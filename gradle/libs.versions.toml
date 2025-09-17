@@ -12,6 +12,7 @@ googleGmsGoogleServices = "4.4.3"
 firebaseFirestore = "26.0.0"
 
 [libraries]
+coil-compose = { module = "io.coil-kt:coil-compose", version = "2.7.0" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
