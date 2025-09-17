@@ -7,7 +7,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import com.team21.myapplication.ui.theme.WelHomeTheme
+import com.team21.myapplication.ui.theme.AppTheme
 import android.util.Log
 import com.google.firebase.firestore.firestore
 import com.google.firebase.Firebase
@@ -46,7 +46,6 @@ class MainActivity : ComponentActivity() {
         db.collection("StudentUser").document(idDocumento)
             .get()
             .addOnSuccessListener { document ->
-                // Si la lectura es exitosa, se ejecuta este bloque
                 if (document != null && document.exists()) {
                     Log.d("FirestoreTest", "✅ Datos leídos correctamente: ${document.data}")
                 } else {
@@ -54,7 +53,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
             .addOnFailureListener { exception ->
-                // Si la lectura falla, se ejecuta este bloque
                 Log.w("FirestoreTest", "❌ Error al leer el documento.", exception)
             }
     }
@@ -71,7 +69,7 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
-    WelHomeTheme {
+    AppTheme {
         Greeting("Android")
     }
 }
