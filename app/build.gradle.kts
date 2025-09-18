@@ -51,13 +51,22 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.firebase.firestore)
+    implementation(platform("androidx.compose:compose-bom:2025.08.00"))
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.foundation:foundation")
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.runtime:runtime")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.material:material-icons-extended")
     testImplementation(libs.junit)
+    androidTestImplementation(platform("androidx.compose:compose-bom:2025.08.00"))
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+
 
     // Import the Firebase BoM
     implementation(platform("com.google.firebase:firebase-bom:34.2.0"))
