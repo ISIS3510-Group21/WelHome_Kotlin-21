@@ -7,6 +7,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -66,24 +68,11 @@ fun MainScreen() {
                 }
             }
             item {
-                IconButtonsRow()
-            }
-            item {
-                ListDivider()
-            }
-            item {
-                SectionTitle("Recommended for you")
+                SectionTitle("Recommended for you", onBellClick = {})
             }
             item {
                 RecommendedForYouSection()
             }
-            item {
-                ListDivider()
-            }
-            item {
-                SectionTitle("Recently seen")
-            }
-            // Recently Seen items
 
             items(sampleListingData) { listing -> // Replace with your actual data
                 Row(
@@ -102,52 +91,31 @@ fun MainScreen() {
     }
 }
 
+
 @Composable
-fun IconButtonsRow() {
-    // Using the AppIcons you've defined
-    // For now, using Home icon for all as requested. You can change these later.
-    val iconButtonItems = listOf(
-        "Houses" to AppIcons.Home,
-        "Apartment" to AppIcons.Home, // Placeholder
-        "Studio" to AppIcons.Home, // Placeholder
-        "Co-Living" to AppIcons.Home, // Placeholder
-        "Residence" to AppIcons.Home  // Placeholder
-    )
+fun SectionTitle(
+    title: String,
+    onBellClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp, horizontal = 16.dp),
-        horizontalArrangement = Arrangement.SpaceAround
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        iconButtonItems.forEach { (label, icon) ->
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.weight(1f) // Distribute space equally
-            ) {
-                IconTile(
-                    label, icon, Color.Black
-                )
-            }
+        Text(
+            text = title,
+            style = LocalDSTypography.current.Section,
+            modifier = Modifier.weight(1f)
+        )
+
+        IconButton(onClick = onBellClick) {
+            Icon(
+                imageVector = Icons.Outlined.Notifications,
+                contentDescription = "Ver notificaciones"
+            )
         }
     }
-}
-
-@Composable
-fun ListDivider() {
-    HorizontalDivider(
-        modifier = Modifier.padding(vertical = 16.dp, horizontal = 16.dp),
-        thickness = 1.dp,
-        color = MaterialTheme.colorScheme.outlineVariant
-    )
-}
-
-@Composable
-fun SectionTitle(title: String) {
-    Text(
-        text = title,
-        style = LocalDSTypography.current.Section,
-        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)
-    )
 }
 
 @Composable
