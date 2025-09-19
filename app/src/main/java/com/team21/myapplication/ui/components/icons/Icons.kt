@@ -10,6 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -36,7 +37,10 @@ object AppIcons {
 }
 
 @Composable
-private fun IconTile(label: String, icon: ImageVector) {
+fun IconTile(
+    label: String,
+    icon: ImageVector,
+    iconColor: Color = MaterialTheme.colorScheme.onSurfaceVariant) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.width(80.dp)
@@ -44,7 +48,7 @@ private fun IconTile(label: String, icon: ImageVector) {
         Icon(
             imageVector = icon,
             contentDescription = label,
-            tint = GrayIcon,
+            tint = iconColor,
             modifier = Modifier
                 .size(28.dp)
                 .padding(4.dp)
@@ -89,7 +93,7 @@ fun Preview_AppIcons_All() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     row.forEach { (label, icon) ->
-                        IconTile(label, icon)
+                        IconTile(label, icon, GrayIcon)
                     }
                 }
             }
