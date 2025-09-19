@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.dp
 import com.team21.myapplication.ui.theme.LavanderLight
 import com.team21.myapplication.ui.theme.GrayIcon
 import com.team21.myapplication.ui.theme.BlueCallToAction
-import com.team21.myapplication.ui.components.navigation.icons.AppIcons
+import com.team21.myapplication.ui.components.icons.AppIcons
 import com.team21.myapplication.ui.components.text.BlackText
 import com.team21.myapplication.ui.components.text.BlueText
 import com.team21.myapplication.ui.components.text.GrayText
