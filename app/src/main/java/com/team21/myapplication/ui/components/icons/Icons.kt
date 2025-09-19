@@ -3,6 +3,10 @@ package com.team21.myapplication.ui.components.icons
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Message
+import androidx.compose.material.icons.filled.ArrowBackIos
+import androidx.compose.material.icons.filled.CropFree
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.*
@@ -42,6 +46,16 @@ object AppIcons {
     val CameraAlt: ImageVector = Icons.Outlined.CameraAlt
     val Queue: ImageVector = Icons.Outlined.Queue
     val ProfilePicture: ImageVector = Icons.Outlined.Person
+
+    val GoBack: ImageVector = Icons.Default.ArrowBackIos
+
+    val HeartSaved: ImageVector = Icons.Default.FavoriteBorder
+
+    val Bath: ImageVector = Icons.Outlined.Bathtub
+
+    val SquareMeters: ImageVector = Icons.Default.CropFree
+
+    val People: ImageVector = Icons.Outlined.Groups
 }
 
 @Composable
@@ -90,7 +104,14 @@ fun Preview_AppIcons_All() {
             "PasswordEye" to AppIcons.PasswordEye,
             "Add" to AppIcons.Add,
             "Queue" to AppIcons.Queue,
-            "Profile" to AppIcons.ProfilePicture
+            "Profile" to AppIcons.ProfilePicture,
+            "HeartSaved" to AppIcons.HeartSaved,
+            "GoBack" to AppIcons.GoBack,
+            "SquareMeters" to AppIcons.SquareMeters,
+            "People" to AppIcons.People,
+            "Bath" to AppIcons.Bath,
+
+
         )
 
         Column(

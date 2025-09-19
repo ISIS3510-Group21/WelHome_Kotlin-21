@@ -88,7 +88,7 @@ fun FilterView(
                 color = BlackText
             )
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(20.dp))
 
             // Grid 2x2 of categories (Houses, Rooms, Cabins, Apartments)
             // Two manual rows with two buttons each
@@ -129,7 +129,7 @@ fun FilterView(
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(20.dp))
 
             // Horizontal carousel of chips (GrayButton)
             HorizontalCarousel(
@@ -141,7 +141,7 @@ fun FilterView(
                 GrayButton(text = label, onClick = { /* TODO: open map screen */ })
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(18.dp))
 
             // Horizontal carousel of housing cards
             HorizontalCarousel(
@@ -166,7 +166,7 @@ fun FilterView(
                 )
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(20.dp))
 
             // Button "Map Search"
             BlueButton(
@@ -177,7 +177,7 @@ fun FilterView(
                     .align(Alignment.CenterHorizontally)
             )
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(20.dp))
         }
     }
 }
