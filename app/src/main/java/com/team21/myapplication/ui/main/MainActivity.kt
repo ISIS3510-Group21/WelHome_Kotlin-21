@@ -13,7 +13,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.team21.myapplication.R
@@ -21,9 +20,7 @@ import com.team21.myapplication.ui.components.cards.HousingInfoCard
 import com.team21.myapplication.ui.components.carousel.HorizontalCarousel
 import com.team21.myapplication.ui.components.inputs.SearchBar
 import com.team21.myapplication.ui.components.navbar.AppNavBar
-import com.team21.myapplication.ui.components.icons.AppIcons
 import com.team21.myapplication.ui.theme.AppTheme
-import com.team21.myapplication.ui.components.icons.IconTile
 import com.team21.myapplication.ui.theme.LocalDSTypography
 
 class MainActivity : ComponentActivity() {
@@ -73,10 +70,23 @@ fun MainScreen() {
             item {
                 RecommendedForYouSection()
             }
+            item{
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp)
+                ) {
+                    Text(
+                        text = "Recently seen",
+                        style = LocalDSTypography.current.Section,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
 
             items(sampleListingData) { listing -> // Replace with your actual data
                 Row(
-                    modifier = Modifier.padding(vertical = 16.dp, horizontal = 16.dp)
+                    modifier = Modifier.padding(vertical = 4.dp, horizontal = 16.dp)
                 ) {
                    HousingInfoCard(
                        title = listing.title,
@@ -143,11 +153,11 @@ data class ListingItemData(
     val imageUrl: Int,
     val rating: Double = 4.0,
     val reviewsCount: Int = 30,
-    val pricePerMonthLabel: String = "$700/month") // Use String for actual image URLs
+    val pricePerMonthLabel: String = "$700/month")
 
 // Sample data for demonstration
 val sampleListingData = List(10) { index ->
-    ListingItemData("Spacious Apartment ${index + 1}", R.drawable.sample_house) // Replace with actual image
+    ListingItemData("Spacious Apartment ${index + 1}", R.drawable.sample_house)
 }
 
 @Preview(showBackground = true, showSystemUi = true)
