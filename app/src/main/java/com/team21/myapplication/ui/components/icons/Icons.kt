@@ -34,6 +34,11 @@ object AppIcons {
     val Star: ImageVector = Icons.Outlined.StarBorder
     val Phone: ImageVector = Icons.Outlined.Phone
     val Message: ImageVector = Icons.Outlined.Message
+    val ArrowDropDown: ImageVector = Icons.Outlined.KeyboardArrowDown
+    val PasswordEye: ImageVector = Icons.Outlined.Visibility
+    val Add: ImageVector = Icons.Outlined.Add
+    val CameraAlt: ImageVector = Icons.Outlined.CameraAlt
+    val Queue: ImageVector = Icons.Outlined.Queue
 }
 
 @Composable
@@ -78,6 +83,10 @@ fun Preview_AppIcons_All() {
             "Star" to AppIcons.Star,
             "Phone" to AppIcons.Phone,
             "Message" to AppIcons.Message,
+            "ArrowDropDown" to AppIcons.ArrowDropDown,
+            "PasswordEye" to AppIcons.PasswordEye,
+            "Add" to AppIcons.Add,
+            "Queue" to AppIcons.Queue
         )
 
         Column(
