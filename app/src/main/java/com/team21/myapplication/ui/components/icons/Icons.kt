@@ -2,6 +2,8 @@ package com.team21.myapplication.ui.components.icons
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Message
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.Icon
@@ -33,12 +35,13 @@ object AppIcons {
     val StarFilled: ImageVector = Icons.Filled.Star
     val Star: ImageVector = Icons.Outlined.StarBorder
     val Phone: ImageVector = Icons.Outlined.Phone
-    val Message: ImageVector = Icons.Outlined.Message
+    val Message: ImageVector = Icons.Outlined.ChatBubbleOutline
     val ArrowDropDown: ImageVector = Icons.Outlined.KeyboardArrowDown
     val PasswordEye: ImageVector = Icons.Outlined.Visibility
     val Add: ImageVector = Icons.Outlined.Add
     val CameraAlt: ImageVector = Icons.Outlined.CameraAlt
     val Queue: ImageVector = Icons.Outlined.Queue
+    val ProfilePicture: ImageVector = Icons.Outlined.Person
 }
 
 @Composable
@@ -86,7 +89,8 @@ fun Preview_AppIcons_All() {
             "ArrowDropDown" to AppIcons.ArrowDropDown,
             "PasswordEye" to AppIcons.PasswordEye,
             "Add" to AppIcons.Add,
-            "Queue" to AppIcons.Queue
+            "Queue" to AppIcons.Queue,
+            "Profile" to AppIcons.ProfilePicture
         )
 
         Column(
