@@ -1,4 +1,4 @@
-package com.team21.myapplication.ui.components.navigation
+package com.team21.myapplication.ui.components.navbar
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.*
@@ -6,7 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.team21.myapplication.ui.components.navigation.icons.AppIcons
+import com.team21.myapplication.ui.components.icons.AppIcons
 import com.team21.myapplication.ui.theme.BlueCallToAction
 import com.team21.myapplication.ui.theme.GrayIcon
 import com.team21.myapplication.ui.theme.LocalDSTypography
