@@ -1,4 +1,4 @@
-package com.team21.myapplication.ui.components.navigation.icons
+package com.team21.myapplication.ui.components.icons
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
