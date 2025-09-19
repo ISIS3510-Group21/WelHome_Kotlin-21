@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.sp
 import com.team21.myapplication.ui.theme.Poppins
 import com.team21.myapplication.ui.theme.LavanderLight
 import com.team21.myapplication.ui.theme.GrayIcon
+import com.team21.myapplication.ui.theme.BlueCallToAction
 import com.team21.myapplication.ui.components.navigation.icons.AppIcons
 
 @Composable
@@ -103,10 +104,10 @@ private fun PlaceholderTextFieldPreview() {
                 Icon(
                     imageVector = AppIcons.Notification,
                     contentDescription = "Info",
-                    tint = Color.Blue
+                    tint = BlueCallToAction
                 )
             },
-            borderColor = Color.Blue
+            borderColor = BlueCallToAction
         )
     }
 }
