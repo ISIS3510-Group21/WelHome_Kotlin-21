@@ -5,21 +5,23 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.team21.myapplication.ui.theme.Poppins
 import com.team21.myapplication.ui.theme.LavanderLight
 import com.team21.myapplication.ui.theme.GrayIcon
 import com.team21.myapplication.ui.theme.BlueCallToAction
 import com.team21.myapplication.ui.components.navigation.icons.AppIcons
+import com.team21.myapplication.ui.components.text.BlackText
+import com.team21.myapplication.ui.components.text.BlueText
+import com.team21.myapplication.ui.components.text.GrayText
+import com.team21.myapplication.ui.components.text.WhiteText
+import com.team21.myapplication.ui.theme.BlackText
+import com.team21.myapplication.ui.theme.WhiteBackground
 
 @Composable
 fun PlaceholderTextField(
@@ -47,17 +49,13 @@ fun PlaceholderTextField(
             verticalAlignment = Alignment.Top, // Align items to the top of the Row
             horizontalArrangement = Arrangement.SpaceBetween // Push text to the start, icon to the end
         ) {
-            Text(
-                text = placeholderText,
-                style = TextStyle(
-                    fontFamily = Poppins,
-                    fontSize = 16.sp,
-                    color = textColor
-                ),
-                modifier = Modifier
-                    .weight(1f) // Text takes up all available space
-                    .padding(end = 8.dp) // Add some space before the icon
-            )
+            when (textColor) {
+                BlackText -> BlackText(text = placeholderText, modifier = Modifier.weight(1f).padding(end = 8.dp))
+                BlueCallToAction -> BlueText(text = placeholderText, modifier = Modifier.weight(1f).padding(end = 8.dp))
+                GrayIcon -> GrayText(text = placeholderText, modifier = Modifier.weight(1f).padding(end = 8.dp))
+                WhiteBackground -> WhiteText(text = placeholderText, modifier = Modifier.weight(1f).padding(end = 8.dp))
+                else -> GrayText(text = placeholderText, modifier = Modifier.weight(1f).padding(end = 8.dp)) // Default value
+            }
             // If an icon is provided, display it
             if (trailingIcon != null) {
                 Box(
@@ -100,6 +98,21 @@ private fun PlaceholderTextFieldPreview() {
         PlaceholderTextField(
             placeholderText = "Long description",
             height = 100.dp,
+            trailingIcon = {
+                Icon(
+                    imageVector = AppIcons.Notification,
+                    contentDescription = "Info",
+                    tint = BlueCallToAction
+                )
+            },
+            borderColor = BlueCallToAction
+        )
+
+        // 4. Placeholder with a different height and an icon on top-right. Black text
+        PlaceholderTextField(
+            placeholderText = "Long description",
+            height = 100.dp,
+            textColor = BlackText,
             trailingIcon = {
                 Icon(
                     imageVector = AppIcons.Notification,
