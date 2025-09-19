@@ -20,10 +20,10 @@ import com.team21.myapplication.R
 import com.team21.myapplication.ui.components.cards.HousingInfoCard
 import com.team21.myapplication.ui.components.carousel.HorizontalCarousel
 import com.team21.myapplication.ui.components.inputs.SearchBar
-import com.team21.myapplication.ui.components.navigation.AppNavBar
-import com.team21.myapplication.ui.components.navigation.icons.AppIcons
+import com.team21.myapplication.ui.components.navbar.AppNavBar
+import com.team21.myapplication.ui.components.icons.AppIcons
 import com.team21.myapplication.ui.theme.AppTheme
-import com.team21.myapplication.ui.components.navigation.icons.IconTile
+import com.team21.myapplication.ui.components.icons.IconTile
 import com.team21.myapplication.ui.theme.LocalDSTypography
 
 class MainActivity : ComponentActivity() {

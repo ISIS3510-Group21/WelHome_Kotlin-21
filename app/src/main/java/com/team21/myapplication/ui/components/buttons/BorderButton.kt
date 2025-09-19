@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.dp
 import com.team21.myapplication.ui.theme.AppTheme
 import com.team21.myapplication.ui.theme.BlueCallToAction
 import com.team21.myapplication.ui.theme.LocalDSTypography
-import com.team21.myapplication.ui.components.navigation.icons.AppIcons
+import com.team21.myapplication.ui.components.icons.AppIcons
 import com.team21.myapplication.ui.theme.WhiteBackground
 
 @Composable
