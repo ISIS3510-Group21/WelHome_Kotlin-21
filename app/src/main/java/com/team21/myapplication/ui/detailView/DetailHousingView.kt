@@ -7,6 +7,8 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -86,10 +88,10 @@ fun DetailHousingView(
 
             ImageCarouselCard(
                 images = listOf(
-                    "https://picsum.photos/800/500?1",
-                    "https://picsum.photos/800/500?2",
-                    "https://picsum.photos/800/500?3",
-                    "https://picsum.photos/800/500?4"
+                    "https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
+                    "https://images.unsplash.com/photo-1572120360610-d971b9b78825",
+                    "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7",
+                    "https://images.unsplash.com/photo-1507089947368-19c1da9775ae"
                 ),
                 onImageClick = { /* noop */ }
             )
@@ -108,6 +110,14 @@ fun DetailHousingView(
             Divider(color = GrayIcon, thickness = 1.dp)
 
             Spacer(Modifier.height(15.dp))
+
+            Text(
+                text = "Amenities",
+                style = AppTextStyles.SubtitleView,
+                color = BlackText
+            )
+
+            Spacer(Modifier.height(12.dp))
 
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(
@@ -161,9 +171,9 @@ fun DetailHousingView(
             Spacer(Modifier.height(20.dp))
 
             val roommates = listOf(
-                AppIcons.Profile,
-                AppIcons.Profile,
-                AppIcons.Profile
+                R.drawable.profile_picture_women,
+                R.drawable.profile_picture_women2,
+                R.drawable.profile_picture_man
             )
             HorizontalCarousel(
                 items = roommates,
@@ -171,7 +181,7 @@ fun DetailHousingView(
                 horizontalSpacing = 12.dp,
                 snapToItems = false
             ) { icon ->
-                ProfilePicture(icon = icon)
+                ProfilePicture(painter = painterResource(icon))
             }
 
             Spacer(Modifier.height(20.dp))
@@ -180,7 +190,7 @@ fun DetailHousingView(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                ProfilePicture(icon = AppIcons.Profile, modifier = Modifier.size(56.dp))
+                ProfilePicture(painter = painterResource(R.drawable.profile_picture_owner), modifier = Modifier.size(56.dp))
                 Spacer(Modifier.width(15.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -218,7 +228,7 @@ fun DetailHousingView(
                 color = BlackText
             )
             Spacer(Modifier.height(18.dp))
-            HousingCard(imageRes = R.drawable.sample_house)
+            HousingCard(imageRes = R.drawable.example_map)
 
             Spacer(Modifier.height(16.dp))
 
