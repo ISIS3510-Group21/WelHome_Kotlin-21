@@ -14,27 +14,32 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.team21.myapplication.ui.theme.AppTheme
 import com.team21.myapplication.ui.components.icons.AppIcons
-import com.team21.myapplication.ui.theme.LavanderLight
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
+import androidx.compose.ui.res.painterResource
+import com.team21.myapplication.R
+import com.team21.myapplication.ui.theme.WhiteBackground
 import com.team21.myapplication.ui.theme.GrayIcon
 
 @Composable
 fun ProfilePicture(
-    icon: ImageVector,
+    painter: Painter,
     modifier: Modifier = Modifier,
-    backgroundColor: Color = LavanderLight,
-    iconTint: Color = GrayIcon
+    backgroundColor: Color = WhiteBackground,
+    borderColor: Color = GrayIcon
 ) {
     Box(
         modifier = modifier
             .size(72.dp)
-            .background(backgroundColor, shape = CircleShape),
+            .background(backgroundColor, shape = CircleShape)
+            .border(1.dp, borderColor, CircleShape),
         contentAlignment = Alignment.Center
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = "Profile Picture",
-            tint = iconTint,
-            modifier = Modifier.size(40.dp)
+        Image(
+            painter = painter,
+            contentDescription = "Profile picture",
+            modifier = Modifier.size(55.dp)
         )
     }
 }
@@ -44,7 +49,7 @@ fun ProfilePicture(
 private fun PreviewProfilePicture() {
     AppTheme {
         ProfilePicture(
-            icon = AppIcons.ProfilePicture
+            painter = painterResource(R.drawable.profile_picture_women)
         )
     }
 }
