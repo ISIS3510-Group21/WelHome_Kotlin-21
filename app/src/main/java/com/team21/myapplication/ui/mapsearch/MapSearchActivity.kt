@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,14 +27,20 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import com.team21.myapplication.R // Asegúrate de tener una imagen de mapa de ejemplo en tus recursos
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MarkerState
+import com.team21.myapplication.R
 import com.team21.myapplication.ui.components.cards.HousingCardListItem
 import com.team21.myapplication.ui.components.inputs.SearchBar
 import com.team21.myapplication.ui.components.navbar.AppNavBar
 import com.team21.myapplication.ui.theme.AppTheme
 import com.team21.myapplication.ui.theme.LocalDSTypography
+import com.google.maps.android.compose.rememberCameraPositionState
 
 class MapSearchActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,10 +57,16 @@ class MapSearchActivity : ComponentActivity() {
 @Composable
 fun MapSearchView(
     navController: NavController,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    mapViewModel: MapSearchViewModel = viewModel()
 ) {
-    var searchQuery by remember { mutableStateOf("") }
+    val state by mapViewModel.state.collectAsState()
 
+    val initialLocation = LatLng(4.60330, -74.06512)
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(initialLocation, 15f)
+    }
+    var searchQuery by remember { mutableStateOf("") }
     // Example data for housing items
     val sampleHousingItems = remember {
         listOf(
@@ -102,12 +115,24 @@ fun MapSearchView(
                     .weight(1f)
                     .padding(horizontal = 16.dp)
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.example_map),
-                    contentDescription = "Map Placeholder",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
+                GoogleMap (
+                        modifier = Modifier.fillMaxSize(),
+                   cameraPositionState = cameraPositionState
+               ) {
+                   state.locations.forEach { location ->
+                       com.google.maps.android.compose.Marker(
+                           state = MarkerState(location.position),
+                           title = location.title,
+                           snippet = "ID ${location.title}"
+                       )
+                   }
+               }
+//                Image(
+//                    painter = painterResource(id = R.drawable.example_map),
+//                    contentDescription = "Map Placeholder",
+//                    contentScale = ContentScale.Crop,
+//                    modifier = Modifier.fillMaxSize()
+//                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
