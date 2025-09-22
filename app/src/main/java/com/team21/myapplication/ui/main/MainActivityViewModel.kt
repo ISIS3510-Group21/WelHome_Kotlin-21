@@ -3,11 +3,7 @@ package com.team21.myapplication.ui.main
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.team21.myapplication.data.model.HousingPost
 import com.team21.myapplication.data.model.HousingPreview
-import com.team21.myapplication.data.model.HousingTag
-import com.team21.myapplication.data.model.StudentUserProfile
-import com.team21.myapplication.data.repository.HousingPostRepository
 import com.team21.myapplication.data.repository.HousingTagRepository
 import com.team21.myapplication.data.repository.StudentUserProfileRepository
 import kotlinx.coroutines.flow.MutableStateFlow
