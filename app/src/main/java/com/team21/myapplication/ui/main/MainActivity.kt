@@ -11,11 +11,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.team21.myapplication.R
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.team21.myapplication.data.model.HousingPreview
 import com.team21.myapplication.ui.components.cards.HousingInfoCard
 import com.team21.myapplication.ui.components.carousel.HorizontalCarousel
 import com.team21.myapplication.ui.components.inputs.SearchBar
@@ -37,7 +39,12 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen() {
+fun MainScreen(viewModel: MainActivityViewModel = MainActivityViewModel()) {
+
+    val recommendedHousingPosts by viewModel.recommendedHousingPosts.collectAsStateWithLifecycle()
+    val recentlySeenHousingPosts by viewModel.recentlySeenHousingPosts.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+
     Scaffold (
         bottomBar = {
             AppNavBar(
@@ -68,7 +75,7 @@ fun MainScreen() {
                 SectionTitle("Recommended for you", onBellClick = {})
             }
             item {
-                RecommendedForYouSection()
+                RecommendedForYouSection(recommendedHousingPosts)
             }
             item{
                 Row(
@@ -84,23 +91,23 @@ fun MainScreen() {
                 }
             }
 
-            items(sampleListingData) { listing -> // Replace with your actual data
+            items(recentlySeenHousingPosts) { listing ->
                 Row(
                     modifier = Modifier.padding(vertical = 4.dp, horizontal = 16.dp)
                 ) {
                    HousingInfoCard(
                        title = listing.title,
-                       rating = listing.rating,
-                       reviewsCount = listing.reviewsCount,
-                       pricePerMonthLabel = listing.pricePerMonthLabel,
-                       imageRes = R.drawable.sample_house
+                       rating = listing.rating.toDouble(),
+                       reviewsCount = 0,
+                       pricePerMonthLabel = listing.price.toString() + "/month",
+                       imageUrl = listing.photoPath
+
                    )
                 }
             }
         }
     }
 }
-
 
 @Composable
 fun SectionTitle(
@@ -129,10 +136,16 @@ fun SectionTitle(
 }
 
 @Composable
-fun RecommendedForYouSection() {
+fun RecommendedForYouSection(recommendedHousingPosts: List<HousingPreview> = emptyList()) {
     // Sample data - replace with your actual data source and data class
-    val recommendedItems = List(5) { index ->
-        ListingItemData("Beautiful house #$index", R.drawable.sample_house)
+    val recommendedItems = recommendedHousingPosts.map {
+        ListingItemData(
+            title = it.title,
+            imageUrl = it.photoPath,
+            rating = 4.9,
+            reviewsCount = 0,
+            pricePerMonthLabel = it.price.toString() + "/month"
+        )
     }
 
     HorizontalCarousel( items = recommendedItems) {
@@ -142,7 +155,7 @@ fun RecommendedForYouSection() {
             rating = item.rating,
             reviewsCount = item.reviewsCount,
             pricePerMonthLabel = item.pricePerMonthLabel,
-            imageRes = item.imageUrl
+            imageUrl = item.imageUrl
         )
     }
 }
@@ -150,14 +163,14 @@ fun RecommendedForYouSection() {
 // Data class for listing items
 data class ListingItemData(
     val title: String,
-    val imageUrl: Int,
+    val imageUrl: String,
     val rating: Double = 4.0,
     val reviewsCount: Int = 30,
     val pricePerMonthLabel: String = "$700/month")
 
 // Sample data for demonstration
 val sampleListingData = List(10) { index ->
-    ListingItemData("Spacious Apartment ${index + 1}", R.drawable.sample_house)
+    ListingItemData("Spacious Apartment ${index + 1}", "")
 }
 
 @Preview(showBackground = true, showSystemUi = true)
