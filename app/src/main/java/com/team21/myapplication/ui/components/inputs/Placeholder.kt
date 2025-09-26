@@ -22,6 +22,13 @@ import com.team21.myapplication.ui.components.text.GrayText
 import com.team21.myapplication.ui.components.text.WhiteText
 import com.team21.myapplication.ui.theme.BlackText
 import com.team21.myapplication.ui.theme.WhiteBackground
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.runtime.*
+import androidx.compose.ui.text.TextStyle
+import com.team21.myapplication.ui.theme.Poppins
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun PlaceholderTextField(
@@ -34,36 +41,68 @@ fun PlaceholderTextField(
     height: Dp = 52.dp,
     trailingIcon: @Composable (() -> Unit)? = null // Optional Composable for the icon
 ) {
+    var value by remember { mutableStateOf("") }
+    val shape = RoundedCornerShape(8.dp)
+    val coercedHeight = if (height < 56.dp) 56.dp else height
+    val tfSize = 16.sp
+    val endPaddingForIcon = if (trailingIcon != null) 36.dp else 0.dp
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(height)
+            .height(coercedHeight)
             .background(backgroundColor, RoundedCornerShape(8.dp))
             .border(borderWidth, borderColor, RoundedCornerShape(8.dp))
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        contentAlignment = Alignment.TopStart // Aligns content to the top-left
+            .padding(horizontal = 4.dp)
     ) {
-        // Use a Row to position the text and icon
-        Row(
-            modifier = Modifier.fillMaxSize(),
-            verticalAlignment = Alignment.Top, // Align items to the top of the Row
-            horizontalArrangement = Arrangement.SpaceBetween // Push text to the start, icon to the end
-        ) {
-            when (textColor) {
-                BlackText -> BlackText(text = placeholderText, modifier = Modifier.weight(1f).padding(end = 8.dp))
-                BlueCallToAction -> BlueText(text = placeholderText, modifier = Modifier.weight(1f).padding(end = 8.dp))
-                GrayIcon -> GrayText(text = placeholderText, modifier = Modifier.weight(1f).padding(end = 8.dp))
-                WhiteBackground -> WhiteText(text = placeholderText, modifier = Modifier.weight(1f).padding(end = 8.dp))
-                else -> GrayText(text = placeholderText, modifier = Modifier.weight(1f).padding(end = 8.dp)) // Default value
-            }
-            // If an icon is provided, display it
-            if (trailingIcon != null) {
-                Box(
-                    modifier = Modifier.wrapContentSize(),
-                    contentAlignment = Alignment.TopEnd // Align icon to the top-right
-                ) {
-                    trailingIcon()
+        TextField(
+            value = value,
+            onValueChange = { value = it },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(end = endPaddingForIcon),
+            textStyle = TextStyle(
+                fontFamily = Poppins,
+                fontSize = tfSize,
+                fontWeight = FontWeight.Normal,
+                color = textColor
+            ),
+            placeholder = {
+                when (textColor) {
+                    BlackText -> BlackText(text = placeholderText, size = tfSize)
+                    BlueCallToAction -> BlueText(text = placeholderText, size = tfSize)
+                    GrayIcon -> GrayText(text = placeholderText, size = tfSize)
+                    WhiteBackground -> WhiteText(text = placeholderText, size = tfSize)
+                    else -> GrayText(text = placeholderText, size = tfSize)
                 }
+            },
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = backgroundColor,
+                unfocusedContainerColor = backgroundColor,
+                disabledContainerColor = backgroundColor,
+                errorContainerColor = backgroundColor,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                disabledIndicatorColor = Color.Transparent,
+                errorIndicatorColor = Color.Transparent,
+                cursorColor = textColor
+            ),
+            shape = shape,
+            singleLine = height <= 56.dp,
+            minLines = when {
+                height >= 100.dp -> 4
+                height >= 76.dp -> 3
+                height > 56.dp -> 2
+                else -> 1
+            }
+        )
+        if (trailingIcon != null){
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 14.dp, end = 16.dp)
+            )
+            {
+                trailingIcon()
             }
         }
     }
