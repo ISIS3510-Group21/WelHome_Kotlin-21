@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,12 +41,14 @@ fun VerificationLayout() {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start
         ) {
-            Icon(
-                imageVector = AppIcons.GoBack,
-                contentDescription = "Back",
-                modifier = Modifier.size(24.dp),
-                tint = BlueCallToAction
-            )
+            IconButton(onClick = {/* TODO: action */ }) {
+                Icon(
+                    imageVector = AppIcons.GoBack,
+                    contentDescription = "Back",
+                    modifier = Modifier.size(24.dp),
+                    tint = BlueCallToAction
+                )
+            }
             Spacer(modifier = Modifier.width(8.dp))
             BlackText(
                 text = "Create account",

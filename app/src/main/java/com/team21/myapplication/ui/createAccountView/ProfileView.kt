@@ -43,12 +43,14 @@ fun ProfileLayout() {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start
         ) {
-            Icon(
-                imageVector = AppIcons.GoBack,
-                contentDescription = "Back",
-                modifier = Modifier.size(24.dp),
-                tint = BlueCallToAction
-            )
+            IconButton(onClick = {/* TODO: action */ }) {
+                Icon(
+                    imageVector = AppIcons.GoBack,
+                    contentDescription = "Back",
+                    modifier = Modifier.size(24.dp),
+                    tint = BlueCallToAction
+                )
+            }
             Spacer(modifier = Modifier.width(8.dp))
             BlackText(
                 text = "Create account",
