@@ -25,6 +25,8 @@ import com.team21.myapplication.ui.theme.BlueSecondary
 import com.team21.myapplication.ui.theme.GrayIcon
 import com.team21.myapplication.ui.theme.LavanderLight
 import com.team21.myapplication.ui.theme.WhiteBackground
+import androidx.compose.runtime.*
+import com.team21.myapplication.ui.theme.BlackText
 
 @Composable
 fun CustomRadioButton(
@@ -53,7 +55,7 @@ fun CustomRadioButton(
     ) {
         RadioButton(
             selected = selected,
-            onClick = null,
+            onClick = onClick,
             enabled = enabled,
             colors = RadioButtonDefaults.colors(
                 selectedColor = selectedColor,
@@ -75,17 +77,20 @@ fun CustomRadioButtonSelectedPreview() {
     Column (
         modifier = Modifier.padding(16.dp)
     ){
+        var selected by remember { mutableStateOf(true) }
         CustomRadioButton(
             text = "Option 1",
-            selected = true,
-            onClick = { }
+            selected = selected,
+            onClick = { selected = !selected }
         )
+        var selectedTwo by remember { mutableStateOf(false) }
         CustomRadioButton(
             text = "Option 2",
-            selected = false,
-            onClick = { },
+            selected = selectedTwo,
+            onClick = { selectedTwo = !selectedTwo },
             selectedColor = BlueSecondary
         )
+
         CustomRadioButton(
             text = "Option 3",
             selected = true,
@@ -104,10 +109,11 @@ fun CustomRadioButtonSelectedPreview() {
                 )
             }
         )
+        var selectedThree by remember { mutableStateOf(true) }
         CustomRadioButton(
             text = "Custom option",
-            selected = true,
-            onClick = { },
+            selected = selectedThree,
+            onClick = { selectedThree = !selectedThree },
             selectedColor = LavanderLight,
             unselectedColor = WhiteBackground
         )
