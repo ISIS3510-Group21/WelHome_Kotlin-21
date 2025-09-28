@@ -13,7 +13,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,9 +21,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.team21.myapplication.ui.theme.AppTheme
 import com.team21.myapplication.ui.theme.BlueCallToAction
-import com.team21.myapplication.ui.theme.LocalDSTypography
 import com.team21.myapplication.ui.components.icons.AppIcons
-import com.team21.myapplication.ui.theme.WhiteBackground
+import com.team21.myapplication.ui.components.text.BlackText
+import com.team21.myapplication.ui.theme.BlackText
 
 @Composable
 fun BorderButton(
@@ -42,7 +41,7 @@ fun BorderButton(
             .height(52.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = Color.Transparent, // No fill
-            contentColor = BlueCallToAction // Text and icon color
+            contentColor = BlackText // Text and icon color
         ),
         border = BorderStroke(1.dp, BlueCallToAction), // Blue border
         shape = MaterialTheme.shapes.medium
@@ -57,10 +56,8 @@ fun BorderButton(
                 leadingIcon()
                 Spacer(modifier = Modifier.width(8.dp)) // Space between icon and text
             }
-            Text(
-                text = text,
-                style = LocalDSTypography.current.Description,
-                color = BlueCallToAction
+            BlackText(
+                text = text
             )
         }
     }
@@ -82,7 +79,7 @@ private fun BorderButton_Preview() {
                     Icon(
                         imageVector = AppIcons.Home, // Using your custom icon
                         contentDescription = "Add main photo icon",
-                        tint = BlueCallToAction
+                        tint = BlackText
                     )
                 }
             )
