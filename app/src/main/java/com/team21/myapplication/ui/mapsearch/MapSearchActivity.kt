@@ -116,8 +116,8 @@ fun MapSearchView(
                     .padding(horizontal = 16.dp)
             ) {
                 GoogleMap (
-                        modifier = Modifier.fillMaxSize(),
-                   cameraPositionState = cameraPositionState
+                    modifier = Modifier.fillMaxSize(),
+                    cameraPositionState = cameraPositionState
                ) {
                    state.locations.forEach { location ->
                        com.google.maps.android.compose.Marker(
