@@ -59,6 +59,8 @@ dependencies {
     implementation("androidx.compose.runtime:runtime")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material:material-icons-extended")
+    implementation(libs.play.services.location)
+    implementation(libs.androidx.compose.runtime)
     testImplementation(libs.junit)
     androidTestImplementation(platform("androidx.compose:compose-bom:2025.08.00"))
     androidTestImplementation(libs.androidx.junit)

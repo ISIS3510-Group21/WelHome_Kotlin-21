@@ -34,7 +34,7 @@ import com.team21.myapplication.ui.theme.LocalDSTypography
 @Composable
 fun HousingCardListItem(
     modifier: Modifier = Modifier,
-    imageRes: Int?,
+    imageRes: Int? = null,
     imageUrl: String? = null,
     title: String,
     rating: Double,
