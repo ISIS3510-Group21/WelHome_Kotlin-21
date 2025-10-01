@@ -27,7 +27,7 @@ data class HousingPost(
 
 data class Location (
     val lat: Double = 0.0,
-    val long: Double = 0.0,
+    val lng: Double = 0.0,
 )
 
 data class RoomateProfile(
