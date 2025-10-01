@@ -12,9 +12,26 @@ data class HousingPost(
     val rating: Float = 0f,
     val title: String = "No title",
     val description: String = "",
-    val hostId: String = "",
+    val location: Location = Location(),
+
+    val host: String = "",
     val reviews: String = "",
     val bookingDates: String = "",
+
     val pictures: List<String> = emptyList(),
-    val tags: List<TagHousingPost> = emptyList(),
+    val tag: List<TagHousingPost> = emptyList(),
+    val amenities: List<Ammenities> = emptyList(),
+    val roomateProfile: RoomateProfile = RoomateProfile()
+
+)
+
+data class Location (
+    val lat: Double = 0.0,
+    val long: Double = 0.0,
+)
+
+data class RoomateProfile(
+    val id: String = "",
+    val name: String = "",
+    val studentUserID: String = ""
 )
