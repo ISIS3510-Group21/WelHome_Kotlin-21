@@ -6,5 +6,6 @@ data class MapLocation(
     val title: String,
     val position: LatLng,
     val rating: Float,
-    val price: String
+    val price: String,
+    val imageUrl: String
 )

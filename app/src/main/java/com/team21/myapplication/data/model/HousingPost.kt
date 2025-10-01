@@ -1,6 +1,7 @@
 package com.team21.myapplication.data.model
 
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.PropertyName
 
 data class HousingPost(
     val id: String = "",
@@ -13,14 +14,19 @@ data class HousingPost(
     val title: String = "No title",
     val description: String = "",
     val location: Location = Location(),
+    val thumbnail: String = "https://img.freepik.com/free-photo/beautiful-interior-shot-modern-house-with-white-relaxing-walls-furniture-technology_181624-3828.jpg?semt=ais_hybrid&w=740&q=80",
 
     val host: String = "",
     val reviews: String = "",
     val bookingDates: String = "",
 
-    val pictures: List<String> = emptyList(),
+    @PropertyName("Pictures")
+    val pictures: List<Picture> = emptyList(),
+    @PropertyName("Tag")
     val tag: List<TagHousingPost> = emptyList(),
-    val amenities: List<Ammenities> = emptyList(),
+    @PropertyName("Ammenities")
+    val ammenities: List<Ammenities> = emptyList(),
+    @PropertyName("RoomateProfile")
     val roomateProfile: RoomateProfile = RoomateProfile()
 
 )
@@ -33,5 +39,12 @@ data class Location (
 data class RoomateProfile(
     val id: String = "",
     val name: String = "",
+    @PropertyName("StudentUserID")
     val studentUserID: String = ""
+)
+
+data class Picture(
+    @PropertyName("PhotoPath")
+    val photoPath: String = "",
+    val name: String = ""
 )

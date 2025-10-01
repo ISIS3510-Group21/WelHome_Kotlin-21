@@ -66,6 +66,8 @@ fun MapSearchView(
     modifier: Modifier = Modifier,
     mapViewModel: MapSearchViewModel = viewModel()
 ) {
+    val state by mapViewModel.state.collectAsState()
+
     val context = LocalContext.current
     val fusedLocationClient = remember {
         LocationServices.getFusedLocationProviderClient(context)
@@ -96,30 +98,24 @@ fun MapSearchView(
     }
 
     // Set the initial camera position to the user's location or a default location
-    val initialLocation = userLocation ?: LatLng(4.60330, -74.06512)
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(initialLocation, 12f)
+        position = CameraPosition.fromLatLngZoom(state.userLocation, 12f)
     }
 
     // If userLocation changes, animate the camera to the new location
+    // and notify the ViewModel
     LaunchedEffect(userLocation) {
         userLocation?.let {
             cameraPositionState.animate(
                 update = CameraUpdateFactory.newLatLngZoom(it, 12f),
                 durationMs = 1000
             )
+            mapViewModel.onUserLocationReceived(it)
         }
     }
 
     var searchQuery by remember { mutableStateOf("") }
-    // Example data for housing items
-    val sampleHousingItems = remember {
-        listOf(
-            HousingItemData("Portal de los Rosales", 4.95, "$700'000 /month", R.drawable.sample_house),
-            HousingItemData("Living 71", 4.95, "$700'000 /month", R.drawable.sample_house),
-            HousingItemData("Apartamento en Calendaria", 4.95, "$700'000 /month", R.drawable.sample_house)
-        )
-    }
+
 
     Scaffold(
         topBar = {
@@ -174,7 +170,6 @@ fun MapSearchView(
                                 .defaultMarker(BitmapDescriptorFactory.HUE_AZURE)
                         )
                     }
-                    val state by mapViewModel.state.collectAsState()
                    state.locations.forEach { location ->
                        com.google.maps.android.compose.Marker(
                            state = MarkerState(location.position),
@@ -193,11 +188,11 @@ fun MapSearchView(
                     .fillMaxWidth()
                     .weight(1f)
             ) {
-                items(sampleHousingItems) { housingItem ->
+                items(state.locations) { housingItem ->
                     HousingCardListItem(
-                        imageRes = housingItem.imageRes,
+                        imageUrl = housingItem.imageUrl,
                         title = housingItem.title,
-                        rating = housingItem.rating,
+                        rating = housingItem.rating.toDouble(),
                         price = housingItem.price,
                         modifier = Modifier.padding(horizontal = 2.dp)
                     )
@@ -206,14 +201,6 @@ fun MapSearchView(
         }
     }
 }
-
-data class HousingItemData(
-    val title: String,
-    val rating: Double,
-    val price: String,
-    val imageRes: Int? = null,
-    val imageUrl: String? = null
-)
 
 @Preview(showBackground = true)
 @Composable
