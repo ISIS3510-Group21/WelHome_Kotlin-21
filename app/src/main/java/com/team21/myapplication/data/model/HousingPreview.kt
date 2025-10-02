@@ -9,4 +9,5 @@ data class HousingPreview (
     val title: String = "",
     val photoPath: String = "",
     val housing: DocumentReference? = null,
+    val reviewsCount: Int = 0
 )

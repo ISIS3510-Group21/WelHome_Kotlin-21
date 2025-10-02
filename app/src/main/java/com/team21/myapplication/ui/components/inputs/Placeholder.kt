@@ -29,6 +29,9 @@ import androidx.compose.ui.text.TextStyle
 import com.team21.myapplication.ui.theme.Poppins
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 @Composable
 fun PlaceholderTextField(
@@ -39,9 +42,12 @@ fun PlaceholderTextField(
     borderColor: Color = Color.Transparent,
     borderWidth: Dp = 1.dp,
     height: Dp = 52.dp,
+    value: String,
+    onValueChange: (String) -> Unit,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     trailingIcon: @Composable (() -> Unit)? = null // Optional Composable for the icon
 ) {
-    var value by remember { mutableStateOf("") }
+
     val shape = RoundedCornerShape(8.dp)
     val coercedHeight = if (height < 56.dp) 56.dp else height
     val tfSize = 16.sp
@@ -56,7 +62,7 @@ fun PlaceholderTextField(
     ) {
         TextField(
             value = value,
-            onValueChange = { value = it },
+            onValueChange = onValueChange,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(end = endPaddingForIcon),
@@ -93,7 +99,8 @@ fun PlaceholderTextField(
                 height >= 76.dp -> 3
                 height > 56.dp -> 2
                 else -> 1
-            }
+            },
+            keyboardOptions = keyboardOptions,
         )
         if (trailingIcon != null){
             Box(
@@ -112,18 +119,27 @@ fun PlaceholderTextField(
 @Preview(showBackground = true)
 @Composable
 private fun PlaceholderTextFieldPreview() {
+    var text1 by remember { mutableStateOf("") }
+    var text2 by remember { mutableStateOf("") }
+    var text3 by remember { mutableStateOf("") }
+    var text4 by remember { mutableStateOf("") }
+
     Column(
         modifier = Modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // 1. Default placeholder (no icon)
         PlaceholderTextField(
-            placeholderText = "Ex: Cozy Home"
+            placeholderText = "Ex: Cozy Home",
+            value = text1,
+            onValueChange = { text1 = it }
         )
 
         // 2. Placeholder with a custom icon
         PlaceholderTextField(
             placeholderText = "Enter a valid address",
+            value = text2,
+            onValueChange = { text2 = it },
             trailingIcon = {
                 Icon(
                     imageVector = AppIcons.Notification,
@@ -136,6 +152,8 @@ private fun PlaceholderTextFieldPreview() {
         // 3. Placeholder with a different height and an icon on top-right
         PlaceholderTextField(
             placeholderText = "Long description",
+            value = text3,
+            onValueChange = { text3 = it },
             height = 100.dp,
             trailingIcon = {
                 Icon(
@@ -150,6 +168,8 @@ private fun PlaceholderTextFieldPreview() {
         // 4. Placeholder with a different height and an icon on top-right. Black text
         PlaceholderTextField(
             placeholderText = "Long description",
+            value = text4,
+            onValueChange = { text4 = it },
             height = 100.dp,
             textColor = BlackText,
             trailingIcon = {

@@ -79,4 +79,11 @@ dependencies {
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-storage")
+
+    // Coil para cargar imágenes (REQUERIDO)
+    implementation("io.coil-kt:coil-compose:2.5.0")
+
+    // Para obtener imágenes de la galería y cámara
+    implementation("androidx.activity:activity-compose:1.8.2")
 }

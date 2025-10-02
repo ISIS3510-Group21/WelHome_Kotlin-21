@@ -28,6 +28,9 @@ import com.team21.myapplication.ui.theme.BlueCallToAction
 
 @Composable
 fun VerificationLayout() {
+    var text1 by remember { mutableStateOf("") }
+    var text2 by remember { mutableStateOf("") }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -65,7 +68,7 @@ fun VerificationLayout() {
             currentStep = 2
         )
 
-       Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
         // Section Title: "Verification"
         BlueText(
@@ -107,7 +110,9 @@ fun VerificationLayout() {
 
             // Placeholder for Phone Number Input Field
             PlaceholderTextField(
-                placeholderText = "(999) 111-0000"
+                placeholderText = "(999) 111-0000",
+                value = text1,
+                onValueChange = { text1 = it },
             )
         }
 
@@ -144,9 +149,11 @@ fun VerificationLayout() {
             repeat(6) {
                 PlaceholderTextField(
                     placeholderText = "",
+                    value = text2,
+                    onValueChange = { text2 = it },
                     modifier = Modifier
                         .weight(1f) // Each box takes equal weight
-                    .height(52.dp) // Fixed height for the code input box
+                        .height(52.dp) // Fixed height for the code input box
                 )
             }
         }
