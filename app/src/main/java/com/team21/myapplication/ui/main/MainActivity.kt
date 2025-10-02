@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,6 +15,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -27,6 +30,8 @@ import com.team21.myapplication.ui.components.inputs.SearchBar
 import com.team21.myapplication.ui.components.navbar.AppNavBar
 import com.team21.myapplication.ui.theme.AppTheme
 import com.team21.myapplication.ui.theme.LocalDSTypography
+import com.team21.myapplication.ui.theme.BlueCallToAction
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,60 +52,67 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
 
     Scaffold (
         bottomBar = {
-            AppNavBar(
-                currentRoute = "home",
-                onNavigate = { /* noop */ }
-            )
+            if (!state.isLoading) {
+                AppNavBar(
+                    currentRoute = "home",
+                    onNavigate = { /* noop */ }
+                )
+            }
         }
     ) {
         innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-        ) {
-            item {
-                Row( modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                ) {
-                    SearchBar(
-                        query = "",
-                        onQueryChange = {},
-                        placeholder = "Search"
-                    )
+        if (state.isLoading) {
+            LoadingScreen()
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize()
+            ) {
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                    ) {
+                        SearchBar(
+                            query = "",
+                            onQueryChange = {},
+                            placeholder = "Search"
+                        )
+                    }
                 }
-            }
-            item {
-                SectionTitle("Recommended for you", onBellClick = {})
-            }
-            item {
-                RecommendedForYouSection(state.recommendedHousings)
-            }
-            item{
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp)
-                ) {
-                    Text(
-                        text = "Recently seen",
-                        style = LocalDSTypography.current.Section,
-                        modifier = Modifier.weight(1f)
-                    )
+                item {
+                    SectionTitle("Recommended for you", onBellClick = {})
                 }
-            }
+                item {
+                    RecommendedForYouSection(state.recommendedHousings)
+                }
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp)
+                    ) {
+                        Text(
+                            text = "Recently seen",
+                            style = LocalDSTypography.current.Section,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
 
-            items(state.recentlySeenHousings) { listing ->
-                Row(
-                    modifier = Modifier.padding(vertical = 4.dp, horizontal = 16.dp)
-                ) {
-                   HousingBasicInfoCard(
-                       title = listing.title,
-                       rating = listing.rating,
-                       pricePerMonthLabel = "$" + listing.price.toString() + "/month",
-                       imageUrl = listing.photoPath
-                   )
+                items(state.recentlySeenHousings) { listing ->
+                    Row(
+                        modifier = Modifier.padding(vertical = 4.dp, horizontal = 16.dp)
+                    ) {
+                        HousingBasicInfoCard(
+                            title = listing.title,
+                            rating = listing.rating,
+                            pricePerMonthLabel = "$" + listing.price.toString() + "/month",
+                            imageUrl = listing.photoPath
+                        )
+                    }
                 }
             }
         }
@@ -162,10 +174,38 @@ val sampleListingData = List(10) { index ->
     ListingItemData("Spacious Apartment ${index + 1}", R.drawable.sample_house)
 }
 
+@Composable
+fun LoadingScreen(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(BlueCallToAction)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            CircularProgressIndicator(
+                color = Color.White
+            )
+
+            Text(
+                text = "Preparando todo para ti...",
+                style = LocalDSTypography.current.SubtitleView,
+                textAlign = TextAlign.Center,
+                color = Color.White
+            )
+        }
+    }
+}
+
+
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun DefaultPreview_MainScreen() {
     AppTheme {
-        MainScreen()
+        LoadingScreen()
     }
 }
