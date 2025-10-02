@@ -12,45 +12,45 @@ import androidx.compose.ui.Modifier
 import com.team21.myapplication.ui.theme.AppTheme
 
 /**
- * Activity para crear un nuevo post de vivienda
+ * Activity for creating a new housing post
  *
- * FUNCIÓN:
- * Esta Activity sirve como contenedor para la vista Composable
- * y maneja la navegación cuando el post se crea exitosamente
+ * FUNCTION:
+ * This Activity serves as a container for the Composable view
+ * and handles navigation when the post is successfully created
  */
 class CreatePostActivity : ComponentActivity() {
 
-    // Obtener instancia del ViewModel usando by viewModels()
-    // Esto asegura que el ViewModel sobreviva a cambios de configuración
+    // Get ViewModel instance using by viewModels()
+    // This ensures the ViewModel survives configuration changes
     private val viewModel: CreatePostViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Configurar el contenido con Compose
+        // Configure content with Compose
         setContent {
-            // Aplicar el tema de tu aplicación
+            // Apply your application's theme
             AppTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    // Renderizar la vista de creación de post
+                    // Render the post creation view
                     CreatePostScreenLayout(
                         viewModel = viewModel,
                         onPostCreated = {
-                            // Callback cuando el post se crea exitosamente
+                            // Callback when the post is successfully created
                             Toast.makeText(
                                 this@CreatePostActivity,
                                 "Post created successfully",
                                 Toast.LENGTH_SHORT
                             ).show()
 
-                            // Finalizar la Activity y volver a la anterior
+                            // Finish the Activity and return to the previous one
                             finish()
                         },
                         onNavigateBack = {
-                            // Callback para el botón de retroceso
+                            // Callback for the back button
                             finish()
                         }
                     )

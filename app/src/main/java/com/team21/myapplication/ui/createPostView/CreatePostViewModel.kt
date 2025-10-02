@@ -9,23 +9,24 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import android.net.Uri
+import com.team21.myapplication.data.model.Ammenities
 
 /**
- * ViewModel para manejar la lógica de creación de posts
+ * ViewModel to manage the logic of creating posts
  *
  * El ViewModel:
- * 1. Expone estados observables (StateFlow) para que la UI reaccione
- * 2. Valida los datos antes de enviarlos al Repository
- * 3. Maneja las operaciones asíncronas con coroutines
+ * 1. Exposes observable states (StateFlow) for the UI to react to
+ * 2. Validate the data before sending it to the Repository.
+ * 3. Handle asynchronous operations with coroutines
  */
 class CreatePostViewModel : ViewModel() {
 
-    // Instancia del Repository para acceder a Firebase
+    // Repository instance to access Firebase
     private val repository = HousingPostRepository()
 
-    // --- ESTADOS OBSERVABLES ---
+    // OBSERVABLE STATES
 
-    // Estados para los campos del formulario
+    // States for the form fields
     private val _title = MutableStateFlow("")
     val title: StateFlow<String> = _title.asStateFlow()
 
@@ -38,25 +39,30 @@ class CreatePostViewModel : ViewModel() {
     private val _address = MutableStateFlow("")
     val address: StateFlow<String> = _address.asStateFlow()
 
-    // Tag seleccionado (solo uno)
+    // Selected tag (only one)
     private val _selectedTagId = MutableStateFlow<String?>(null)
     val selectedTagId: StateFlow<String?> = _selectedTagId.asStateFlow()
 
-    // --- NUEVOS ESTADOS PARA IMÁGENES ---
+    // Selected amenities
+    private val _selectedAmenities = MutableStateFlow<List<Ammenities>>(emptyList())
+    val selectedAmenities: StateFlow<List<Ammenities>> = _selectedAmenities.asStateFlow()
 
-    // Foto principal (obligatoria)
+
+    // --- NEW STATES FOR IMAGES ---
+
+    // Main photo (mandatory)
     private val _mainPhoto = MutableStateFlow<Uri?>(null)
     val mainPhoto: StateFlow<Uri?> = _mainPhoto.asStateFlow()
 
-    // Fotos adicionales (opcionales, máximo 9)
+    // Additional photos (optional, maximum 9)
     private val _additionalPhotos = MutableStateFlow<List<Uri>>(emptyList())
     val additionalPhotos: StateFlow<List<Uri>> = _additionalPhotos.asStateFlow()
 
-    // Estado de creación del post
+    // Post creation state
     private val _createPostState = MutableStateFlow<CreatePostState>(CreatePostState.Idle)
     val createPostState: StateFlow<CreatePostState> = _createPostState.asStateFlow()
 
-// --- FUNCIONES PARA ACTUALIZAR CAMPOS DE TEXTO ---
+// --- FUNCTIONS TO UPDATE TEXT FIELDS ---
 
     fun updateTitle(newTitle: String) {
         _title.value = newTitle
@@ -75,39 +81,49 @@ class CreatePostViewModel : ViewModel() {
         _address.value = newAddress
     }
 
+    // --- FUNCTION TO HANDLE TAGS ---
     fun selectTag(tagId: String) {
         _selectedTagId.value = if (_selectedTagId.value == tagId) {
-            null // Si ya está seleccionado, deseleccionar
+            null // If already selected, deselect
         } else {
-            tagId // Seleccionar el nuevo tag
+            tagId // Select the new tag
         }
     }
 
-    // --- NUEVAS FUNCIONES PARA MANEJAR IMÁGENES ---
+    // --- FUNCTION TO HANDLE AMENITIES ---
 
     /**
-     * Establece la foto principal
-     * Solo puede haber una foto principal
+     * Updates the list of selected amenities
+     */
+    fun updateSelectedAmenities(amenities: List<Ammenities>) {
+        _selectedAmenities.value = amenities
+    }
+
+    // --- NEW FUNCTIONS TO HANDLE IMAGES ---
+
+    /**
+     * Sets the main photo
+     * There can only be one main photo
      */
     fun setMainPhoto(uri: Uri) {
         _mainPhoto.value = uri
     }
 
     /**
-     * Elimina la foto principal
+     * Removes the main photo
      */
     fun removeMainPhoto() {
         _mainPhoto.value = null
     }
 
     /**
-     * Agrega fotos adicionales
-     * Máximo 9 fotos adicionales
+     * Adds additional photos
+     * Maximum 9 additional photos
      */
     fun addAdditionalPhotos(uris: List<Uri>) {
         val currentPhotos = _additionalPhotos.value.toMutableList()
 
-        // Calcular cuántas fotos se pueden agregar (máximo 9 en total)
+        // Calculate how many photos can be added (maximum 9 in total)
         val remainingSlots = 9 - currentPhotos.size
         val photosToAdd = uris.take(remainingSlots)
 
@@ -116,7 +132,7 @@ class CreatePostViewModel : ViewModel() {
     }
 
     /**
-     * Elimina una foto adicional específica
+     * Removes a specific additional photo
      */
     fun removeAdditionalPhoto(uri: Uri) {
         val currentPhotos = _additionalPhotos.value.toMutableList()
@@ -125,79 +141,80 @@ class CreatePostViewModel : ViewModel() {
     }
 
     /**
-     * Limpia todas las fotos adicionales
+     * Clears all additional photos
      */
     fun clearAdditionalPhotos() {
         _additionalPhotos.value = emptyList()
     }
 
     /**
-     * Obtiene el total de fotos (principal + adicionales)
+     * Gets the total number of photos (main + additional)
      */
     fun getTotalPhotosCount(): Int {
         val mainPhotoCount = if (_mainPhoto.value != null) 1 else 0
         return mainPhotoCount + _additionalPhotos.value.size
     }
 
-    // --- FUNCIÓN PRINCIPAL: CREAR POST ---
+    // --- MAIN FUNCTION: CREATE POST ---
 
     fun createPost() {
-        // 1. VALIDACIÓN DE DATOS
+        // 1. DATA VALIDATION
 
         if (_title.value.isBlank()) {
-            _createPostState.value = CreatePostState.Error("El título es obligatorio")
+            _createPostState.value = CreatePostState.Error("The title is mandatory")
             return
         }
 
         if (_title.value.length < 3) {
-            _createPostState.value = CreatePostState.Error("El título debe tener al menos 3 caracteres")
+            _createPostState.value = CreatePostState.Error("The title must have at least 3 characters")
             return
         }
 
         if (_address.value.isBlank()) {
-            _createPostState.value = CreatePostState.Error("La dirección es obligatoria")
+            _createPostState.value = CreatePostState.Error("The address is mandatory")
             return
         }
 
         val priceValue = _price.value.toDoubleOrNull()
         if (priceValue == null || priceValue <= 0) {
-            _createPostState.value = CreatePostState.Error("Ingresa un precio válido mayor a 0")
+            _createPostState.value = CreatePostState.Error("Enter a valid price greater than 0")
             return
         }
 
-        // NUEVA VALIDACIÓN: Foto principal obligatoria
+        // NEW VALIDATION: Main photo is mandatory
         if (_mainPhoto.value == null) {
-            _createPostState.value = CreatePostState.Error("Debes agregar una foto principal")
+            _createPostState.value = CreatePostState.Error("You must add a main photo")
             return
         }
 
-        // 2. CAMBIAR ESTADO A LOADING
+        // 2. CHANGE STATE TO LOADING
         _createPostState.value = CreatePostState.Loading
 
-        // 3. EJECUTAR OPERACIÓN ASÍNCRONA
+        // 3. EXECUTE ASYNCHRONOUS OPERATION
         viewModelScope.launch {
-            // Preparar todas las fotos (principal + adicionales)
+            // Prepare all photos (main + additional)
             val allPhotos = mutableListOf<Uri>()
             _mainPhoto.value?.let { allPhotos.add(it) }
             allPhotos.addAll(_additionalPhotos.value)
 
-            // Llamar al Repository con las imágenes
+            // Call the Repository with the images
             val result = repository.createHousingPost(
                 title = _title.value.trim(),
                 description = _description.value.trim(),
                 price = priceValue,
                 address = _address.value.trim(),
-                imageUris = allPhotos, // Pasar las URIs de las imágenes
-                selectedTagId = _selectedTagId.value
+                imageUris = allPhotos, // Pass the image URIs
+                selectedTagId = _selectedTagId.value,
+                selectedAmenities = _selectedAmenities.value
             )
 
-            // 4. ACTUALIZAR ESTADO SEGÚN RESULTADO
+            // 4. UPDATE STATE ACCORDING TO RESULT
             _createPostState.value = if (result.isSuccess) {
                 val createdPost = result.getOrNull()!!
                 CreatePostState.Success(createdPost)
             } else {
                 val errorMessage = result.exceptionOrNull()?.message
-                    ?: "Error desconocido al crear el post"
+                    ?: "Unknown error while creating the post"
                 CreatePostState.Error(errorMessage)
             }
         }
@@ -208,7 +225,7 @@ class CreatePostViewModel : ViewModel() {
     }
 
     /**
-     * Limpia todos los campos del formulario incluyendo las imágenes
+     * Clears all form fields including images
      */
     fun clearForm() {
         _title.value = ""
@@ -219,6 +236,7 @@ class CreatePostViewModel : ViewModel() {
         _additionalPhotos.value = emptyList()
         _createPostState.value = CreatePostState.Idle
         _selectedTagId.value = null
+        _selectedAmenities.value = emptyList()
     }
 }
 

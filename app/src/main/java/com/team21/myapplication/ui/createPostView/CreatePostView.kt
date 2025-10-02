@@ -3,7 +3,6 @@ package com.team21.myapplication.ui.createPostView
 import android.Manifest
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -17,14 +16,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -33,7 +32,6 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.team21.myapplication.R
 import com.team21.myapplication.ui.components.buttons.BlueButton
 import com.team21.myapplication.ui.components.buttons.BorderButton
 import com.team21.myapplication.ui.components.buttons.GrayButton
@@ -41,19 +39,20 @@ import com.team21.myapplication.ui.components.carousel.HorizontalCarousel
 import com.team21.myapplication.ui.components.icons.AppIcons
 import com.team21.myapplication.ui.components.inputs.PlaceholderTextField
 import com.team21.myapplication.ui.components.text.BlackText
-import com.team21.myapplication.ui.theme.BlueCallToAction
+import com.team21.myapplication.ui.theme.*
 import kotlinx.coroutines.launch
 import java.io.File
+import androidx.compose.ui.window.Dialog
 
 /**
- * Vista principal para crear un nuevo post
+ * Main view to create a new post
  *
- * ARQUITECTURA:
- * Esta vista observa los estados del ViewModel y reacciona a los cambios
+ * ARCHITECTURE:
+ * This view observes the ViewModel states and reacts to changes
  *
- * @param viewModel ViewModel que maneja la lógica de negocio
- * @param onPostCreated Callback que se ejecuta cuando el post se crea exitosamente
- * @param onNavigateBack Callback para volver atrás
+ * @param viewModel ViewModel that handles the business logic
+ * @param onPostCreated Callback that is executed when the post is successfully created
+ * @param onNavigateBack Callback to go back
  */
 @Composable
 fun CreatePostScreenLayout(
@@ -62,7 +61,7 @@ fun CreatePostScreenLayout(
     onNavigateBack: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    // --- ESTADOS DEL VIEWMODEL ---
+    // --- VIEWMODEL STATES ---
     val title by viewModel.title.collectAsState()
     val description by viewModel.description.collectAsState()
     val price by viewModel.price.collectAsState()
@@ -71,19 +70,24 @@ fun CreatePostScreenLayout(
     val additionalPhotos by viewModel.additionalPhotos.collectAsState()
     val createPostState by viewModel.createPostState.collectAsState()
 
-    // --- ESTADOS LOCALES ---
+    // --- LOCAL STATES ---
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var photoUri by remember { mutableStateOf<Uri?>(null) }
 
-    // --- LAUNCHER PARA SELECCIONAR FOTO PRINCIPAL ---
+    // --- NEW: STATE FOR DIALOG AND AMENITIES VIEWMODEL ---
+    var showAmenitiesDialog by remember { mutableStateOf(false) }
+    val selectedAmenities by viewModel.selectedAmenities.collectAsState()
+    val amenitiesViewModel: AmenitiesViewModel = viewModel() // Vi
+
+    // --- LAUNCHER FOR SELECTING MAIN PHOTO ---
     val mainPhotoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let { viewModel.setMainPhoto(it) }
     }
 
-    // --- LAUNCHER PARA SELECCIONAR FOTOS ADICIONALES (MÚLTIPLES) ---
+    // --- LAUNCHER FOR SELECTING ADDITIONAL PHOTOS (MULTIPLE) ---
     val additionalPhotosPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
     ) { uris: List<Uri> ->
@@ -92,27 +96,27 @@ fun CreatePostScreenLayout(
         }
     }
 
-    // --- LAUNCHER PARA TOMAR FOTO CON LA CÁMARA ---
+    // --- LAUNCHER FOR TAKING A PHOTO WITH THE CAMERA ---
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
         if (success && photoUri != null) {
-            // Si la foto principal está vacía, usar esta como principal
+            // If main photo is empty, use this as main
             if (mainPhoto == null) {
                 viewModel.setMainPhoto(photoUri!!)
             } else {
-                // Si ya hay foto principal, agregar como adicional
+                // If there is already a main photo, add as additional
                 viewModel.addAdditionalPhotos(listOf(photoUri!!))
             }
         }
     }
 
-    // --- LAUNCHER PARA PERMISOS DE CÁMARA ---
+    // --- LAUNCHER FOR CAMERA PERMISSIONS ---
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            // Permiso concedido, tomar foto
+            // Permission granted, take photo
             val file = File(context.cacheDir, "temp_image_${System.currentTimeMillis()}.jpg")
             photoUri = FileProvider.getUriForFile(
                 context,
@@ -122,20 +126,20 @@ fun CreatePostScreenLayout(
             cameraLauncher.launch(photoUri!!)
         } else {
             scope.launch {
-                snackbarHostState.showSnackbar("Permiso de cámara denegado")
+                snackbarHostState.showSnackbar("Camera permission denied")
             }
         }
     }
 
-    // --- FUNCIÓN PARA VERIFICAR Y SOLICITAR PERMISOS DE CÁMARA ---
+    // --- FUNCTION TO CHECK AND REQUEST CAMERA PERMISSIONS ---
     fun checkCameraPermissionAndTakePhoto() {
         val permission = Manifest.permission.CAMERA
         when {
             ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED -> {
-                // Permiso ya concedido
-                val file = java.io.File.createTempFile("camera_", ".jpg", context.cacheDir)
+                // Permission already granted
+                val file = File.createTempFile("camera_", ".jpg", context.cacheDir)
 
-                photoUri = androidx.core.content.FileProvider.getUriForFile(
+                photoUri = FileProvider.getUriForFile(
                     context,
                     "${context.packageName}.fileprovider",
                     file
@@ -143,35 +147,35 @@ fun CreatePostScreenLayout(
                 cameraLauncher.launch(photoUri!!)
             }
             else -> {
-                // Solicitar permiso
+                // Request permission
                 cameraPermissionLauncher.launch(permission)
             }
         }
     }
 
-    // --- EFECTOS SECUNDARIOS ---
-    // LaunchedEffect se ejecuta cuando createPostState cambia
+    // --- SIDE EFFECTS ---
+    // LaunchedEffect runs when createPostState changes
     LaunchedEffect(createPostState) {
         when (val state = createPostState) {
             is CreatePostState.Success -> {
-                // Mostrar mensaje de éxito
-                snackbarHostState.showSnackbar("¡Post creado exitosamente!")
-                // Limpiar formulario
+                // Show success message
+                snackbarHostState.showSnackbar("Post created successfully!")
+                // Clear form
                 viewModel.clearForm()
-                // Ejecutar callback de navegación
+                // Execute navigation callback
                 onPostCreated()
             }
             is CreatePostState.Error -> {
-                // Mostrar mensaje de error
+                // Show error message
                 snackbarHostState.showSnackbar(state.message)
-                // Resetear estado después de mostrar error
+                // Reset state after showing error
                 viewModel.resetState()
             }
-            else -> { /* No hacer nada para Idle y Loading */ }
+            else -> { /* Do nothing for Idle and Loading */ }
         }
     }
 
-    // --- UI PRINCIPAL ---
+    // --- MAIN UI ---
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -203,14 +207,14 @@ fun CreatePostScreenLayout(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- SECCIÓN: INFORMACIÓN BÁSICA ---
+            // --- SECTION: BASIC INFORMATION ---
             BlackText(
                 text = "Basic Information",
                 size = 24.sp,
                 fontWeight = FontWeight.Bold
             )
 
-            // CAMPO: TÍTULO
+            // FIELD: TITLE
             BlackText(
                 text = "Title",
                 size = 16.sp,
@@ -220,11 +224,11 @@ fun CreatePostScreenLayout(
             PlaceholderTextField(
                 placeholderText = "Ex: Cozy Home",
                 value = title,
-                onValueChange = { viewModel.updateTitle(it) } // Actualiza el ViewModel
+                onValueChange = { viewModel.updateTitle(it) } // Updates the ViewModel
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            // CAMPO: PRECIO
+            // FIELD: PRICE
             BlackText(
                 text = "Rent (per month)",
                 size = 16.sp,
@@ -234,11 +238,11 @@ fun CreatePostScreenLayout(
             PlaceholderTextField(
                 placeholderText = "Ex: 950000",
                 value = price,
-                onValueChange = { viewModel.updatePrice(it) } // Filtra y actualiza
+                onValueChange = { viewModel.updatePrice(it) } // Filters and updates
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            // CAMPO: DESCRIPCIÓN
+            // FIELD: DESCRIPTION
             BlackText(
                 text = "Description",
                 size = 16.sp,
@@ -253,7 +257,7 @@ fun CreatePostScreenLayout(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- TIPO DE VIVIENDA (Por ahora solo visual) ---
+            // --- HOUSING TYPE (tag)
             BlackText(
                 text = "Type of housing",
                 size = 16.sp,
@@ -261,15 +265,15 @@ fun CreatePostScreenLayout(
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Observar el tag seleccionado
+            // Observe the selected tag
             val selectedTagId by viewModel.selectedTagId.collectAsState()
 
-            // Definir los IDs de los tags según tu Firebase
+            // Define the tag IDs according to your Firebase
             val housingTags = listOf(
                 "HousingTag1" to "House" to AppIcons.Home,
                 "HousingTag2" to "Apartment" to AppIcons.Apartments,
                 "HousingTag3" to "Cabin" to AppIcons.Cabins,
-                "HousingTag5" to "Residence" to AppIcons.Houses
+                "HousingTag11" to "Residence" to AppIcons.Houses
             )
 
             Row(
@@ -288,7 +292,7 @@ fun CreatePostScreenLayout(
                             Icon(
                                 imageVector = icon,
                                 contentDescription = tagName,
-                                tint = if (isSelected) MaterialTheme.colorScheme.primary else BlueCallToAction
+                                tint = if (isSelected) BlueCallToAction else BlackText
                             )
                         }
                     )
@@ -311,7 +315,7 @@ fun CreatePostScreenLayout(
                             Icon(
                                 imageVector = icon,
                                 contentDescription = tagName,
-                                tint = if (isSelected) MaterialTheme.colorScheme.primary else BlueCallToAction
+                                tint = if (isSelected) BlueCallToAction else BlackText
                             )
                         }
                     )
@@ -319,13 +323,14 @@ fun CreatePostScreenLayout(
             }
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- AMENIDADES (Por ahora solo visual) ---
+            // --- AMENITIES (For now just visual) ---
             BlackText(
                 text = "Amenities",
                 size = 16.sp,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(8.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -336,54 +341,60 @@ fun CreatePostScreenLayout(
                         .width(85.dp)
                         .clip(RoundedCornerShape(20.dp)),
                     text = "Add",
-                    onClick = {}
+                    onClick = {showAmenitiesDialog = true }
                 )
-                HorizontalCarousel(
-                    items = listOf("5 Beds", "2 Baths", "70 m2"),
-                    contentPadding = PaddingValues(horizontal = 0.dp),
-                    horizontalSpacing = 8.dp,
-                    snapToItems = false
-                ) { label ->
-                    GrayButton(text = label, onClick = {})
+                if (selectedAmenities.isNotEmpty()) {
+                    HorizontalCarousel(
+                        items = selectedAmenities.map { it.name },
+                        contentPadding = PaddingValues(horizontal = 0.dp),
+                        horizontalSpacing = 8.dp,
+                        snapToItems = false
+                    ) { label ->
+                        GrayButton(text = label, onClick = {})
+                    }
+                } else {
+                    BlackText(
+                        text = "No amenities selected"
+                    )
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- COMPAÑEROS DE CUARTO (Por ahora solo visual) ---
-            BlackText(
-                text = "Roommates' Profile",
-                size = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                BlueButton(
-                    modifier = Modifier
-                        .height(40.dp)
-                        .width(85.dp)
-                        .clip(RoundedCornerShape(20.dp)),
-                    text = "Add",
-                    onClick = {}
-                )
-                HorizontalCarousel(
-                    items = listOf("Joan", "Majo", "Arturo Jose"),
-                    contentPadding = PaddingValues(horizontal = 0.dp),
-                    horizontalSpacing = 8.dp,
-                    snapToItems = false
-                ) { label ->
-                    GrayButton(text = label, onClick = {})
-                }
-            }
+            // --- Roommates ---
+//            BlackText(
+//                text = "Roommates' Profile",
+//                size = 16.sp,
+//                fontWeight = FontWeight.Bold
+//            )
+//            Spacer(modifier = Modifier.height(8.dp))
+//            Row(
+//                modifier = Modifier.fillMaxWidth(),
+//                horizontalArrangement = Arrangement.spacedBy(8.dp)
+//            ) {
+//                BlueButton(
+//                    modifier = Modifier
+//                        .height(40.dp)
+//                        .width(85.dp)
+//                        .clip(RoundedCornerShape(20.dp)),
+//                    text = "Add",
+//                    onClick = {}
+//                )
+//                HorizontalCarousel(
+//                    items = listOf("Joan", "Majo", "Arturo Jose"),
+//                    contentPadding = PaddingValues(horizontal = 0.dp),
+//                    horizontalSpacing = 8.dp,
+//                    snapToItems = false
+//                ) { label ->
+//                    GrayButton(text = label, onClick = {})
+//                }
+//            }
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- SECCIÓN DE FOTOS (ACTUALIZADA Y FUNCIONAL) ---
+            // --- PHOTOS SECTION (UPDATED AND FUNCTIONAL) ---
             BlackText(text = "Add Photos", size = 16.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
 
-            // BOTÓN 1: Agregar foto principal
+            // BUTTON 1: Add main photo
             BorderButton(
                 text = if (mainPhoto == null) "Add main photo" else "Change main photo",
                 onClick = { mainPhotoPickerLauncher.launch("image/*") },
@@ -396,7 +407,7 @@ fun CreatePostScreenLayout(
                 }
             )
 
-            // Vista previa de la foto principal
+            // Preview of the main photo
             if (mainPhoto != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Card(
@@ -410,7 +421,7 @@ fun CreatePostScreenLayout(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Foto Principal",
+                            text = "Main Photo",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -425,7 +436,7 @@ fun CreatePostScreenLayout(
                                     .clip(RoundedCornerShape(8.dp)),
                                 contentScale = ContentScale.Crop
                             )
-                            // Botón para eliminar la foto principal
+                            // Button to remove the main photo
                             IconButton(
                                 onClick = { viewModel.removeMainPhoto() },
                                 modifier = Modifier
@@ -451,7 +462,7 @@ fun CreatePostScreenLayout(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // BOTÓN 2: Tomar foto con la cámara
+            // BUTTON 2: Take photo with the camera
             BorderButton(
                 text = "Take new photos",
                 onClick = { checkCameraPermissionAndTakePhoto() },
@@ -466,7 +477,7 @@ fun CreatePostScreenLayout(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // BOTÓN 3: Agregar fotos adicionales
+            // BUTTON 3: Add additional photos
             BorderButton(
                 text = "Add additional photos (${additionalPhotos.size}/9)",
                 onClick = { additionalPhotosPickerLauncher.launch("image/*") },
@@ -480,7 +491,7 @@ fun CreatePostScreenLayout(
                 enabled = additionalPhotos.size < 9
             )
 
-            // Vista previa de fotos adicionales
+            // Preview of additional photos
             if (additionalPhotos.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Card(
@@ -493,7 +504,7 @@ fun CreatePostScreenLayout(
                         modifier = Modifier.padding(8.dp)
                     ) {
                         Text(
-                            text = "Fotos Adicionales (${additionalPhotos.size})",
+                            text = "Additional Photos (${additionalPhotos.size})",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -516,7 +527,7 @@ fun CreatePostScreenLayout(
                                             ),
                                         contentScale = ContentScale.Crop
                                     )
-                                    // Botón para eliminar foto adicional
+                                    // Button to remove additional photo
                                     IconButton(
                                         onClick = { viewModel.removeAdditionalPhoto(uri) },
                                         modifier = Modifier
@@ -542,7 +553,7 @@ fun CreatePostScreenLayout(
             }
             Spacer(modifier = Modifier.height(16.dp))
 
-            // CAMPO: DIRECCIÓN
+            // FIELD: ADDRESS
             BlackText(
                 text = "Address",
                 size = 16.sp,
@@ -556,27 +567,27 @@ fun CreatePostScreenLayout(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            // MAPA (Por ahora solo visual)
-            Image(
-                painter = painterResource(id = R.drawable.simple_map),
-                contentDescription = "Map",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-            )
-            Spacer(modifier = Modifier.height(32.dp))
+            // MAP (For now just visual)
+//            Image(
+//                painter = painterResource(id = R.drawable.simple_map),
+//                contentDescription = "Map",
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .clip(RoundedCornerShape(16.dp))
+//            )
+//            Spacer(modifier = Modifier.height(32.dp))
 
-            // --- BOTÓN DE CREAR ---
+            // --- CREATE BUTTON ---
             BlueButton(
                 text = if (createPostState is CreatePostState.Loading) "Creating..." else "Create",
                 onClick = {
-                    // Llamar a la función del ViewModel para crear el post
+                    // Call the ViewModel function to create the post
                     viewModel.createPost()
                 },
-                enabled = createPostState !is CreatePostState.Loading // Deshabilitar si está cargando
+                enabled = createPostState !is CreatePostState.Loading // Disable if loading
             )
 
-            // Mostrar indicador de carga si está en estado Loading
+            // Show loading indicator if in Loading state
             if (createPostState is CreatePostState.Loading) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Box(
@@ -588,13 +599,35 @@ fun CreatePostScreenLayout(
             }
         }
 
-        // --- SNACKBAR HOST (MENSAJES) ---
+        // --- SNACKBAR HOST (MESSAGES) ---
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(16.dp)
         )
+    }
+
+    // Dialog for selecting amenities
+    if (showAmenitiesDialog) {
+        Dialog(onDismissRequest = { showAmenitiesDialog = false }) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.8f),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                AddAmenitiesLayout(
+                    viewModel = amenitiesViewModel,
+                    initialAmenities = selectedAmenities,
+                    onSave = { newAmenities ->
+                        viewModel.updateSelectedAmenities(newAmenities)
+                        showAmenitiesDialog = false
+                    },
+                    onBack = { showAmenitiesDialog = false }
+                )
+            }
+        }
     }
 }
 
