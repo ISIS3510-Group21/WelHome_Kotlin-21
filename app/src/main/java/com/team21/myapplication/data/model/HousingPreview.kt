@@ -8,6 +8,6 @@ data class HousingPreview (
     val rating: Float = 0f,
     val title: String = "",
     val photoPath: String = "",
-    val housing: DocumentReference? = null,
+    val housing: String = "",
     val reviewsCount: Int = 0
 )
