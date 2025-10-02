@@ -121,7 +121,7 @@ class SignUpViewModel : ViewModel() {
         }
 
         if (!_isStudent.value && !_isHost.value) {
-            _signUpState.value = SignUpState.Error("Selecciona the type of user")
+            _signUpState.value = SignUpState.Error("Select the type of user")
             return
         }
 

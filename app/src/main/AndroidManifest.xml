@@ -60,5 +60,15 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <activity
+            android:name=".ui.createAccountView.WelcomeActivity"
+            android:exported="true"
+            android:theme="@style/Theme.WelHome" />
+
+        <activity
+            android:name=".ui.createAccountView.SignUpActivity"
+            android:exported="false"
+            android:theme="@style/Theme.WelHome" />
+
     </application>
 </manifest>

@@ -24,76 +24,123 @@ import com.team21.myapplication.ui.components.icons.AppIcons
 import com.team21.myapplication.ui.components.inputs.PlaceholderTextField
 import com.team21.myapplication.ui.components.text.BlackText
 import com.team21.myapplication.ui.components.text.BlueText
-import com.team21.myapplication.ui.theme.BlueCallToAction
 import com.team21.myapplication.ui.theme.GrayIcon
 import com.team21.myapplication.R
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.res.painterResource
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
-fun WelcomeLayout() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()) // Enable scrolling for long content
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(36.dp))
+fun WelcomeLayout(
+    viewModel: WelcomeViewModel = viewModel(),
+    onSignInSuccess: () -> Unit = {},
+    onNavigateToSignUp: () -> Unit = {}
+) {
+    val email by viewModel.email.collectAsState()
+    val password by viewModel.password.collectAsState()
+    val signInState by viewModel.signInState.collectAsState()
 
-        Image(
-            painter = painterResource(R.drawable.app_logo),
-            contentDescription = "App Logo",
-            modifier = Modifier.size(250.dp),
-        )
+    val snackbarHostState = remember { SnackbarHostState() }
 
-        // Input Field: Name
-        BlueText(
-            text = "Email",
-            size = 16.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        PlaceholderTextField(
-            placeholderText = "youremail@example.com",
-            value ="",
-            onValueChange = {},
-        )
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // Input Field: Password
-        BlueText(
-            text = "Password",
-            size = 16.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        PlaceholderTextField(
-            placeholderText = "**********",
-            value ="",
-            onValueChange = {},
-            trailingIcon = {
-                Icon(
-                    imageVector = AppIcons.PasswordEye,
-                    contentDescription = "Info",
-                    tint = GrayIcon
-                )
+    LaunchedEffect(signInState) {
+        when (val state = signInState) {
+            is SignInState.Success -> {
+                snackbarHostState.showSnackbar("Successful login!")
+                onSignInSuccess()
             }
+            is SignInState.Error -> {
+                snackbarHostState.showSnackbar(state.message)
+                viewModel.resetState()
+            }
+            else -> {}
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()) // Enable scrolling for long content
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(36.dp))
+
+            Image(
+                painter = painterResource(R.drawable.app_logo),
+                contentDescription = "App Logo",
+                modifier = Modifier.size(250.dp),
+            )
+
+            // Input Field: Email
+            BlueText(
+                text = "Email",
+                size = 16.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            PlaceholderTextField(
+                placeholderText = "youremail@example.com",
+                value = email,
+                onValueChange = {viewModel.updateEmail(it)},
+            )
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Input Field: Password
+            BlueText(
+                text = "Password",
+                size = 16.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            PlaceholderTextField(
+                placeholderText = "**********",
+                value = password,
+                onValueChange = {viewModel.updatePassword(it)},
+                trailingIcon = {
+                    Icon(
+                        imageVector = AppIcons.PasswordEye,
+                        contentDescription = "Info",
+                        tint = GrayIcon
+                    )
+                }
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            BlueText(text = "Forgot password?")
+            Spacer(modifier = Modifier.height(32.dp))
+            // Blue Button: "LogIn"
+            BlueButton(
+                text = if (signInState is SignInState.Loading) "Loading..." else "LogIn",
+                onClick = {viewModel.signIn() },
+                enabled = signInState !is SignInState.Loading
+            )
+            if (signInState is SignInState.Loading) {
+                Spacer(modifier = Modifier.height(16.dp))
+                CircularProgressIndicator()
+            }
+
+            Spacer(modifier = Modifier.height(40.dp))
+            BlackText(text = "Not a member?")
+
+            Spacer(modifier = Modifier.height(8.dp))
+            GrayButton(text = "Register now", onClick = onNavigateToSignUp)
+
+        }
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(16.dp)
         )
-        Spacer(modifier = Modifier.height(8.dp))
-        BlueText(text = "Forgot password?")
-        Spacer(modifier = Modifier.height(32.dp))
-        // Blue Button: "LogIn"
-        BlueButton(text = "LogIn", onClick = { /* TODO: Handle next action */ })
-
-        Spacer(modifier = Modifier.height(40.dp))
-        BlackText(text="Not a member?")
-
-        Spacer(modifier = Modifier.height(8.dp))
-        GrayButton(text = "Register now", onClick = { /* TODO: Handle next action */ })
-
     }
 }
 

@@ -87,7 +87,7 @@ fun SignUpLayout(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start
         ) {
-            IconButton(onClick = {/* TODO: action */ }) {
+            IconButton(onClick = onNavigateBack) {
                 Icon(
                     imageVector = AppIcons.GoBack,
                     contentDescription = "Back",
@@ -340,12 +340,12 @@ fun SignUpLayout(
         // Radio Buttons for "Type of user"
         Column(modifier = Modifier.fillMaxWidth()) {
             CustomRadioButton(
-                text = "Host (Offering accomodation)",
+                text = "Host (Offering accommodation)",
                 selected = isHost,
                 onClick = {viewModel.toggleUserType(false) }
             )
             CustomRadioButton(
-                text = "Student (Looking for accomodation)",
+                text = "Student (Looking for accommodation)",
                 selected = isStudent,
                 onClick = {viewModel.toggleUserType(true) }
             )
