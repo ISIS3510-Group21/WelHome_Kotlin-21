@@ -22,10 +22,9 @@ import com.team21.myapplication.R
 import com.team21.myapplication.ui.theme.*
 
 @Composable
-fun HousingInfoCard(
+fun HousingBasicInfoCard(
     title: String,
-    rating: Double,
-    reviewsCount: Int,
+    rating: Float,
     pricePerMonthLabel: String,
     modifier: Modifier = Modifier,
     imageUrl: String? = null,
@@ -87,12 +86,6 @@ fun HousingInfoCard(
                         style = LocalDSTypography.current.Description,
                         color = BlackText
                     )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = "$reviewsCount reviews",
-                        style = LocalDSTypography.current.Description,
-                        color = GrayIcon
-                    )
                 }
 
                 Spacer(Modifier.height(6.dp))
@@ -112,10 +105,9 @@ fun HousingInfoCard(
 @Composable
 private fun HousingInfoCard_Preview() {
     AppTheme {
-        HousingInfoCard(
+        HousingBasicInfoCard(
             title = "Portal de los Rosales",
-            rating = 4.95,
-            reviewsCount = 22,
+            rating = 4.95f,
             pricePerMonthLabel = "$700’000 /month",
             imageRes = R.drawable.sample_house
         )
