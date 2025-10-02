@@ -11,11 +11,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.team21.myapplication.R
+import com.team21.myapplication.ui.components.cards.HousingBasicInfoCard
 import com.team21.myapplication.ui.components.cards.HousingInfoCard
 import com.team21.myapplication.ui.components.carousel.HorizontalCarousel
 import com.team21.myapplication.ui.components.inputs.SearchBar
@@ -37,7 +41,9 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen() {
+fun MainScreen(viewModel: MainViewModel = viewModel()) {
+    val state by viewModel.homeState.collectAsStateWithLifecycle()
+
     Scaffold (
         bottomBar = {
             AppNavBar(
@@ -84,16 +90,15 @@ fun MainScreen() {
                 }
             }
 
-            items(sampleListingData) { listing -> // Replace with your actual data
+            items(state.recentlySeenHousings) { listing ->
                 Row(
                     modifier = Modifier.padding(vertical = 4.dp, horizontal = 16.dp)
                 ) {
-                   HousingInfoCard(
+                   HousingBasicInfoCard(
                        title = listing.title,
                        rating = listing.rating,
-                       reviewsCount = listing.reviewsCount,
-                       pricePerMonthLabel = listing.pricePerMonthLabel,
-                       imageRes = R.drawable.sample_house
+                       pricePerMonthLabel = "$" + listing.price.toString() + "/month",
+                       imageUrl = listing.photoPath
                    )
                 }
             }
@@ -139,7 +144,7 @@ fun RecommendedForYouSection() {
         item ->
         HousingInfoCard(
             title = item.title,
-            rating = item.rating,
+            rating = item.rating.toDouble(),
             reviewsCount = item.reviewsCount,
             pricePerMonthLabel = item.pricePerMonthLabel,
             imageRes = item.imageUrl
@@ -151,7 +156,7 @@ fun RecommendedForYouSection() {
 data class ListingItemData(
     val title: String,
     val imageUrl: Int,
-    val rating: Double = 4.0,
+    val rating: Float = 4.0f,
     val reviewsCount: Int = 30,
     val pricePerMonthLabel: String = "$700/month")
 
