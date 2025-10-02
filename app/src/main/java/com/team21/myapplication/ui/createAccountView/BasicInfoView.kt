@@ -8,6 +8,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -24,6 +28,13 @@ import com.team21.myapplication.ui.theme.*
 
 @Composable
 fun CreateAccountLayout() {
+    var text1 by remember { mutableStateOf("") }
+    var text2 by remember { mutableStateOf("") }
+    var text3 by remember { mutableStateOf("") }
+    var text4 by remember { mutableStateOf("") }
+    var text5 by remember { mutableStateOf("") }
+    var text6 by remember { mutableStateOf("") }
+    var text7 by remember { mutableStateOf("") }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -82,7 +93,9 @@ fun CreateAccountLayout() {
         )
         Spacer(modifier = Modifier.height(8.dp))
         PlaceholderTextField(
-            placeholderText = "Jhoan Doe"
+            placeholderText = "Jhoan Doe",
+            value = text1,
+            onValueChange = { text1 = it }
         )
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -95,7 +108,9 @@ fun CreateAccountLayout() {
         )
         Spacer(modifier = Modifier.height(8.dp))
         PlaceholderTextField(
-            placeholderText = "youremail@example.com"
+            placeholderText = "youremail@example.com",
+            value = text2,
+            onValueChange = { text2 = it }
         )
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -109,6 +124,8 @@ fun CreateAccountLayout() {
         Spacer(modifier = Modifier.height(8.dp))
         PlaceholderTextField(
             placeholderText = "**********",
+            value = text3,
+            onValueChange = { text3 = it },
             trailingIcon = {
                 Icon(
                     imageVector = AppIcons.PasswordEye,
@@ -129,6 +146,8 @@ fun CreateAccountLayout() {
         Spacer(modifier = Modifier.height(8.dp))
         PlaceholderTextField(
             placeholderText = "**********",
+            value = text4,
+            onValueChange = { text4 = it },
             trailingIcon = {
                 Icon(
                     imageVector = AppIcons.PasswordEye,
@@ -154,6 +173,8 @@ fun CreateAccountLayout() {
             // Placeholder for Day dropdown
             PlaceholderTextField(
                 placeholderText = "Day",
+                value = text5,
+                onValueChange = { text5 = it },
                 modifier = Modifier
                     .height(50.dp)
                     .weight(1f)
@@ -162,6 +183,8 @@ fun CreateAccountLayout() {
             // Placeholder for Month dropdown
             PlaceholderTextField(
                 placeholderText = "Month",
+                value = text6,
+                onValueChange = { text6 = it },
                 modifier = Modifier
                     .height(50.dp)
                     .weight(1f)
@@ -169,6 +192,8 @@ fun CreateAccountLayout() {
             // Placeholder for Year dropdown
             PlaceholderTextField(
                 placeholderText = "Year",
+                value = text7,
+                onValueChange = { text7 = it },
                 modifier = Modifier
                     .height(50.dp)
                     .weight(1f)
@@ -184,7 +209,7 @@ fun CreateAccountLayout() {
                 Spacer(modifier = Modifier.width(180.dp))
             }
             // Blue Button: "Next"
-                BlueButton(text = "Next", onClick = { /* TODO: Handle next action */ })
+            BlueButton(text = "Next", onClick = { /* TODO: Handle next action */ })
         }
     }
 }
