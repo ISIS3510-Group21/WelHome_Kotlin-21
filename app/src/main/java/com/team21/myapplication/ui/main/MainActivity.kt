@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.team21.myapplication.R
+import com.team21.myapplication.data.model.HousingPreview
 import com.team21.myapplication.ui.components.cards.HousingBasicInfoCard
 import com.team21.myapplication.ui.components.cards.HousingInfoCard
 import com.team21.myapplication.ui.components.carousel.HorizontalCarousel
@@ -74,7 +75,7 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
                 SectionTitle("Recommended for you", onBellClick = {})
             }
             item {
-                RecommendedForYouSection()
+                RecommendedForYouSection(state.recommendedHousings)
             }
             item{
                 Row(
@@ -134,20 +135,16 @@ fun SectionTitle(
 }
 
 @Composable
-fun RecommendedForYouSection() {
-    // Sample data - replace with your actual data source and data class
-    val recommendedItems = List(5) { index ->
-        ListingItemData("Beautiful house #$index", R.drawable.sample_house)
-    }
+fun RecommendedForYouSection(recommendedItems: List<HousingPreview>) {
 
     HorizontalCarousel( items = recommendedItems) {
         item ->
         HousingInfoCard(
             title = item.title,
             rating = item.rating.toDouble(),
-            reviewsCount = item.reviewsCount,
-            pricePerMonthLabel = item.pricePerMonthLabel,
-            imageRes = item.imageUrl
+            reviewsCount = 0,
+            pricePerMonthLabel = "$" + item.price.toString() + "/month",
+            imageUrl = item.photoPath
         )
     }
 }

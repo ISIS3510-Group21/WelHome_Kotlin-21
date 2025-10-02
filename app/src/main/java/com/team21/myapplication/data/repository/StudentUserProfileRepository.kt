@@ -28,8 +28,16 @@ class StudentUserProfileRepository {
             ?.await()
             ?.toObjects(HousingPreview::class.java)
 
+        val recommendedHousingPosts = doc
+            ?.reference
+            ?.collection("RecommendedHousingPosts")
+            ?.get()
+            ?.await()
+            ?.toObjects(HousingPreview::class.java)
+
         return userProfile?.copy(
-            visitedHousingPosts = visitedHousingPosts ?: emptyList()
+            visitedHousingPosts = visitedHousingPosts ?: emptyList(),
+            recommendedHousingPosts = recommendedHousingPosts ?: emptyList()
         )
     }
 }
