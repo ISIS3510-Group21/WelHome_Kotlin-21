@@ -178,7 +178,7 @@ fun LoadingScreen(modifier: Modifier = Modifier) {
             )
 
             Text(
-                text = "Preparando todo para ti...",
+                text = "Getting everything ready for you...",
                 style = LocalDSTypography.current.SubtitleView,
                 textAlign = TextAlign.Center,
                 color = Color.White
