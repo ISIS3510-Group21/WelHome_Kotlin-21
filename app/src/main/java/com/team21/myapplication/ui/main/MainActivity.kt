@@ -21,7 +21,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.team21.myapplication.R
 import com.team21.myapplication.data.model.HousingPreview
 import com.team21.myapplication.ui.components.cards.HousingBasicInfoCard
 import com.team21.myapplication.ui.components.cards.HousingInfoCard
@@ -159,19 +158,6 @@ fun RecommendedForYouSection(recommendedItems: List<HousingPreview>) {
             imageUrl = item.photoPath
         )
     }
-}
-
-// Data class for listing items
-data class ListingItemData(
-    val title: String,
-    val imageUrl: Int,
-    val rating: Float = 4.0f,
-    val reviewsCount: Int = 30,
-    val pricePerMonthLabel: String = "$700/month")
-
-// Sample data for demonstration
-val sampleListingData = List(10) { index ->
-    ListingItemData("Spacious Apartment ${index + 1}", R.drawable.sample_house)
 }
 
 @Composable
