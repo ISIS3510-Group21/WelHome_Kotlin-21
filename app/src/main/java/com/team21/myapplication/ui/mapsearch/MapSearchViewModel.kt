@@ -24,21 +24,22 @@ class MapSearchViewModel: ViewModel() {
         viewModelScope.launch {
             val posts = repository.getHousingPosts()
 
-            val locations = posts.map { post ->
-                post.location.let { location ->
-                    MapLocation(
-                        title = post.title,
-                        position = LatLng(location.lat, location.lng),
-                        rating = post.rating,
-                        price = "$" + post.price.toString() + "/month",
-                        imageUrl = post.thumbnail
-                    )
-                }
+            val locations = posts.mapNotNull { post ->
+                val geo = post.location ?: return@mapNotNull null
+                MapLocation(
+                    title = post.title,
+                    position = LatLng(geo.latitude, geo.longitude),
+                    rating = post.rating,
+                    price = "$" + post.price.toString() + "/month",
+                    imageUrl = "https://img.freepik.com/free-photo/beautiful-interior-shot-modern-house-with-white-relaxing-walls-furniture-technology_181624-3828.jpg?semt=ais_hybrid&w=740&q=80"
+                )
             }
+
             _state.value = _state.value.copy(locations = locations, isLoading = false)
             reorderPostsByDistance(_state.value.userLocation)
         }
     }
+
 
     fun onUserLocationReceived(location: LatLng) {
         _state.value = _state.value.copy(userLocation = location)

@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.gms.google.services)
+    id("kotlin-parcelize")
 }
 
 android {
@@ -52,7 +53,6 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.firebase.firestore)
-    implementation(platform("androidx.compose:compose-bom:2025.08.00"))
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.ui:ui")

@@ -32,78 +32,118 @@ fun HousingInfoCard(
     imageRes: Int? = null,
     onClick: (() -> Unit)? = null
 ) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = WhiteBackground),
-        elevation = CardDefaults.cardElevation(2.dp),
-        onClick = onClick ?: {}
-    ) {
-        Column(Modifier.fillMaxWidth()) {
+    // Usa la variante "clickable" solo si hay onClick; si no, no consume gestos.
+    if (onClick != null) {
+        Card(
+            modifier = modifier,
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = WhiteBackground),
+            elevation = CardDefaults.cardElevation(2.dp),
+            onClick = onClick
+        ) {
+            HousingInfoCardContent(
+                title = title,
+                rating = rating,
+                reviewsCount = reviewsCount,
+                pricePerMonthLabel = pricePerMonthLabel,
+                imageUrl = imageUrl,
+                imageRes = imageRes
+            )
+        }
+    } else {
+        Card(
+            modifier = modifier,
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = WhiteBackground),
+            elevation = CardDefaults.cardElevation(2.dp)
+        ) {
+            HousingInfoCardContent(
+                title = title,
+                rating = rating,
+                reviewsCount = reviewsCount,
+                pricePerMonthLabel = pricePerMonthLabel,
+                imageUrl = imageUrl,
+                imageRes = imageRes
+            )
+        }
+    }
+}
 
-            val imgModifier = Modifier
-                .fillMaxWidth()
-                .height(180.dp)
-                .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+@Composable
+private fun HousingInfoCardContent(
+    title: String,
+    rating: Double,
+    reviewsCount: Int,
+    pricePerMonthLabel: String,
+    imageUrl: String?,
+    imageRes: Int?
+) {
+    Column(Modifier.fillMaxWidth()) {
 
-            when {
-                imageUrl != null -> AsyncImage(
-                    model = imageUrl,
+        val imgModifier = Modifier
+            .fillMaxWidth()
+            .height(180.dp)
+            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+
+        when {
+            imageUrl != null -> AsyncImage(
+                model = imageUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = imgModifier
+            )
+            imageRes != null -> Image(
+                painter = painterResource(imageRes),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = imgModifier
+            )
+            else -> Image(
+                painter = painterResource(R.drawable.sample_house),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = imgModifier
+            )
+        }
+
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+
+            Text(
+                text = title,
+                style = LocalDSTypography.current.Section,
+                color = BlackText
+            )
+
+            Spacer(Modifier.height(6.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Filled.Star,
                     contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = imgModifier
+                    tint = BlackText,
+                    modifier = Modifier.size(18.dp)
                 )
-                imageRes != null -> Image(
-                    painter = painterResource(imageRes),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = imgModifier
-                )
-            }
-
-            Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
-
+                Spacer(Modifier.width(6.dp))
                 Text(
-                    text = title,
-                    style = LocalDSTypography.current.Section,
-                    color = BlackText
-                )
-
-                Spacer(Modifier.height(6.dp))
-
-                // ⭐ rating + reviews
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Star,
-                        contentDescription = null,
-                        tint = BlackText,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = String.format("%.2f", rating),
-                        style = LocalDSTypography.current.Description,
-                        color = BlackText
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = "$reviewsCount reviews",
-                        style = LocalDSTypography.current.Description,
-                        color = GrayIcon
-                    )
-                }
-
-                Spacer(Modifier.height(6.dp))
-
-
-                Text(
-                    text = pricePerMonthLabel,
+                    text = String.format("%.2f", rating),
                     style = LocalDSTypography.current.Description,
                     color = BlackText
                 )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "$reviewsCount reviews",
+                    style = LocalDSTypography.current.Description,
+                    color = GrayIcon
+                )
             }
+
+            Spacer(Modifier.height(6.dp))
+
+            Text(
+                text = pricePerMonthLabel,
+                style = LocalDSTypography.current.Description,
+                color = BlackText
+            )
         }
     }
 }

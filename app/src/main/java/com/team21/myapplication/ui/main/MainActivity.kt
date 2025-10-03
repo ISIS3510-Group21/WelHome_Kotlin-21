@@ -1,5 +1,6 @@
 package com.team21.myapplication.ui.main
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -22,14 +23,22 @@ import com.team21.myapplication.ui.components.inputs.SearchBar
 import com.team21.myapplication.ui.components.navbar.AppNavBar
 import com.team21.myapplication.ui.theme.AppTheme
 import com.team21.myapplication.ui.theme.LocalDSTypography
+import androidx.navigation.compose.rememberNavController
+import com.team21.myapplication.ui.components.navbar.AppNavGraph
 
 class MainActivity : ComponentActivity() {
+    @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             AppTheme {
-                MainScreen()
+                val navController = rememberNavController()
+                Scaffold(
+                    bottomBar = { AppNavBar(navController) }
+                ) {
+                    AppNavGraph(navController = navController)
+                }
             }
         }
     }

@@ -1,5 +1,6 @@
 package com.team21.myapplication.ui.components.inputs
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,50 +28,38 @@ fun SearchBar(
     modifier: Modifier = Modifier,
     placeholder: String = "Search",
     onSearch: ((String) -> Unit)? = null,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    asButton: Boolean = false,          // NUEVO
+    onClick: (() -> Unit)? = null       // NUEVO
 ) {
+    val base = Modifier
+        .fillMaxWidth()
+        .height(48.dp)
+
+    val clickableMod = if (asButton && onClick != null) {
+        base.clickable(enabled = enabled) { onClick() }
+    } else base
+
     TextField(
         value = query,
         onValueChange = onQueryChange,
         enabled = enabled,
-        modifier = modifier
-            .fillMaxWidth()
-            .height(48.dp),
+        readOnly = asButton,                 // <- NO abre teclado si es botón
+        modifier = modifier.then(clickableMod),
         singleLine = true,
         shape = RoundedCornerShape(24.dp),
-        leadingIcon = {
-            Icon(
-                imageVector = Icons.Filled.Search,
-                contentDescription = null,
-                tint = GrayIcon
-            )
-        },
-        placeholder = {
-            Text(
-                text = placeholder,
-                style = LocalDSTypography.current.Description,
-                color = GrayIcon
-            )
-        },
+        leadingIcon = { Icon(imageVector = Icons.Filled.Search, contentDescription = null, tint = GrayIcon) },
+        placeholder = { Text(text = placeholder, style = LocalDSTypography.current.Description, color = GrayIcon) },
         textStyle = LocalDSTypography.current.Description,
-        keyboardOptions = KeyboardOptions(
-            imeAction = ImeAction.Search,
-            keyboardType = KeyboardType.Text
-        ),
-        keyboardActions = KeyboardActions(
-            onSearch = {
-                onSearch?.invoke(query)
-            }
-        ),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search, keyboardType = KeyboardType.Text),
+        keyboardActions = KeyboardActions(onSearch = { onSearch?.invoke(query) }),
         colors = TextFieldDefaults.colors(
             focusedContainerColor = LavanderLight,
             unfocusedContainerColor = LavanderLight,
             disabledContainerColor = LavanderLight.copy(alpha = 0.6f),
-
             focusedTextColor = GrayIcon,
             unfocusedTextColor = GrayIcon,
             disabledTextColor = GrayIcon.copy(alpha = 0.6f),
-
             cursorColor = GrayIcon,
             focusedIndicatorColor = Color.Transparent,
             unfocusedIndicatorColor = Color.Transparent,
@@ -83,6 +72,7 @@ fun SearchBar(
         )
     )
 }
+
 
 @Preview(showBackground = true, widthDp = 360)
 @Composable
