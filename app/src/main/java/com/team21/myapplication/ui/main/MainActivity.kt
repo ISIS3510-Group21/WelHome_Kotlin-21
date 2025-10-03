@@ -12,15 +12,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.team21.myapplication.analytics.AnalyticsHelper
 import com.team21.myapplication.data.model.HousingPreview
 import com.team21.myapplication.ui.components.cards.HousingBasicInfoCard
 import com.team21.myapplication.ui.components.cards.HousingInfoCard
@@ -30,6 +34,7 @@ import com.team21.myapplication.ui.components.navbar.AppNavBar
 import com.team21.myapplication.ui.theme.AppTheme
 import com.team21.myapplication.ui.theme.LocalDSTypography
 import com.team21.myapplication.ui.theme.BlueCallToAction
+import com.team21.myapplication.utils.AppViewModelFactory
 
 
 class MainActivity : ComponentActivity() {
@@ -46,8 +51,19 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(viewModel: MainViewModel = viewModel()) {
+fun MainScreen() {
+
+    val context = LocalContext.current
+
+    val appViewModelFactory = remember {
+        AppViewModelFactory(AnalyticsHelper(context.applicationContext))
+    }
+    val viewModel: MainViewModel = viewModel(factory = appViewModelFactory)
+
     val state by viewModel.homeState.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) {
+        viewModel.getHousingPosts(context)
+    }
 
     Scaffold (
         bottomBar = {
