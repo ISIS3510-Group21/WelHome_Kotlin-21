@@ -59,7 +59,7 @@ class HousingPostRepository {
     }
 
     /** TagHousingPost con housingTag como String (id o path) */
-    private fun parseTagList(raw: Any?): List<TagHousingPost> {
+     fun parseTagList(raw: Any?): List<TagHousingPost> {
         val items = raw as? List<*> ?: return emptyList()
         return items.mapNotNull { it as? Map<*, *> }.map {
             TagHousingPost(
@@ -380,5 +380,9 @@ class HousingPostRepository {
         } catch (_: Exception) {
             // best-effort: no rompemos el create si esto falla
         }
+    }
+
+    suspend fun getTagsForPostId(postId: String): List<TagHousingPost> {
+        return getHousingPostById(postId)?.tag ?: emptyList()
     }
 }

@@ -3,59 +3,67 @@ package com.team21.myapplication.ui.createAccountView
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.team21.myapplication.data.repository.AuthRepository
+import com.team21.myapplication.ui.createAccountView.state.SignInOperationState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.team21.myapplication.ui.createAccountView.state.SignInUiState
 
 
 class WelcomeViewModel : ViewModel() {
     private val repository = AuthRepository()
 
-    private val _email = MutableStateFlow("")
-    val email: StateFlow<String> = _email.asStateFlow()
+    private val _uiState = MutableStateFlow(SignInUiState())
+    val uiState: StateFlow<SignInUiState> = _uiState.asStateFlow()
 
-    private val _password = MutableStateFlow("")
-    val password: StateFlow<String> = _password.asStateFlow()
+    fun updateEmail(value: String) {
+        _uiState.value = _uiState.value.copy(email = value)
+    }
 
-    private val _signInState = MutableStateFlow<SignInState>(SignInState.Idle)
-    val signInState: StateFlow<SignInState> = _signInState.asStateFlow()
-
-    fun updateEmail(value: String) { _email.value = value }
-    fun updatePassword(value: String) { _password.value = value }
+    fun updatePassword(value: String) {
+        _uiState.value = _uiState.value.copy(password = value)
+    }
 
     fun signIn() {
-        if (_email.value.isBlank() || !_email.value.contains("@")) {
-            _signInState.value = SignInState.Error("Enter a valid email")
+        val state = _uiState.value
+        // email validation
+        if (state.email.isBlank() || !state.email.contains("@")) {
+            _uiState.value = state.copy(
+                operationState = SignInOperationState.Error("Enter a valid email")
+            )
+            return
+        }
+        if (state.password.length< 6) { //password validation
+            _uiState.value = state.copy(
+                operationState = SignInOperationState.Error("Password must contain at least 6 characters")
+            )
             return
         }
 
-        if (_password.value.length < 6) {
-            _signInState.value = SignInState.Error("Password must contain at least 6 characters")
-            return
-        }
-
-        _signInState.value = SignInState.Loading
+        _uiState.value = state.copy(operationState = SignInOperationState.Loading)
 
         viewModelScope.launch {
-            val result = repository.signIn(_email.value.trim(), _password.value)
+            val result = repository.signIn(state.email.trim(), state.password)
 
-            _signInState.value = if (result.isSuccess) {
-                SignInState.Success(result.getOrNull()!!)
-            } else {
-                SignInState.Error(result.exceptionOrNull()?.message ?: "Error logging in")
-            }
+            _uiState.value = _uiState.value.copy(
+                operationState = if (result.isSuccess) {
+                    SignInOperationState.Success(result.getOrNull()!!)
+                } else {
+                    SignInOperationState.Error(result.exceptionOrNull()?.message ?: "Error logging in")
+                }
+            )
         }
     }
 
     fun resetState() {
-        _signInState.value = SignInState.Idle
+        _uiState.value = _uiState.value.copy(operationState = SignInOperationState.Idle)
     }
 }
 
-sealed class SignInState {
-    object Idle : SignInState()
-    object Loading : SignInState()
-    data class Success(val userId: String) : SignInState()
-    data class Error(val message: String) : SignInState()
-}
+//sealed class SignInState {
+//    object Idle : SignInState()
+//    object Loading : SignInState()
+//    data class Success(val userId: String) : SignInState()
+//    data class Error(val message: String) : SignInState()
+//}

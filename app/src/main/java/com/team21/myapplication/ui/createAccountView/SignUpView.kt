@@ -1,6 +1,5 @@
 package com.team21.myapplication.ui.createAccountView
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
@@ -12,9 +11,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -32,7 +29,7 @@ import com.team21.myapplication.ui.components.text.BlueText
 import com.team21.myapplication.ui.theme.*
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.rememberCoroutineScope
+import com.team21.myapplication.ui.createAccountView.state.OperationState
 
 @Composable
 fun SignUpLayout(
@@ -40,33 +37,19 @@ fun SignUpLayout(
     onSignUpSuccess: () -> Unit = {},
     onNavigateBack: () -> Unit = {}
 ) {
-    // Observe states
-    val name by viewModel.name.collectAsState()
-    val email by viewModel.email.collectAsState()
-    val password by viewModel.password.collectAsState()
-    val phoneNumber by viewModel.phoneNumber.collectAsState()
-    val phonePrefix by viewModel.phonePrefix.collectAsState()
-    val birthDay by viewModel.birthDay.collectAsState()
-    val birthMonth by viewModel.birthMonth.collectAsState()
-    val birthYear by viewModel.birthYear.collectAsState()
-    val gender by viewModel.gender.collectAsState()
-    val nationality by viewModel.nationality.collectAsState()
-    val language by viewModel.language.collectAsState()
-    val isStudent by viewModel.isStudent.collectAsState()
-    val isHost by viewModel.isHost.collectAsState()
-    val signUpState by viewModel.signUpState.collectAsState()
+    // Observe state
+    val uiState by viewModel.uiState.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
 
-// Handle states
-    LaunchedEffect(signUpState) {
-        when (val state = signUpState) {
-            is SignUpState.Success -> {
+// Handle states - Reacciona al operationState dentro de uiState
+    LaunchedEffect(uiState.operationState) {
+        when (val state = uiState.operationState) {
+            is OperationState.Success -> {
                 snackbarHostState.showSnackbar("Successful registration!")
                 onSignUpSuccess()
             }
-            is SignUpState.Error -> {
+            is OperationState.Error -> {
                 snackbarHostState.showSnackbar(state.message)
                 viewModel.resetState()
             }
@@ -126,7 +109,7 @@ fun SignUpLayout(
         Spacer(modifier = Modifier.height(8.dp))
         PlaceholderTextField(
             placeholderText = "Jhoan Doe",
-            value = name,
+            value = uiState.name,
             onValueChange = {viewModel.updateName(it) }
         )
         Spacer(modifier = Modifier.height(16.dp))
@@ -141,7 +124,7 @@ fun SignUpLayout(
         Spacer(modifier = Modifier.height(8.dp))
         PlaceholderTextField(
             placeholderText = "youremail@example.com",
-            value = email,
+            value = uiState.email,
             onValueChange = { viewModel.updateEmail(it) }
         )
         Spacer(modifier = Modifier.height(16.dp))
@@ -156,7 +139,7 @@ fun SignUpLayout(
         Spacer(modifier = Modifier.height(8.dp))
         PlaceholderTextField(
             placeholderText = "**********",
-            value = password,
+            value = uiState.password,
             onValueChange = { viewModel.updatePassword(it)},
             trailingIcon = {
                 Icon(
@@ -184,7 +167,7 @@ fun SignUpLayout(
             // Placeholder for Day dropdown
             PlaceholderTextField(
                 placeholderText = "Day",
-                value = birthDay,
+                value = uiState.birthDay,
                 onValueChange = { viewModel.updateBirthDay(it) },
                 modifier = Modifier
                     .height(50.dp)
@@ -194,7 +177,7 @@ fun SignUpLayout(
             // Placeholder for Month dropdown
             PlaceholderTextField(
                 placeholderText = "Month",
-                value = birthMonth,
+                value = uiState.birthMonth,
                 onValueChange = { viewModel.updateBirthMonth(it) },
                 modifier = Modifier
                     .height(50.dp)
@@ -203,7 +186,7 @@ fun SignUpLayout(
             // Placeholder for Year dropdown
             PlaceholderTextField(
                 placeholderText = "Year",
-                value = birthYear,
+                value = uiState.birthYear,
                 onValueChange = { viewModel.updateBirthYear(it) },
                 modifier = Modifier
                     .height(50.dp)
@@ -233,7 +216,7 @@ fun SignUpLayout(
             //var numbersPrefix by remember { mutableStateOf("Select Prefix") }
 
             CustomDropdownMenu(
-                placeholderText = phonePrefix,
+                placeholderText = uiState.phonePrefix,
                 items = prefixes,
                 modifier = Modifier
                     .width(90.dp) // Fixed width for the dropdown
@@ -244,7 +227,7 @@ fun SignUpLayout(
             // Placeholder for Phone Number Input Field
             PlaceholderTextField(
                 placeholderText = "(999) 111-0000",
-                value = phoneNumber,
+                value = uiState.phoneNumber,
                 onValueChange = { viewModel.updatePhoneNumber(it)},
             )
         }
@@ -272,7 +255,7 @@ fun SignUpLayout(
         val genres = listOf("Male", "Female", "Non-binary", "Prefer not to say")
         //var selectedGenre by remember { mutableStateOf("Select") }
         CustomDropdownMenu(
-            placeholderText = gender.ifEmpty { "Select" },
+            placeholderText = uiState.gender.ifEmpty { "Select" },
             items = genres,
             onItemSelected = { viewModel.updateGender(it) },
             textColor = GrayIcon,
@@ -292,10 +275,9 @@ fun SignUpLayout(
         Spacer(modifier = Modifier.height(8.dp))
         // Custom Dropdown Menu for Genre
         val nationalities = listOf("USA", "Canada", "Mexico", "Colombia")
-        var selectedNationality by remember { mutableStateOf("Select") }
 
         CustomDropdownMenu(
-            placeholderText = nationality.ifEmpty { "Select" },
+            placeholderText = uiState.nationality.ifEmpty { "Select" },
             items = nationalities,
             onItemSelected = { viewModel.updateNationality(it)  },
             textColor = GrayIcon,
@@ -318,7 +300,7 @@ fun SignUpLayout(
         //var selectedLanguage by remember { mutableStateOf("Select") }
 
         CustomDropdownMenu(
-            placeholderText = language.ifEmpty { "Select" },
+            placeholderText = uiState.language.ifEmpty { "Select" },
             items = languages,
             onItemSelected = { viewModel.updateLanguage(it) },
             textColor = GrayIcon,
@@ -341,12 +323,12 @@ fun SignUpLayout(
         Column(modifier = Modifier.fillMaxWidth()) {
             CustomRadioButton(
                 text = "Host (Offering accommodation)",
-                selected = isHost,
+                selected = uiState.isHost,
                 onClick = {viewModel.toggleUserType(false) }
             )
             CustomRadioButton(
                 text = "Student (Looking for accommodation)",
-                selected = isStudent,
+                selected = uiState.isStudent,
                 onClick = {viewModel.toggleUserType(true) }
             )
         }
@@ -354,13 +336,13 @@ fun SignUpLayout(
         Spacer(modifier = Modifier.height(32.dp))
 
         BlueButton(
-            text = if (signUpState is SignUpState.Loading) "Loading..." else "Start",
+            text = if (uiState.operationState is OperationState.Loading) "Loading..." else "Start",
             onClick = {viewModel.signUp()},
-            enabled = signUpState !is SignUpState.Loading,
+            enabled = uiState.operationState !is OperationState.Loading,
             modifier = Modifier.fillMaxWidth(), // Fill width for this button
         )
 
-        if (signUpState is SignUpState.Loading) {
+        if (uiState.operationState is OperationState.Loading) {
             Spacer(modifier = Modifier.height(16.dp))
             CircularProgressIndicator()
         }

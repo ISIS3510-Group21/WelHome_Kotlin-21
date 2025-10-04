@@ -4,25 +4,25 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.team21.myapplication.data.model.Ammenities
 import com.team21.myapplication.data.repository.AmenityRepository
+import com.team21.myapplication.ui.createPostView.state.AmenitiesUiState
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class AmenitiesViewModel : ViewModel() {
     private val repository = AmenityRepository()
 
-    // List of all available amenities
-    private val _amenitiesList = MutableStateFlow<List<Ammenities>>(emptyList())
-    val amenitiesList: StateFlow<List<Ammenities>> = _amenitiesList.asStateFlow()
+    private val _uiState = MutableStateFlow(AmenitiesUiState())
+    val uiState: StateFlow<AmenitiesUiState> = _uiState.asStateFlow()
 
-    // Selected amenities (IDs)
-    private val _selectedAmenitiesIds = MutableStateFlow<Set<String>>(emptySet())
-    val selectedAmenitiesIds: StateFlow<Set<String>> = _selectedAmenitiesIds.asStateFlow()
-
-    // Loading state
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+    // Exponer propiedades individuales para compatibilidad
+    val amenitiesList = _uiState.map { it.amenitiesList }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val selectedAmenitiesIds = _uiState.map { it.selectedAmenitiesIds }.stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+    val isLoading = _uiState.map { it.isLoading }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     init {
         loadAmenities()
@@ -30,35 +30,37 @@ class AmenitiesViewModel : ViewModel() {
 
     private fun loadAmenities() {
         viewModelScope.launch {
-            _isLoading.value = true
+            _uiState.value = _uiState.value.copy(isLoading = true)
             try {
-                val amenities = repository.getHousingPosts() // Uses the method you already have
-                _amenitiesList.value = amenities
+                val amenities = repository.getHousingPosts()
+                _uiState.value = _uiState.value.copy(
+                    amenitiesList = amenities,
+                    isLoading = false
+                )
             } catch (e: Exception) {
-                println("Error loading amenities: ${e.message}")
-            } finally {
-                _isLoading.value = false
+                _uiState.value = _uiState.value.copy(isLoading = false)
             }
         }
     }
 
     fun toggleAmenity(amenityId: String) {
-        val current = _selectedAmenitiesIds.value.toMutableSet()
+        val current = _uiState.value.selectedAmenitiesIds.toMutableSet()
         if (current.contains(amenityId)) {
             current.remove(amenityId)
         } else {
             current.add(amenityId)
         }
-        _selectedAmenitiesIds.value = current
+        _uiState.value = _uiState.value.copy(selectedAmenitiesIds = current)
     }
 
     fun setInitialSelection(amenities: List<Ammenities>) {
-        _selectedAmenitiesIds.value = amenities.map { it.id }.toSet()
+        _uiState.value = _uiState.value.copy(
+            selectedAmenitiesIds = amenities.map { it.id }.toSet()
+        )
     }
 
     fun getSelectedAmenities(): List<Ammenities> {
-        return _amenitiesList.value.filter {
-            _selectedAmenitiesIds.value.contains(it.id)
-        }
+        val state = _uiState.value
+        return state.amenitiesList.filter { state.selectedAmenitiesIds.contains(it.id) }
     }
 }

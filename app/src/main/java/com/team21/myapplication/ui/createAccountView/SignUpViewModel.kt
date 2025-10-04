@@ -3,162 +3,136 @@ package com.team21.myapplication.ui.createAccountView
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.team21.myapplication.data.repository.AuthRepository
+import com.team21.myapplication.ui.createAccountView.state.OperationState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.team21.myapplication.ui.createAccountView.state.SignUpUiState
 
 class SignUpViewModel : ViewModel() {
     private val repository = AuthRepository()
 
-    // Forms States
-    private val _name = MutableStateFlow("")
-    val name: StateFlow<String> = _name.asStateFlow()
+    // unique stateFflow that contains the complete stage
+    private val _uiState = MutableStateFlow(SignUpUiState())
+    val uiState: StateFlow<SignUpUiState> = _uiState.asStateFlow()
 
-    private val _email = MutableStateFlow("")
-    val email: StateFlow<String> = _email.asStateFlow()
+    // Update functions - actualizan el estado unificado
+    fun updateName(value: String) {
+        _uiState.value = _uiState.value.copy(name = value)
+    }
 
-    private val _password = MutableStateFlow("")
-    val password: StateFlow<String> = _password.asStateFlow()
+    fun updateEmail(value: String) {
+        _uiState.value = _uiState.value.copy(email = value)
+    }
 
-    private val _phoneNumber = MutableStateFlow("")
-    val phoneNumber: StateFlow<String> = _phoneNumber.asStateFlow()
+    fun updatePassword(value: String) {
+        _uiState.value = _uiState.value.copy(password = value)
+    }
 
-    private val _phonePrefix = MutableStateFlow("+57")
-    val phonePrefix: StateFlow<String> = _phonePrefix.asStateFlow()
+    fun updatePhoneNumber(value: String) {
+        _uiState.value = _uiState.value.copy(phoneNumber = value)
+    }
 
-    private val _birthDay = MutableStateFlow("")
-    val birthDay: StateFlow<String> = _birthDay.asStateFlow()
+    fun updatePhonePrefix(value: String) {
+        _uiState.value = _uiState.value.copy(phonePrefix = value)
+    }
 
-    private val _birthMonth = MutableStateFlow("")
-    val birthMonth: StateFlow<String> = _birthMonth.asStateFlow()
+    fun updateBirthDay(value: String) {
+        _uiState.value = _uiState.value.copy(birthDay = value)
+    }
 
-    private val _birthYear = MutableStateFlow("")
-    val birthYear: StateFlow<String> = _birthYear.asStateFlow()
+    fun updateBirthMonth(value: String) {
+        _uiState.value = _uiState.value.copy(birthMonth = value)
+    }
 
-    private val _gender = MutableStateFlow("")
-    val gender: StateFlow<String> = _gender.asStateFlow()
+    fun updateBirthYear(value: String) {
+        _uiState.value = _uiState.value.copy(birthYear = value)
+    }
 
-    private val _nationality = MutableStateFlow("")
-    val nationality: StateFlow<String> = _nationality.asStateFlow()
+    fun updateGender(value: String) {
+        _uiState.value = _uiState.value.copy(gender = value)
+    }
 
-    private val _language = MutableStateFlow("")
-    val language: StateFlow<String> = _language.asStateFlow()
+    fun updateNationality(value: String) {
+        _uiState.value = _uiState.value.copy(nationality = value)
+    }
 
-    private val _isStudent = MutableStateFlow(false)
-    val isStudent: StateFlow<Boolean> = _isStudent.asStateFlow()
-
-    private val _isHost = MutableStateFlow(false)
-    val isHost: StateFlow<Boolean> = _isHost.asStateFlow()
-
-    // Register state
-    private val _signUpState = MutableStateFlow<SignUpState>(SignUpState.Idle)
-    val signUpState: StateFlow<SignUpState> = _signUpState.asStateFlow()
-
-    // Update functions
-    fun updateName(value: String) { _name.value = value }
-    fun updateEmail(value: String) { _email.value = value }
-    fun updatePassword(value: String) { _password.value = value }
-    fun updatePhoneNumber(value: String) { _phoneNumber.value = value }
-    fun updatePhonePrefix(value: String) { _phonePrefix.value = value }
-    fun updateBirthDay(value: String) { _birthDay.value = value }
-    fun updateBirthMonth(value: String) { _birthMonth.value = value }
-    fun updateBirthYear(value: String) { _birthYear.value = value }
-    fun updateGender(value: String) { _gender.value = value }
-    fun updateNationality(value: String) { _nationality.value = value }
-    fun updateLanguage(value: String) { _language.value = value }
+    fun updateLanguage(value: String) {
+        _uiState.value = _uiState.value.copy(language = value)
+    }
 
     fun toggleUserType(isStudentSelected: Boolean) {
-        if (isStudentSelected) {
-            _isStudent.value = true
-            _isHost.value = false
-        } else {
-            _isStudent.value = false
-            _isHost.value = true
-        }
+        _uiState.value = _uiState.value.copy(
+            isStudent = isStudentSelected,
+            isHost = !isStudentSelected
+        )
     }
 
     fun signUp() {
-        // Validations
-        if (_name.value.isBlank()) {
-            _signUpState.value = SignUpState.Error("Name is mandatory")
+        // Validar usando el estado actual
+        val validationError = validateSignUpState(_uiState.value)
+        if (validationError != null) {
+            _uiState.value = _uiState.value.copy(
+                operationState = OperationState.Error(validationError)
+            )
             return
         }
 
-        if (_email.value.isBlank() || !_email.value.contains("@")) {
-            _signUpState.value = SignUpState.Error("Enter a valid email address")
-            return
-        }
-
-        if (_password.value.length < 6) {
-            _signUpState.value = SignUpState.Error("The password must be at least 6 characters long")
-            return
-        }
-
-        if (_phoneNumber.value.isBlank()) {
-            _signUpState.value = SignUpState.Error("The phone number is required")
-            return
-        }
-
-        if (_birthDay.value.isBlank() || _birthMonth.value.isBlank() || _birthYear.value.isBlank()) {
-            _signUpState.value = SignUpState.Error("Date of birth is mandatory")
-            return
-        }
-
-        if (_gender.value.isBlank()) {
-            _signUpState.value = SignUpState.Error("Select a genre")
-            return
-        }
-
-        if (_nationality.value.isBlank()) {
-            _signUpState.value = SignUpState.Error("Select a nationality")
-            return
-        }
-
-        if (_language.value.isBlank()) {
-            _signUpState.value = SignUpState.Error("Select a language")
-            return
-        }
-
-        if (!_isStudent.value && !_isHost.value) {
-            _signUpState.value = SignUpState.Error("Select the type of user")
-            return
-        }
-
-        _signUpState.value = SignUpState.Loading
+        _uiState.value = _uiState.value.copy(operationState = OperationState.Loading)
 
         viewModelScope.launch {
-            val birthDate = "${_birthDay.value}/${_birthMonth.value}/${_birthYear.value}"
-            val fullPhoneNumber = "${_phonePrefix.value}${_phoneNumber.value}"
+            val state = _uiState.value
+            val birthDate = "${state.birthDay}/${state.birthMonth}/${state.birthYear}"
+            val fullPhoneNumber = "${state.phonePrefix}${state.phoneNumber}"
 
             val result = repository.registerUser(
-                email = _email.value.trim(),
-                password = _password.value,
-                name = _name.value.trim(),
+                email = state.email.trim(),
+                password = state.password,
+                name = state.name.trim(),
                 phoneNumber = fullPhoneNumber,
-                gender = _gender.value,
-                nationality = _nationality.value,
-                language = _language.value,
+                gender = state.gender,
+                nationality = state.nationality,
+                language = state.language,
                 birthDate = birthDate,
-                isStudent = _isStudent.value
+                isStudent = state.isStudent
             )
 
-            _signUpState.value = if (result.isSuccess) {
-                SignUpState.Success(result.getOrNull()!!)
-            } else {
-                SignUpState.Error(result.exceptionOrNull()?.message ?: "Unknown error")
-            }
+            _uiState.value = _uiState.value.copy(
+                operationState = if (result.isSuccess) {
+                    OperationState.Success(result.getOrNull()!!)
+                } else {
+                    OperationState.Error(result.exceptionOrNull()?.message ?: "Unknown error")
+                }
+            )
         }
     }
 
     fun resetState() {
-        _signUpState.value = SignUpState.Idle
+        _uiState.value = _uiState.value.copy(operationState = OperationState.Idle)
+    }
+
+    // Función pura de validación
+    private fun validateSignUpState(state: SignUpUiState): String? {
+        return when {
+            state.name.isBlank() -> "Name is mandatory"
+            state.email.isBlank() || !state.email.contains("@") -> "Enter a valid email address"
+            state.password.length < 6 -> "The password must be at least 6 characters long"
+            state.phoneNumber.isBlank() -> "The phone number is required"
+            state.birthDay.isBlank() || state.birthMonth.isBlank() || state.birthYear.isBlank() ->
+                "Date of birth is mandatory"
+            state.gender.isBlank() -> "Select a genre"
+            state.nationality.isBlank() -> "Select a nationality"
+            state.language.isBlank() -> "Select a language"
+            !state.isStudent && !state.isHost -> "Select the type of user"
+            else -> null
+        }
     }
 }
 
-sealed class SignUpState {
-    object Idle : SignUpState()
-    object Loading : SignUpState()
-    data class Success(val userId: String) : SignUpState()
-    data class Error(val message: String) : SignUpState()
-}
+//sealed class SignUpState {
+//    object Idle : SignUpState()
+//    object Loading : SignUpState()
+//    data class Success(val userId: String) : SignUpState()
+//    data class Error(val message: String) : SignUpState()
+//}
