@@ -10,6 +10,7 @@ import com.team21.myapplication.data.model.Picture
 import com.team21.myapplication.data.model.RoomateProfile
 import kotlin.collections.emptyList
 import android.net.Uri
+import android.util.Log
 import java.util.UUID
 import com.google.firebase.storage.FirebaseStorage
 import com.team21.myapplication.data.model.Ammenities
@@ -283,4 +284,43 @@ class HousingPostRepository {
             // Do not throw an exception so the post is created even if this fails
         }
     }
+
+    /*
+    Gets the tags of a housing post given the id of the housing post
+ */
+    suspend fun getTagsForHousingPost(housingPostId: String): List<TagHousingPost> {
+        return try {
+            Log.d("TagRepo", "Obteniendo tags para el post: $housingPostId")
+            val tagsSnapshot = db.collection("HousingPost")
+                .document(housingPostId)
+                .collection("Tag")
+                .get()
+                .await()
+            Log.d(
+                "TagRepo",
+                "Documentos encontrados en subcolección: ${tagsSnapshot.documents.size}"
+            )
+
+            val tags = tagsSnapshot.documents.mapNotNull { doc ->
+                Log.d("TagRepo", "Documento Tag ID: ${doc.id}, datos: ${doc.data}")
+                // Crear el objeto manualmente con el ID del documento
+                val tag = doc.toObject(TagHousingPost::class.java)
+                if (tag != null) {
+                    TagHousingPost(
+                        id = doc.id,  // Usar el ID del documento
+                        name = tag.name,
+                        housingTag = null
+                    )
+                } else {
+                    null
+                }
+            }
+            Log.d("TagRepo", "Tags deserializados: ${tags.size} - Nombres: ${tags.map { it.name }}")
+            tags
+        } catch (e: Exception) {
+            Log.e("TagRepo", "Error obteniendo tags para el post $housingPostId: ${e.message}", e)
+            emptyList()
+        }
+    }
+
 }

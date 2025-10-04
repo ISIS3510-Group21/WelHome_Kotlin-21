@@ -26,4 +26,50 @@ class AnalyticsHelper(context: Context) {
         }
     }
 
+    fun logHousingPostClick(
+        postId: String,
+        postTitle: String,
+        housingCategory: String,
+        price: Double,
+        userNationality: String
+    ) {
+        Log.d("AnalyticsHelper", "Logging click: $postTitle | Nat: $userNationality | Cat: $housingCategory")
+        firebaseAnalytics.logEvent("housing_post_click") {
+            param("post_id", postId)
+            param("post_title", postTitle)
+            param("housing_category", housingCategory)
+            param("price", price)
+            param("user_nationality", userNationality)
+            param(FirebaseAnalytics.Param.CONTENT_TYPE, "housing_post")
+        }
+    }
+
+    fun logMapMarkerClick(
+        postId: String,
+        housingCategory: String,
+        userNationality: String,
+        latitude: Double,
+        longitude: Double
+    ) {
+        firebaseAnalytics.logEvent("map_marker_click") {
+            param("post_id", postId)
+            param("housing_category", housingCategory)
+            param("user_nationality", userNationality)
+            param("latitude", latitude)
+            param("longitude", longitude)
+        }
+    }
+
+    fun setUserNationality(nationality: String) {
+        firebaseAnalytics.setUserProperty("nationality", nationality)
+    }
+
+    fun setUserType(isStudent: Boolean) {
+        firebaseAnalytics.setUserProperty("user_type", if (isStudent) "student" else "host")
+    }
+
+    fun setUserLanguage(language: String) {
+        firebaseAnalytics.setUserProperty("language", language)
+    }
+
 }

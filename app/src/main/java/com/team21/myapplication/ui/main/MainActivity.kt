@@ -1,10 +1,12 @@
 package com.team21.myapplication.ui.main
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -61,11 +63,25 @@ fun MainScreen() {
     val viewModel: MainViewModel = viewModel(factory = appViewModelFactory)
 
     val state by viewModel.homeState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() } //TODO: debug!
+
     LaunchedEffect(Unit) {
         viewModel.getHousingPosts(context)
     }
+    LaunchedEffect(state.snackbarMessage) { //TODO: debug!
+        state.snackbarMessage?.let { message ->
+            // Muestra el Snackbar con el mensaje
+            snackbarHostState.showSnackbar(
+                message = message,
+                duration = SnackbarDuration.Short
+            )
+            // Llama a la función del ViewModel para limpiar el estado
+            viewModel.clearSnackbarMessage()
+        }
+    }
 
     Scaffold (
+        snackbarHost = { SnackbarHost(snackbarHostState) }, //TODO: debug!
         bottomBar = {
             if (!state.isLoading) {
                 AppNavBar(
@@ -125,12 +141,22 @@ fun MainScreen() {
                             title = listing.title,
                             rating = listing.rating,
                             pricePerMonthLabel = "$" + listing.price.toString() + "/month",
-                            imageUrl = listing.photoPath
+                            imageUrl = listing.photoPath,
+                            onClick = {
+                                // ESTA LÍNEA AHORA SÍ DEBE EJECUTARSE
+                                Log.d("CLICK_TEST", "Click en post ${listing.id}")
+                                viewModel.logHousingPostClick(
+                                    postId = listing.housing,
+                                    postTitle = listing.title,
+                                    price = listing.price
+                                )
+                            }
                         )
                     }
                 }
             }
         }
+
     }
 }
 
@@ -162,17 +188,18 @@ fun SectionTitle(
 }
 
 @Composable
-fun RecommendedForYouSection(recommendedItems: List<HousingPreview>) {
+fun RecommendedForYouSection(recommendedItems: List<HousingPreview>,
+                             onPostClick: (HousingPreview) -> Unit = {}) {
 
     HorizontalCarousel( items = recommendedItems) {
         item ->
-        HousingInfoCard(
-            title = item.title,
-            rating = item.rating.toDouble(),
-            reviewsCount = 0,
-            pricePerMonthLabel = "$" + item.price.toString() + "/month",
-            imageUrl = item.photoPath
-        )
+            HousingInfoCard(
+                title = item.title,
+                rating = item.rating.toDouble(),
+                reviewsCount = 0,
+                pricePerMonthLabel = "$" + item.price.toString() + "/month",
+                imageUrl = item.photoPath
+            )
     }
 }
 
