@@ -1,21 +1,20 @@
 package com.team21.myapplication.ui.components.inputs
 
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.team21.myapplication.ui.theme.*
@@ -27,8 +26,49 @@ fun SearchBar(
     modifier: Modifier = Modifier,
     placeholder: String = "Search",
     onSearch: ((String) -> Unit)? = null,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    asButton: Boolean = true,
+    onClick: (() -> Unit)? = null
 ) {
+    if (asButton) {
+        // Botón con apariencia de barra de búsqueda
+        Surface(
+            modifier = modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .clickable(
+                    enabled = enabled,
+                    role = Role.Button,
+                    onClick = { onClick?.invoke() }
+                ),
+            shape = RoundedCornerShape(24.dp),
+            color = LavanderLight,
+            tonalElevation = 0.dp,
+            shadowElevation = 0.dp
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Search,
+                    contentDescription = null,
+                    tint = GrayIcon
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = placeholder,
+                    style = LocalDSTypography.current.Description,
+                    color = GrayIcon
+                )
+            }
+        }
+        return
+    }
+
+    // Modo TextField “clásico”
     TextField(
         value = query,
         onValueChange = onQueryChange,
@@ -58,9 +98,7 @@ fun SearchBar(
             keyboardType = KeyboardType.Text
         ),
         keyboardActions = KeyboardActions(
-            onSearch = {
-                onSearch?.invoke(query)
-            }
+            onSearch = { onSearch?.invoke(query) }
         ),
         colors = TextFieldDefaults.colors(
             focusedContainerColor = LavanderLight,
@@ -86,12 +124,27 @@ fun SearchBar(
 
 @Preview(showBackground = true, widthDp = 360)
 @Composable
-private fun SearchBar_Preview() {
+private fun SearchBar_Preview_Button() {
     AppTheme {
         SearchBar(
             query = "",
             onQueryChange = {},
-            placeholder = "Search"
+            placeholder = "Search homes...",
+            asButton = true,
+            onClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 360)
+@Composable
+private fun SearchBar_Preview_TextField() {
+    AppTheme {
+        SearchBar(
+            query = "",
+            onQueryChange = {},
+            placeholder = "Search",
+            onSearch = {}
         )
     }
 }

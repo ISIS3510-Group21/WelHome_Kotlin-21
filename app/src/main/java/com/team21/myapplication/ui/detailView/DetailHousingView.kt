@@ -7,11 +7,10 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.foundation.Image
-import androidx.compose.ui.res.painterResource
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.team21.myapplication.R
@@ -19,21 +18,18 @@ import com.team21.myapplication.ui.components.buttons.BlueButton
 import com.team21.myapplication.ui.components.buttons.GrayButton
 import com.team21.myapplication.ui.components.cards.GrayBorderCardWithIcon
 import com.team21.myapplication.ui.components.cards.HousingCard
+import com.team21.myapplication.ui.components.cards.ImageCarouselCard
 import com.team21.myapplication.ui.components.carousel.HorizontalCarousel
 import com.team21.myapplication.ui.components.icons.AppIcons
 import com.team21.myapplication.ui.components.icons.ProfilePicture
 import com.team21.myapplication.ui.components.navbar.AppNavBar
 import com.team21.myapplication.ui.components.text.HousingInfoText
-import com.team21.myapplication.ui.components.cards.ImageCarouselCard
-import com.team21.myapplication.ui.theme.AppTextStyles
-import com.team21.myapplication.ui.theme.BlackText
-import com.team21.myapplication.ui.theme.GrayIcon
-import com.team21.myapplication.ui.theme.WhiteBackground
-import com.team21.myapplication.ui.theme.BlueCallToAction
-import com.team21.myapplication.ui.theme.AppTheme
+import com.team21.myapplication.ui.detailView.state.DetailHousingUiState
+import com.team21.myapplication.ui.theme.*
 
 @Composable
 fun DetailHousingView(
+    uiState: DetailHousingUiState, // STATE: la View solo dibuja lo que hay en el estado
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {},
     onToggleFavorite: () -> Unit = {},
@@ -44,13 +40,7 @@ fun DetailHousingView(
 ) {
     Scaffold(
         containerColor = WhiteBackground,
-        bottomBar = {
-            AppNavBar(
-                currentRoute = "home",
-                onNavigate = { /* TODO: conectar navegación */ },
-                showDivider = true
-            )
-        }
+
     ) { innerPadding ->
         Column(
             modifier = modifier
@@ -60,6 +50,7 @@ fun DetailHousingView(
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
 
+            // Header con back y favorito (acciones siguen siendo callbacks)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -86,6 +77,7 @@ fun DetailHousingView(
 
             Spacer(Modifier.height(10.dp))
 
+            // IMÁGENES: por tu pedido, se mantienen estáticas (defaults)
             ImageCarouselCard(
                 images = listOf(
                     "https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
@@ -98,17 +90,16 @@ fun DetailHousingView(
 
             Spacer(Modifier.height(12.dp))
 
+            // INFO PRINCIPAL: dinámico desde STATE
             HousingInfoText(
-                title = "Portal de los Rosales",
-                rating = 4.95,
-                reviewsCount = 22,
-                pricePerMonthLabel = "$750’000/month"
+                title = uiState.title.ifBlank { "No title" },
+                rating = uiState.rating,
+                reviewsCount = uiState.reviewsCount,
+                pricePerMonthLabel = uiState.pricePerMonthLabel.ifBlank { "$0/month" }
             )
 
             Spacer(Modifier.height(12.dp))
-
             Divider(color = GrayIcon, thickness = 1.dp)
-
             Spacer(Modifier.height(15.dp))
 
             Text(
@@ -116,8 +107,15 @@ fun DetailHousingView(
                 style = AppTextStyles.SubtitleView,
                 color = BlackText
             )
-
             Spacer(Modifier.height(12.dp))
+
+            // AMENITIES: textos dinámicos; íconos por defecto
+            var defaultAmenities = listOf("5 beds", "2 bath", "70 meters", "6 people")
+            var amenityTexts = if (uiState.amenityLabels.isNotEmpty())
+                uiState.amenityLabels.take(4).let { list ->
+                    // Rellena con defaults si vienen menos de 4
+                    list + List((4 - list.size).coerceAtLeast(0)) { defaultAmenities[it] }
+                } else defaultAmenities
 
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(
@@ -125,12 +123,12 @@ fun DetailHousingView(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     GrayBorderCardWithIcon(
-                        text = "5 beds",
+                        text = amenityTexts[0],
                         icon = AppIcons.Houses,
                         modifier = Modifier.weight(1f)
                     )
                     GrayBorderCardWithIcon(
-                        text = "2 bath",
+                        text = amenityTexts[1],
                         icon = AppIcons.Bath,
                         modifier = Modifier.weight(1f)
                     )
@@ -140,12 +138,12 @@ fun DetailHousingView(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     GrayBorderCardWithIcon(
-                        text = "70 meters",
+                        text = amenityTexts[2],
                         icon = AppIcons.SquareMeters,
                         modifier = Modifier.weight(1f)
                     )
                     GrayBorderCardWithIcon(
-                        text = "6 people",
+                        text = amenityTexts[3],
                         icon = AppIcons.People,
                         modifier = Modifier.weight(1f)
                     )
@@ -153,7 +151,6 @@ fun DetailHousingView(
             }
 
             Spacer(Modifier.height(15.dp))
-
             GrayButton(
                 text = "View All Amenities",
                 onClick = onViewAllAmenities,
@@ -161,20 +158,25 @@ fun DetailHousingView(
             )
 
             Spacer(Modifier.height(20.dp))
-
             Text(
                 text = "Roommates Profile",
                 style = AppTextStyles.SubtitleView,
                 color = BlackText
             )
-
             Spacer(Modifier.height(20.dp))
 
-            val roommates = listOf(
+            // ROOMMATES: cantidad dinámica; avatares estáticos
+            var avatarPool = listOf(
                 R.drawable.profile_picture_women,
                 R.drawable.profile_picture_women2,
                 R.drawable.profile_picture_man
             )
+            var roommates = if (uiState.roommateCount > 0) {
+                List(uiState.roommateCount.coerceAtMost(12)) { idx ->
+                    avatarPool[idx % avatarPool.size]
+                }
+            } else avatarPool // fallback a tus 3 estáticos
+
             HorizontalCarousel(
                 items = roommates,
                 contentPadding = PaddingValues(horizontal = 0.dp),
@@ -186,20 +188,24 @@ fun DetailHousingView(
 
             Spacer(Modifier.height(20.dp))
 
+            // OWNER: nombre dinámico (foto e íconos estáticos)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                ProfilePicture(painter = painterResource(R.drawable.profile_picture_owner), modifier = Modifier.size(56.dp))
+                ProfilePicture(
+                    painter = painterResource(R.drawable.profile_picture_owner),
+                    modifier = Modifier.size(56.dp)
+                )
                 Spacer(Modifier.width(15.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Vova Parkhomchuk",
+                        text = uiState.ownerName.ifBlank { "Host" },
                         style = AppTextStyles.Description,
                         color = BlackText
                     )
                     Text(
-                        text = "World-renowned startup founder",
+                        text = "World-renowned startup founder", // estático
                         style = AppTextStyles.Description,
                         color = GrayIcon
                     )
@@ -222,25 +228,35 @@ fun DetailHousingView(
 
             Spacer(Modifier.height(20.dp))
 
+            // LOCATION: mapa estático + address dinámico
             Text(
                 text = "Location",
                 style = AppTextStyles.SubtitleView,
                 color = BlackText
             )
-            Spacer(Modifier.height(18.dp))
-            HousingCard(imageRes = R.drawable.example_map)
+            Spacer(Modifier.height(8.dp))
+            if (uiState.address.isNotBlank()) {
+                Text(
+                    text = uiState.address,
+                    style = AppTextStyles.Description,
+                    color = GrayIcon
+                )
+                Spacer(Modifier.height(10.dp))
+            }
+            Spacer(Modifier.height(8.dp))
+            HousingCard(imageRes = R.drawable.example_map) // imagen estática meanwhile
 
             Spacer(Modifier.height(16.dp))
-
             Divider(color = GrayIcon, thickness = 1.dp)
             Spacer(Modifier.height(18.dp))
+
             BlueButton(
                 text = "Book Visit",
                 onClick = onBookVisit,
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(100.dp))
         }
     }
 }
@@ -248,5 +264,19 @@ fun DetailHousingView(
 @Preview(showBackground = true, name = "DetailHousingView")
 @Composable
 private fun PreviewDetailHousingView() {
-    AppTheme { DetailHousingView() }
+    AppTheme {
+        // STATE: ejemplo de estado (en ejecución real vendrá del ViewModel)
+        var previewState = DetailHousingUiState(
+            isLoading = false,
+            title = "Portal de los Rosales",
+            rating = 4.95,
+            reviewsCount = 22,
+            pricePerMonthLabel = "$750,000/month",
+            address = "Cra. 7 #72-21, Bogotá",
+            amenityLabels = listOf("3 beds", "2 bath", "75 m²", "Pet friendly"),
+            roommateCount = 3,
+            ownerName = "OwnerUser123"
+        )
+        DetailHousingView(uiState = previewState)
+    }
 }

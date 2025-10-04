@@ -19,7 +19,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.team21.myapplication.R
-import com.team21.myapplication.ui.theme.*
+import com.team21.myapplication.ui.theme.BlackText
+import com.team21.myapplication.ui.theme.GrayIcon
+import com.team21.myapplication.ui.theme.LocalDSTypography
+import com.team21.myapplication.ui.theme.AppTheme
+import com.team21.myapplication.ui.theme.WhiteBackground
 
 @Composable
 fun HousingInfoCard(
@@ -62,7 +66,6 @@ fun HousingInfoCard(
             }
 
             Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
-
                 Text(
                     text = title,
                     style = LocalDSTypography.current.Section,
@@ -72,9 +75,7 @@ fun HousingInfoCard(
                 Spacer(Modifier.height(6.dp))
 
                 // ⭐ rating + reviews
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Filled.Star,
                         contentDescription = null,
@@ -96,7 +97,6 @@ fun HousingInfoCard(
                 }
 
                 Spacer(Modifier.height(6.dp))
-
 
                 Text(
                     text = pricePerMonthLabel,
