@@ -4,16 +4,20 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.team21.myapplication.data.repository.FilterMode
 import com.team21.myapplication.data.repository.HousingTagRepository
+import com.team21.myapplication.domain.mapper.FilterUiMapper
 import com.team21.myapplication.domain.usecase.GetAllTagsUseCase
 import com.team21.myapplication.domain.usecase.SearchPreviewsByTagsUseCase
 import com.team21.myapplication.ui.filterView.state.FilterUiState
 import com.team21.myapplication.ui.filterView.state.PreviewCardUi
-import com.team21.myapplication.domain.mapper.FilterUiMapper
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+
+import com.google.firebase.analytics.analytics
+import com.google.firebase.analytics.logEvent
+import com.google.firebase.Firebase
 
 /**
  * MVVM (ViewModel):
@@ -65,7 +69,18 @@ class FilterViewModel(
 
     /** Selección/deselección de un tag. */
     fun toggleTag(tagId: String) {
-        if (selected.contains(tagId)) selected.remove(tagId) else selected.add(tagId)
+        val nowSelected = if (selected.contains(tagId)) {
+            selected.remove(tagId); false
+        } else {
+            selected.add(tagId); true
+        }
+
+        // Opcional: evento de analytics por toggle
+        Firebase.analytics.logEvent("filter_tag_toggle") {
+            param("tag_id", tagId)
+            param("selected", if (nowSelected) 1L else 0L)
+            param("selected_count", selected.size.toLong())
+        }
 
         val cur = _state.value
         val newFeatured = cur.featuredTags.map { it.copy(selected = it.id in selected) }
@@ -86,12 +101,32 @@ class FilterViewModel(
      */
     fun search(mode: FilterMode = FilterMode.AND) {
         if (selected.isEmpty()) return
-        _state.value = _state.value.copy(isLoading = true, error = null)
 
+        // Evento: el usuario presionó Search
+        Firebase.analytics.logEvent("filter_search") {
+            param("selected_count", selected.size.toLong())
+            param("mode", mode.name)
+            // Envía CSV acotado para no exceder tamaño de evento
+            param("selected_ids_csv", selected.joinToString(",").take(100))
+        }
+
+        selected.forEach { tagId ->
+            Firebase.analytics.logEvent("filter_search_tag") {
+                param("tag_id", tagId)
+            }
+        }
+
+        _state.value = _state.value.copy(isLoading = true, error = null)
         viewModelScope.launch {
             try {
                 val previews = searchPreviews(selected.toList(), mode)
                 val ui = FilterUiMapper.toPreviewUi(previews)
+
+                // Evento: resultados listos
+                Firebase.analytics.logEvent("filter_results_ready") {
+                    param("results_count", ui.size.toLong())
+                    param("mode", mode.name)
+                }
 
                 _state.value = _state.value.copy(
                     isLoading = false,
