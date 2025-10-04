@@ -36,6 +36,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.res.painterResource
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.team21.myapplication.ui.createAccountView.state.SignInOperationState
 
 @Composable
 fun WelcomeLayout(
@@ -43,19 +44,17 @@ fun WelcomeLayout(
     onSignInSuccess: () -> Unit = {},
     onNavigateToSignUp: () -> Unit = {}
 ) {
-    val email by viewModel.email.collectAsState()
-    val password by viewModel.password.collectAsState()
-    val signInState by viewModel.signInState.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(signInState) {
-        when (val state = signInState) {
-            is SignInState.Success -> {
+    LaunchedEffect(uiState.operationState) {
+        when (val state = uiState.operationState) {
+            is SignInOperationState.Success -> {
                 snackbarHostState.showSnackbar("Successful login!")
                 onSignInSuccess()
             }
-            is SignInState.Error -> {
+            is SignInOperationState.Error -> {
                 snackbarHostState.showSnackbar(state.message)
                 viewModel.resetState()
             }
@@ -89,7 +88,7 @@ fun WelcomeLayout(
             Spacer(modifier = Modifier.height(8.dp))
             PlaceholderTextField(
                 placeholderText = "youremail@example.com",
-                value = email,
+                value = uiState.email,
                 onValueChange = {viewModel.updateEmail(it)},
             )
             Spacer(modifier = Modifier.height(32.dp))
@@ -104,7 +103,7 @@ fun WelcomeLayout(
             Spacer(modifier = Modifier.height(8.dp))
             PlaceholderTextField(
                 placeholderText = "**********",
-                value = password,
+                value = uiState.password,
                 onValueChange = {viewModel.updatePassword(it)},
                 trailingIcon = {
                     Icon(
@@ -119,11 +118,11 @@ fun WelcomeLayout(
             Spacer(modifier = Modifier.height(32.dp))
             // Blue Button: "LogIn"
             BlueButton(
-                text = if (signInState is SignInState.Loading) "Loading..." else "LogIn",
+                text = if (uiState.operationState is SignInOperationState.Loading) "Loading..." else "LogIn",
                 onClick = {viewModel.signIn() },
-                enabled = signInState !is SignInState.Loading
+                enabled = uiState.operationState !is SignInOperationState.Loading
             )
-            if (signInState is SignInState.Loading) {
+            if (uiState.operationState is SignInOperationState.Loading) {
                 Spacer(modifier = Modifier.height(16.dp))
                 CircularProgressIndicator()
             }
