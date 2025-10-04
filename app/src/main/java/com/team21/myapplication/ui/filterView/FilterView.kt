@@ -45,6 +45,7 @@ class FilterViewActivity : ComponentActivity() {
  * - Selección de filtros + carousels.
  * - SearchBar y botón Search ejecutan onSearch().
  * - Carousel default: items clickeables → onOpenDetail(housingId).
+ * - [ANALYTICS] Se loguea en el ViewModel (toggle/search), aquí no hace falta tocar nada.
  */
 @Composable
 fun FilterView(
@@ -63,19 +64,19 @@ fun FilterView(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-                // SearchBar como botón
+                // [CAMBIO: SearchBar actúa como botón y dispara onSearch()]
                 SearchBar(
                     query = "",
                     onQueryChange = {},
                     placeholder = if (state.selectedCount > 0) "Search (${state.selectedCount})" else "Search",
                     asButton = true,
-                    onClick = onSearch,
+                    onClick = onSearch,  // ← dispara búsqueda (el VM hace Analytics)
                     enabled = true
                 )
             }
         },
 
-    ) { inner ->
+        ) { inner ->
         LazyColumn(
             modifier = modifier
                 .fillMaxSize()
@@ -116,7 +117,7 @@ fun FilterView(
                             text = a?.label ?: "Houses",
                             imageVector = iconFor(a?.label ?: "Houses"),
                             selected = a?.selected == true,
-                            onClick = { a?.let { onToggleTag(it.id) } },
+                            onClick = { a?.let { onToggleTag(it.id) } }, // [CAMBIO: toggle selección]
                             modifier = Modifier.weight(1f)
                         )
                         val b = featured.getOrNull(1)
@@ -124,7 +125,7 @@ fun FilterView(
                             text = b?.label ?: "Rooms",
                             imageVector = iconFor(b?.label ?: "Rooms"),
                             selected = b?.selected == true,
-                            onClick = { b?.let { onToggleTag(it.id) } },
+                            onClick = { b?.let { onToggleTag(it.id) } }, // [CAMBIO: toggle selección]
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -137,7 +138,7 @@ fun FilterView(
                             text = c?.label ?: "Cabins",
                             imageVector = iconFor(c?.label ?: "Cabins"),
                             selected = c?.selected == true,
-                            onClick = { c?.let { onToggleTag(it.id) } },
+                            onClick = { c?.let { onToggleTag(it.id) } }, // [CAMBIO: toggle selección]
                             modifier = Modifier.weight(1f)
                         )
                         val d = featured.getOrNull(3)
@@ -145,7 +146,7 @@ fun FilterView(
                             text = d?.label ?: "Apartments",
                             imageVector = iconFor(d?.label ?: "Apartments"),
                             selected = d?.selected == true,
-                            onClick = { d?.let { onToggleTag(it.id) } },
+                            onClick = { d?.let { onToggleTag(it.id) } }, // [CAMBIO: toggle selección]
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -163,7 +164,7 @@ fun FilterView(
                     GrayButton(
                         text = chip.label,
                         selected = chip.selected,
-                        onClick = { onToggleTag(chip.id) }
+                        onClick = { onToggleTag(chip.id) } // [CAMBIO: toggle selección]
                     )
                 }
             }
@@ -171,8 +172,8 @@ fun FilterView(
             // Carousel DEFAULT (estático) → cada card navega al detail
             item {
                 val defaultItems = listOf(
-                    DefaultHouseUi(id = "HousingPost10", title = "Living 72", rating = 4.95, reviews = 22, price = "$700'000 /month"),
-                    DefaultHouseUi(id = "HousingPost11", title = "City U",    rating = 4.95, reviews = 22, price = "$700'000 /month"),
+                    DefaultHouseUi(id = "HousingPost10", title = "Living 72",  rating = 4.95, reviews = 22, price = "$700'000 /month"),
+                    DefaultHouseUi(id = "HousingPost11", title = "City U",     rating = 4.95, reviews = 22, price = "$700'000 /month"),
                     DefaultHouseUi(id = "HousingPost12", title = "Modern Loft", rating = 4.90, reviews = 18, price = "$680'000 /month")
                 )
                 HorizontalCarousel(
@@ -188,7 +189,7 @@ fun FilterView(
                         pricePerMonthLabel = house.price,
                         imageRes = R.drawable.sample_house,
                         modifier = Modifier.fillMaxWidth(0.8f),
-                        onClick = { onOpenDetail(house.id) }   // ← navega al detail
+                        onClick = { onOpenDetail(house.id) }   // [CAMBIO: navega al detail]
                     )
                 }
             }
@@ -197,12 +198,12 @@ fun FilterView(
             item {
                 BlueButton(
                     text = if (state.canSearch) "Search" else "Search (select filters)",
-                    onClick = onSearch,
+                    onClick = onSearch, // [CAMBIO: dispara búsqueda]
                     modifier = Modifier.fillMaxWidth()
                 )
             }
 
-            // Botón Map Search
+            // Botón Map Search (opcional)
             item {
                 BlueButton(
                     text = "Map Search",

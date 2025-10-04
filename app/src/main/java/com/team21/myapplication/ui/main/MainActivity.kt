@@ -33,16 +33,59 @@ import com.team21.myapplication.ui.components.navbar.AppNavGraph
 import com.team21.myapplication.ui.theme.AppTheme
 import com.team21.myapplication.ui.theme.BlueCallToAction
 import com.team21.myapplication.ui.theme.LocalDSTypography
+import com.google.firebase.messaging.FirebaseMessaging
+import android.Manifest
+import android.app.Activity
+import android.os.Build
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.compose.rememberNavController
+import com.team21.myapplication.ui.components.navbar.AppNavBar
+import com.team21.myapplication.ui.components.navbar.AppNavGraph
+import com.team21.myapplication.ui.theme.AppTheme
 
 class MainActivity : ComponentActivity() {
+
+    // Launcher para pedir POST_NOTIFICATIONS en Android 13+
+    private val requestNotifPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* noop: si lo niegan, solo no mostramos notifs */ }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Suscribe al topic una vez (ok si se llama repetido)
+        FirebaseMessaging.getInstance().subscribeToTopic("trending_filters")
+
+        // Pide permiso de notificaciones (Android 13+)
+        if (Build.VERSION.SDK_INT >= 33) {
+            requestNotifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+
         setContent {
-            AppTheme { MainEntry() }
+            AppTheme {
+                val navController = rememberNavController()
+
+                // Manejar deep link del intent que abrió la Activity
+                val ctx = LocalContext.current
+                LaunchedEffect(Unit) {
+                    (ctx as? Activity)?.intent?.let { navController.handleDeepLink(it) }
+                }
+
+                androidx.compose.material3.Scaffold(
+                    bottomBar = { AppNavBar(navController) }
+                ) { inner ->
+                    AppNavGraph(
+                        navController = navController,
+                    )
+                }
+            }
         }
     }
 }
+
 
 @Composable
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
