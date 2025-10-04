@@ -204,7 +204,6 @@ fun MainScreen(
                             }
                         )
                     }
-                    Spacer(Modifier.height(100.dp))
                 }
             }
         }
