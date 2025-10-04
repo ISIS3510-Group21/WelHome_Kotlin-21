@@ -43,6 +43,7 @@ import com.team21.myapplication.ui.theme.*
 import kotlinx.coroutines.launch
 import java.io.File
 import androidx.compose.ui.window.Dialog
+import com.team21.myapplication.ui.createPostView.state.CreatePostOperationState
 
 /**
  * Main view to create a new post
@@ -62,22 +63,16 @@ fun CreatePostScreenLayout(
 ) {
     val context = LocalContext.current
     // --- VIEWMODEL STATES ---
-    val title by viewModel.title.collectAsState()
-    val description by viewModel.description.collectAsState()
-    val price by viewModel.price.collectAsState()
-    val address by viewModel.address.collectAsState()
-    val mainPhoto by viewModel.mainPhoto.collectAsState()
-    val additionalPhotos by viewModel.additionalPhotos.collectAsState()
-    val createPostState by viewModel.createPostState.collectAsState()
+    // Observar un solo estado unificado
+    val uiState by viewModel.uiState.collectAsState()
 
     // --- LOCAL STATES ---
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var photoUri by remember { mutableStateOf<Uri?>(null) }
 
-    // --- NEW: STATE FOR DIALOG AND AMENITIES VIEWMODEL ---
+    // STATE FOR DIALOG AND AMENITIES VIEWMODEL ---
     var showAmenitiesDialog by remember { mutableStateOf(false) }
-    val selectedAmenities by viewModel.selectedAmenities.collectAsState()
     val amenitiesViewModel: AmenitiesViewModel = viewModel() // Vi
 
     // --- LAUNCHER FOR SELECTING MAIN PHOTO ---
@@ -102,7 +97,7 @@ fun CreatePostScreenLayout(
     ) { success ->
         if (success && photoUri != null) {
             // If main photo is empty, use this as main
-            if (mainPhoto == null) {
+            if (uiState.mainPhoto == null) {
                 viewModel.setMainPhoto(photoUri!!)
             } else {
                 // If there is already a main photo, add as additional
@@ -155,9 +150,9 @@ fun CreatePostScreenLayout(
 
     // --- SIDE EFFECTS ---
     // LaunchedEffect runs when createPostState changes
-    LaunchedEffect(createPostState) {
-        when (val state = createPostState) {
-            is CreatePostState.Success -> {
+    LaunchedEffect(uiState.operationState) {
+        when (val state = uiState.operationState) {
+            is CreatePostOperationState.Success -> {
                 // Show success message
                 snackbarHostState.showSnackbar("Post created successfully!")
                 // Clear form
@@ -165,7 +160,7 @@ fun CreatePostScreenLayout(
                 // Execute navigation callback
                 onPostCreated()
             }
-            is CreatePostState.Error -> {
+            is CreatePostOperationState.Error -> {
                 // Show error message
                 snackbarHostState.showSnackbar(state.message)
                 // Reset state after showing error
@@ -223,7 +218,7 @@ fun CreatePostScreenLayout(
             Spacer(modifier = Modifier.height(8.dp))
             PlaceholderTextField(
                 placeholderText = "Ex: Cozy Home",
-                value = title,
+                value = uiState.title,
                 onValueChange = { viewModel.updateTitle(it) } // Updates the ViewModel
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -237,7 +232,7 @@ fun CreatePostScreenLayout(
             Spacer(modifier = Modifier.height(8.dp))
             PlaceholderTextField(
                 placeholderText = "Ex: 950000",
-                value = price,
+                value = uiState.price,
                 onValueChange = { viewModel.updatePrice(it) } // Filters and updates
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -252,7 +247,7 @@ fun CreatePostScreenLayout(
             PlaceholderTextField(
                 placeholderText = "Ex: The neighborhood is pretty quiet and nice",
                 height = 100.dp,
-                value = description,
+                value = uiState.description,
                 onValueChange = { viewModel.updateDescription(it) }
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -265,8 +260,6 @@ fun CreatePostScreenLayout(
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Observe the selected tag
-            val selectedTagId by viewModel.selectedTagId.collectAsState()
 
             // Define the tag IDs according to your Firebase
             val housingTags = listOf(
@@ -282,7 +275,7 @@ fun CreatePostScreenLayout(
             ) {
                 housingTags.take(2).forEach { (tagInfo, icon) ->
                     val (tagId, tagName) = tagInfo
-                    val isSelected = selectedTagId == tagId
+                    val isSelected = uiState.selectedTagId == tagId
 
                     BorderButton(
                         modifier = Modifier.weight(1f),
@@ -305,7 +298,7 @@ fun CreatePostScreenLayout(
             ) {
                 housingTags.drop(2).forEach { (tagInfo, icon) ->
                     val (tagId, tagName) = tagInfo
-                    val isSelected = selectedTagId == tagId
+                    val isSelected = uiState.selectedTagId == tagId
 
                     BorderButton(
                         modifier = Modifier.weight(1f),
@@ -343,9 +336,9 @@ fun CreatePostScreenLayout(
                     text = "Add",
                     onClick = {showAmenitiesDialog = true }
                 )
-                if (selectedAmenities.isNotEmpty()) {
+                if (uiState.selectedAmenities.isNotEmpty()) {
                     HorizontalCarousel(
-                        items = selectedAmenities.map { it.name },
+                        items = uiState.selectedAmenities.map { it.name },
                         contentPadding = PaddingValues(horizontal = 0.dp),
                         horizontalSpacing = 8.dp,
                         snapToItems = false
@@ -396,7 +389,7 @@ fun CreatePostScreenLayout(
 
             // BUTTON 1: Add main photo
             BorderButton(
-                text = if (mainPhoto == null) "Add main photo" else "Change main photo",
+                text = if (uiState.mainPhoto == null) "Add main photo" else "Change main photo",
                 onClick = { mainPhotoPickerLauncher.launch("image/*") },
                 leadingIcon = {
                     Icon(
@@ -408,7 +401,7 @@ fun CreatePostScreenLayout(
             )
 
             // Preview of the main photo
-            if (mainPhoto != null) {
+            if (uiState.mainPhoto != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -428,7 +421,7 @@ fun CreatePostScreenLayout(
                         Spacer(modifier = Modifier.height(8.dp))
                         Box {
                             AsyncImage(
-                                model = mainPhoto,
+                                model = uiState.mainPhoto,
                                 contentDescription = "Main photo",
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -479,7 +472,7 @@ fun CreatePostScreenLayout(
 
             // BUTTON 3: Add additional photos
             BorderButton(
-                text = "Add additional photos (${additionalPhotos.size}/9)",
+                text = "Add additional photos (${uiState.additionalPhotos.size}/9)",
                 onClick = { additionalPhotosPickerLauncher.launch("image/*") },
                 leadingIcon = {
                     Icon(
@@ -488,11 +481,11 @@ fun CreatePostScreenLayout(
                         tint = BlueCallToAction
                     )
                 },
-                enabled = additionalPhotos.size < 9
+                enabled = uiState.additionalPhotos.size < 9
             )
 
             // Preview of additional photos
-            if (additionalPhotos.isNotEmpty()) {
+            if (uiState.additionalPhotos.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -504,7 +497,7 @@ fun CreatePostScreenLayout(
                         modifier = Modifier.padding(8.dp)
                     ) {
                         Text(
-                            text = "Additional Photos (${additionalPhotos.size})",
+                            text = "Additional Photos (${uiState.additionalPhotos.size})",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -512,7 +505,7 @@ fun CreatePostScreenLayout(
                         LazyRow(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            items(additionalPhotos) { uri ->
+                            items(uiState.additionalPhotos) { uri ->
                                 Box {
                                     AsyncImage(
                                         model = uri,
@@ -562,7 +555,7 @@ fun CreatePostScreenLayout(
             Spacer(modifier = Modifier.height(8.dp))
             PlaceholderTextField(
                 placeholderText = "Ex: Cr 9 # XX -XX",
-                value = address,
+                value = uiState.address,
                 onValueChange = { viewModel.updateAddress(it) }
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -579,16 +572,16 @@ fun CreatePostScreenLayout(
 
             // --- CREATE BUTTON ---
             BlueButton(
-                text = if (createPostState is CreatePostState.Loading) "Creating..." else "Create",
+                text = if (uiState.operationState is CreatePostOperationState.Loading) "Creating..." else "Create",
                 onClick = {
                     // Call the ViewModel function to create the post
                     viewModel.createPost()
                 },
-                enabled = createPostState !is CreatePostState.Loading // Disable if loading
+                enabled = uiState.operationState  !is CreatePostOperationState.Loading // Disable if loading
             )
 
             // Show loading indicator if in Loading state
-            if (createPostState is CreatePostState.Loading) {
+            if (uiState.operationState  is CreatePostOperationState.Loading) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Box(
                     modifier = Modifier.fillMaxWidth(),
@@ -619,7 +612,7 @@ fun CreatePostScreenLayout(
             ) {
                 AddAmenitiesLayout(
                     viewModel = amenitiesViewModel,
-                    initialAmenities = selectedAmenities,
+                    initialAmenities = uiState.selectedAmenities,
                     onSave = { newAmenities ->
                         viewModel.updateSelectedAmenities(newAmenities)
                         showAmenitiesDialog = false
