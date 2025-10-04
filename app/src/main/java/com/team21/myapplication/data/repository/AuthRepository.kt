@@ -1,5 +1,6 @@
 package com.team21.myapplication.data.repository
 
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.team21.myapplication.data.model.OwnerUser
@@ -43,7 +44,7 @@ class AuthRepository {
                     password = "", //Never save password
                     nationality = nationality,
                     language = language,
-                    birthDate = birthDate,
+                    birthDate = Timestamp.now(), //TODO: adjust
                     university = "Traingle Insitute", //by default
                     roomieTags = emptyList(),
                     savedBookings = emptyList(),

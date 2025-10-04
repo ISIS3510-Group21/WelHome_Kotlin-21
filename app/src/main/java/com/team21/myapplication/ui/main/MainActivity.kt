@@ -2,6 +2,7 @@ package com.team21.myapplication.ui.main
 
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -13,13 +14,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
@@ -63,9 +69,26 @@ fun MainScreen(
     onOpenFilters: () -> Unit,
     onOpenDetail: (String) -> Unit,
     onNavigateToDetail: (String) -> Unit,
-    viewModel: MainViewModel = viewModel()
+    //viewModel: MainViewModel = viewModel()
 ) {
+    val appContext = LocalContext.current.applicationContext
+
+    // Factory con ese context
+    val viewModel: MainViewModel = viewModel(
+        factory = remember {
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    return MainViewModel(appContext) as T
+                }
+            }
+        }
+    )
     val state by viewModel.homeState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        viewModel.getHousingPosts()
+    }
 
     Scaffold { innerPadding ->
         if (state.isLoading) {
@@ -130,6 +153,11 @@ fun MainScreen(
                                 resolveHousingId(listing)?.let { id ->
                                     onNavigateToDetail(id)
                                 }
+                                viewModel.logHousingPostClick(
+                                    postId = listing.housing,
+                                    postTitle = listing.title,
+                                    price = listing.price
+                                )
                             }
                         )
                     }
