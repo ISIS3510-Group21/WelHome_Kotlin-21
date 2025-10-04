@@ -1,13 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-    <uses-feature android:name="android.hardware.camera"  android:required="false" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
 
     <application
         android:allowBackup="true"
@@ -18,31 +24,37 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.WelHome">
+
+        <!-- ✅ MAIN LAUNCHER (singleTop + deep link opcional) -->
         <activity
             android:name=".ui.main.MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.WelHome">
+            android:theme="@style/Theme.WelHome"
+            android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- (Opcional) para abrir con welhome://filterResults -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="welhome"
+                    android:host="filterresults" />
             </intent-filter>
         </activity>
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyDw_k90Gzr2HIC3lbizsqcOrFSBecEZkWg"
-        />
+            android:value="AIzaSyDw_k90Gzr2HIC3lbizsqcOrFSBecEZkWg" />
 
         <activity
             android:name=".ui.mapsearch.MapSearchActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+            android:exported="true" />
 
         <activity
             android:name=".ui.createPostView.CreatePostActivity"
@@ -64,11 +76,24 @@
             android:name=".ui.createAccountView.WelcomeActivity"
             android:exported="true"
             android:theme="@style/Theme.WelHome" />
-
         <activity
             android:name=".ui.createAccountView.SignUpActivity"
             android:exported="false"
             android:theme="@style/Theme.WelHome" />
+
+        <!-- ✅ Servicio de FCM en tu package .notification -->
+        <service
+            android:name=".notification.MyMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!-- (Opcional) Canal por defecto si usas notificaciones automáticas de FCM -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="trending_filters" />
 
     </application>
 </manifest>

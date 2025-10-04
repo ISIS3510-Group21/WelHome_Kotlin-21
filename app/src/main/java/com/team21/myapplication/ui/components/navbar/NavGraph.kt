@@ -2,11 +2,12 @@ package com.team21.myapplication.ui.components.navbar
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavType
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 import androidx.compose.material3.Text
 import com.team21.myapplication.ui.filterView.FilterRoute
 import com.team21.myapplication.ui.filterView.results.FilterResultsCache
@@ -32,17 +33,15 @@ fun AppNavGraph(
         composable(AppDest.Home.route) {
             com.team21.myapplication.ui.main.MainScreen(
                 onOpenFilters = { navController.navigate("filters") },
-                // Ambas reciben el mismo callback para navegar al detalle
-                onOpenDetail = { id -> navController.navigate(DetailRoutes.detail(id)) },
+                onOpenDetail  = { id -> navController.navigate(DetailRoutes.detail(id)) },
                 onNavigateToDetail = { id -> navController.navigate(DetailRoutes.detail(id)) }
             )
         }
 
-        // FILTROS (pantalla para escoger filtros)
+        // PANTALLA DE FILTROS
         composable("filters") {
             FilterRoute(
                 onNavigateToResults = { items ->
-                    // OJO: usa SIEMPRE el mismo nombre de ruta que declaras abajo ("filterResults")
                     FilterResultsCache.items = items
                     navController.navigate("filterResults")
                 },
@@ -52,27 +51,30 @@ fun AppNavGraph(
             )
         }
 
-        // SAVED (placeholder)
-        composable(AppDest.Saved.route) { Text("Saved") }
-
-        // FORUM -> también abre filtros (como pediste)
-        composable(AppDest.Forum.route) {
-            FilterRoute(
-                onNavigateToResults = { items ->
-                    FilterResultsCache.items = items
-                    navController.navigate("filterResults")
-                },
-                onOpenDetail = { housingId ->
-                    navController.navigate(DetailRoutes.detail(housingId))
+        // DESTINO con Deep Link (para notificaciones)
+        composable(
+            route = "filterResults?tags={tags}",
+            arguments = listOf(
+                navArgument("tags") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                    nullable = true
                 }
+            ),
+            deepLinks = listOf(
+                navDeepLink { uriPattern = "welhome://filterResults?tags={tags}" }
+            )
+        ) { backStackEntry ->
+            val tagsCsv = backStackEntry.arguments?.getString("tags").orEmpty()
+            // TODO: si tu FilterResultsRoute soporta este parámetro, pásalo.
+            // Por ahora tiramos de la cache poblada desde FilterRoute.
+            FilterResultsRoute(
+                onOpenDetail = { id -> navController.navigate(DetailRoutes.detail(id)) },
+                onNavigateBottomBar = { /* no-op aquí */ }
             )
         }
 
-        // VISITS / PROFILE (placeholders)
-        composable(AppDest.Visits.route) { Text("Visits") }
-        composable(AppDest.Profile.route) { Text("Profile") }
-
-        // RESULTADOS DE FILTROS
+        // RESULTADOS (cuando vienes desde la pantalla de filtros)
         composable("filterResults") {
             FilterResultsRoute(
                 onOpenDetail = { housingId ->
@@ -91,6 +93,23 @@ fun AppNavGraph(
                 }
             )
         }
+
+        // OTROS (placeholders)
+        composable(AppDest.Saved.route)   { Text("Saved") }
+        composable(AppDest.Forum.route)   {
+            // Como pediste: Forum abre Filtros
+            FilterRoute(
+                onNavigateToResults = { items ->
+                    FilterResultsCache.items = items
+                    navController.navigate("filterResults")
+                },
+                onOpenDetail = { housingId ->
+                    navController.navigate(DetailRoutes.detail(housingId))
+                }
+            )
+        }
+        composable(AppDest.Visits.route)  { Text("Visits") }
+        composable(AppDest.Profile.route) { Text("Profile") }
 
         // DETALLE
         composable(
