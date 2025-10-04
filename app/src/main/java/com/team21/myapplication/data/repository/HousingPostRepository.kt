@@ -1,44 +1,210 @@
 package com.team21.myapplication.data.repository
 
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.team21.myapplication.data.model.HousingPost
-import kotlinx.coroutines.tasks.await
-import com.google.firebase.Timestamp
-import com.team21.myapplication.data.model.Location
-import com.team21.myapplication.data.model.Picture
-import com.team21.myapplication.data.model.RoomateProfile
-import kotlin.collections.emptyList
 import android.net.Uri
-import java.util.UUID
+import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.DocumentReference
+import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.storage.FirebaseStorage
-import com.team21.myapplication.data.model.Ammenities
-import com.team21.myapplication.data.model.TagHousingPost
+import com.team21.myapplication.data.model.*
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.tasks.await
+import java.util.UUID
 
 class HousingPostRepository {
     private val db = FirebaseFirestore.getInstance()
-    private val housingPostsCollection = db.collection("HousingPost")
-
+    private val col = db.collection(CollectionNames.HOUSING_POST)
+    private val housingPostsCollection = col
     private val auth = FirebaseAuth.getInstance().currentUser?.uid
     private val storage = FirebaseStorage.getInstance()
 
-    suspend fun getHousingPosts(): List<HousingPost> {
-        val querySnapshot = housingPostsCollection.get().await()
-        return querySnapshot.documents.mapNotNull { document ->
-            document.toObject(HousingPost::class.java)
+    // ------------------------------
+    // Helpers de coerción / parseo
+    // ------------------------------
+
+    /** Convierte GeoPoint o Map {lat,lng}/{latitude,longitude} → Location */
+    private fun coerceLocation(raw: Any?): Location? = when (raw) {
+        is GeoPoint -> Location(lat = raw.latitude, lng = raw.longitude)
+        is Map<*, *> -> {
+            val lat = (raw["lat"] ?: raw["latitude"]) as? Number
+            val lng = (raw["lng"] ?: raw["longitude"]) as? Number
+            if (lat != null && lng != null) Location(lat.toDouble(), lng.toDouble()) else null
+        }
+        else -> null
+    }
+
+    /** Convierte DocumentReference o String → String (path o id) */
+    private fun coerceDocPath(raw: Any?): String? = when (raw) {
+        is DocumentReference -> raw.path       // p.ej. "HousingTag/HousingTag1"
+        is String -> raw                       // ya es path o id
+        else -> null
+    }
+
+    // ------------------------------
+    // Parsers de listas embebidas
+    // ------------------------------
+
+    private fun parsePicturesList(raw: Any?): List<Picture> {
+        val items = raw as? List<*> ?: return emptyList()
+        return items.mapNotNull { it as? Map<*, *> }.map {
+            Picture(
+                id = (it["id"] as? String).orEmpty(),
+                name = (it["name"] as? String).orEmpty(),
+                PhotoPath = (it["PhotoPath"] as? String).orEmpty()
+            )
         }
     }
 
+    /** TagHousingPost con housingTag como String (id o path) */
+    private fun parseTagList(raw: Any?): List<TagHousingPost> {
+        val items = raw as? List<*> ?: return emptyList()
+        return items.mapNotNull { it as? Map<*, *> }.map {
+            TagHousingPost(
+                id = (it["id"] as? String).orEmpty(),
+                name = (it["name"] as? String).orEmpty(),
+                housingTag = coerceDocPath(it["housingTag"]) // ← String
+            )
+        }
+    }
+
+    private fun parseAmmenitiesList(raw: Any?): List<Ammenities> {
+        val items = raw as? List<*> ?: return emptyList()
+        return items.mapNotNull { it as? Map<*, *> }.map {
+            Ammenities(
+                id = (it["id"] as? String).orEmpty(),
+                name = (it["name"] as? String).orEmpty(),
+                iconPath = (it["iconPath"] as? String).orEmpty()
+            )
+        }
+    }
+
+    private fun parseRoomiesList(raw: Any?): List<RoomateProfile> {
+        val items = raw as? List<*> ?: return emptyList()
+        return items.mapNotNull { it as? Map<*, *> }.map {
+            RoomateProfile(
+                id = (it["id"] as? String).orEmpty(),
+                name = (it["name"] as? String).orEmpty(),
+                StudentUserID = (it["StudentUserID"] as? String).orEmpty(),
+                roomieTags = (it["roomieTags"] as? List<*>)?.mapNotNull { s -> s as? String } ?: emptyList()
+            )
+        }
+    }
+
+    // ------------------------------
+    // Mapping de documento base
+    // ------------------------------
+
+    /** Mapea el documento base SIN toObject para tolerar location y tipos mixtos. */
+    private fun mapHousingPostBase(snap: DocumentSnapshot): HousingPost? {
+        val data = snap.data ?: return null
+        return HousingPost(
+            id = snap.id,
+            creationDate  = data["creationDate"]  as? Timestamp,
+            updatedAt     = data["updatedAt"]     as? Timestamp,
+            closureDate   = data["closureDate"]   as? Timestamp,
+            address       = (data["address"] as? String).orEmpty(),
+            price         = (data["price"]   as? Number)?.toDouble() ?: 0.0,
+            rating        = (data["rating"]  as? Number)?.toDouble() ?: 0.0,
+            title         = (data["title"]   as? String).orEmpty(),
+            description   = (data["description"] as? String).orEmpty(),
+            host          = (data["host"]    as? String).orEmpty(),
+            location      = coerceLocation(data["location"]),
+            status        = (data["status"]  as? String).orEmpty(),
+            statusChange  = data["statusChange"]  as? Timestamp,
+            thumbnail     = (data["thumbnail"] as? String).orEmpty(),
+            reviews       = (data["reviews"] as? String).orEmpty(),
+            bookingDates  = (data["bookingDates"] as? String).orEmpty(),
+
+            // Listas embebidas si existen (compatibilidad hacia adelante)
+            pictures      = parsePicturesList(data["pictures"]),
+            tag           = parseTagList(data["tag"]),                 // ← housingTag como String
+            ammenities    = parseAmmenitiesList(data["ammenities"]),
+            roomateProfile= parseRoomiesList(data["roomateProfile"])
+        )
+    }
+
+    // ------------------------------
+    // Lecturas
+    // ------------------------------
+
+    /** Lista simple (usa solo root; no subcolecciones) */
+    suspend fun getHousingPosts(): List<HousingPost> {
+        val snapshot = col.get().await()
+        return snapshot.documents.mapNotNull { d -> mapHousingPostBase(d) }
+    }
+
     /**
-     * Creates a new housing post in Firestore
-     * UPDATED: Now uploads images to Firebase Storage
-     *
-     * @param title Post title
-     * @param description Housing description
-     * @param price Rental price
-     * @param address Housing address
-     * @param imageUris List of URIs of the images to upload
-     * @return Result with the created HousingPost or an error
+     * Detalle completo.
+     * - Si el doc ya trae listas embebidas → las usamos.
+     * - Si no las trae → fallback a subcolecciones (datos antiguos).
+     */
+    suspend fun getHousingPostById(housingId: String): HousingPostFull? = coroutineScope {
+        val docRef = col.document(housingId)
+        val snap = docRef.get().await()
+        val base = mapHousingPostBase(snap) ?: return@coroutineScope null
+
+        val hasEmbedded =
+            base.pictures.isNotEmpty() ||
+                    base.tag.isNotEmpty() ||
+                    base.ammenities.isNotEmpty() ||
+                    base.roomateProfile.isNotEmpty()
+
+        if (hasEmbedded) {
+            return@coroutineScope HousingPostFull(
+                post = base,
+                pictures = base.pictures,
+                tag = base.tag,
+                ammenities = base.ammenities,
+                roomateProfile = base.roomateProfile
+            )
+        }
+
+        // Fallback: subcolecciones (compatibilidad hacia atrás)
+        val picturesDef = async {
+            docRef.collection(CollectionNames.PICTURES).get().await().documents.mapNotNull { d ->
+                d.toObject(Picture::class.java)?.apply { id = d.id }
+            }
+        }
+        val tagsDef = async {
+            docRef.collection(CollectionNames.TAG).get().await().documents.mapNotNull { d ->
+                val m = d.data ?: return@mapNotNull null
+                TagHousingPost(
+                    id = d.id,
+                    name = (m["name"] as? String).orEmpty(),
+                    housingTag = coerceDocPath(m["housingTag"]) // ← String (id o path)
+                )
+            }
+        }
+        val ammsDef = async {
+            docRef.collection(CollectionNames.AMMENITIES).get().await().documents.mapNotNull { d ->
+                d.toObject(Ammenities::class.java)?.copy(id = d.id)
+            }
+        }
+        val roomiesDef = async {
+            docRef.collection(CollectionNames.ROOMATE_PROFILE).get().await().documents.mapNotNull { d ->
+                d.toObject(RoomateProfile::class.java)?.copy(id = d.id)
+            }
+        }
+
+        HousingPostFull(
+            post = base,
+            pictures = picturesDef.await(),
+            tag = tagsDef.await(),
+            ammenities = ammsDef.await(),
+            roomateProfile = roomiesDef.await()
+        )
+    }
+
+    // ------------------------------
+    // Create “todo en uno” (root)
+    // ------------------------------
+
+    /**
+     * CREATE: respeta tu enfoque "todo en uno" (root con listas embebidas).
+     * Sube imágenes a Storage y guarda thumbnail + listas.
      */
     suspend fun createHousingPost(
         title: String,
@@ -50,94 +216,81 @@ class HousingPostRepository {
         selectedAmenities: List<Ammenities> = emptyList()
     ): Result<HousingPost> {
         return try {
-            // 1. Generate a unique ID for the document
             val postId = housingPostsCollection.document().id
 
-            // 2. UPLOAD IMAGES TO FIREBASE STORAGE
-            println("Uploading ${imageUris.size} images...")
+            // Subir imágenes
             val uploadedPictures = uploadImages(postId, imageUris)
+            if (imageUris.isEmpty()) return Result.failure(Exception("You must attach at least one image"))
+            if (uploadedPictures.isEmpty()) return Result.failure(Exception("Image upload failed."))
 
-            if (imageUris.isEmpty()) {
-                return Result.failure(Exception("You must attach at least one image"))
-            }
-            if (uploadedPictures.isEmpty()) {
-                return Result.failure(Exception("Image upload failed. Check Storage permissions/rules and logs."))
-            }
-
-            println("${uploadedPictures.size} images uploaded successfully")
-
-            // 3. Get the current user
-            val currentUserId = "temporary_user_${System.currentTimeMillis()}" //TODO: obtain real id
-
-            // 4. The first uploaded image will be the thumbnail
-            val thumbnailUrl = uploadedPictures.firstOrNull()?.photoPath
+            val currentUserId = auth ?: "temporary_user_${System.currentTimeMillis()}"
+            val thumbnailUrl = uploadedPictures.firstOrNull()?.PhotoPath
                 ?: "https://img.freepik.com/free-photo/beautiful-interior-shot-modern-house-with-white-relaxing-walls-furniture-technology_181624-3828.jpg?semt=ais_hybrid&w=740&q=80"
 
-            // 5. Create the HousingPost object
-            val housingPost = HousingPost(
-                id = postId,
-                creationDate = Timestamp.now(),
-                updateAt = Timestamp.now(),
-                closureDate = Timestamp.now(),
-                address = address,
-                price = price,
-                rating = 0f,
-                title = title,
-                description = description,
-                location = Location(
-                    lat = 4.6097, // Default coordinates (Bogotá)
-                    lng = -74.0817
-                ),
-                thumbnail = thumbnailUrl, // Use the first uploaded image
-                host = currentUserId,
-                reviews = "",
-                bookingDates = "",
-                pictures = uploadedPictures, // REAL uploaded images
-                tag = if (selectedTagId != null) {
-                    // Generate unique UUID for this TagHousingPost
-                    val tagUuid = "tag_${System.currentTimeMillis()}"
-
-                    // Get the tag name according to the ID
-                    val tagName = when(selectedTagId) {
-                        "HousingTag1" -> "House"
-                        "HousingTag2" -> "Apartment"
-                        "HousingTag3" -> "Cabin"
-                        "HousingTag11" -> "Residence"
-                        else -> "Unknown"
-                    }
-                    listOf(
-                        TagHousingPost(
-                            id = tagUuid,
-                            name = tagName,
-                            housingTag = db.collection("HousingTag").document(selectedTagId)
-                        )
+            // Tag embebido (si aplica) — GUARDA **String** (path o id), no DocumentReference
+            val embeddedTags = if (selectedTagId != null) {
+                val tagUuid = "tag_${System.currentTimeMillis()}"
+                val tagName = when (selectedTagId) {
+                    "HousingTag1" -> "House"
+                    "HousingTag2" -> "Apartment"
+                    "HousingTag3" -> "Cabin"
+                    "HousingTag11" -> "Residence"
+                    else -> "Unknown"
+                }
+                listOf(
+                    TagHousingPost(
+                        id = tagUuid,
+                        name = tagName,
+                        // Elige: guardar el PATH completo...
+                        housingTag = db.collection("HousingTag").document(selectedTagId).path
+                        // ...o solo el ID:
+                        // housingTag = selectedTagId
                     )
-                } else {
-                    emptyList()
-                },
+                )
+            } else emptyList()
 
-                ammenities = selectedAmenities.map { amenity ->
-                    Ammenities(
-                        id = amenity.id,
-                        name = amenity.name,
-                        iconPath = amenity.iconPath
-                    )
-                },
+            // Amenidades embebidas
+            val embeddedAmm = selectedAmenities.map { a ->
+                Ammenities(id = a.id, name = a.name, iconPath = a.iconPath)
+            }
 
-                roomateProfile = RoomateProfile(
+            // Roomies embebidos (placeholder)
+            val embeddedRoomies = listOf(
+                RoomateProfile(
                     id = "",
                     name = "No roommates yet",
-                    studentUserID = ""
+                    StudentUserID = ""
                 )
             )
 
-            // 6. Save the document in Firestore
-            housingPostsCollection
-                .document(postId)
-                .set(housingPost)
-                .await()
+            val housingPost = HousingPost(
+                id = postId,
+                creationDate = Timestamp.now(),
+                updatedAt = Timestamp.now(),
+                closureDate = Timestamp.now(),
+                address = address,
+                price = price,
+                rating = 0.0,
+                title = title,
+                description = description,
+                location = Location( // guardamos como mapa {lat,lng}
+                    lat = 4.6097,  // Bogotá por defecto
+                    lng = -74.0817
+                ),
+                thumbnail = thumbnailUrl,
+                host = currentUserId,
+                reviews = "",
+                bookingDates = "",
 
-            // 7. Update HousingTag with the HousingPreview
+                pictures = uploadedPictures,
+                tag = embeddedTags,           // ← housingTag String
+                ammenities = embeddedAmm,
+                roomateProfile = embeddedRoomies
+            )
+
+            housingPostsCollection.document(postId).set(housingPost).await()
+
+            // Actualizar HousingTag con preview (best effort)
             if (selectedTagId != null) {
                 updateHousingTagWithPreview(
                     housingTagId = selectedTagId,
@@ -149,76 +302,39 @@ class HousingPostRepository {
                 )
             }
 
-            println("Post created successfully with ID: $postId")
-
-            // 8. Return success
             Result.success(housingPost)
-
         } catch (e: Exception) {
-            println("Error creating post: ${e.message}")
             e.printStackTrace()
             Result.failure(e)
         }
     }
 
-    /**
-     * Uploads multiple images to Firebase Storage
-     *
-     * STRUCTURE IN STORAGE:
-     * housing_posts/
-     * {postId}/
-     * image_0_uuid.jpg
-     * image_1_uuid.jpg
-     * ...
-     *
-     * @param postId Post ID (to organize the images)
-     * @param imageUris List of image URIs
-     * @return List of Picture objects with download URLs
-     */
     private suspend fun uploadImages(postId: String, imageUris: List<Uri>): List<Picture> {
         val uploadedPictures = mutableListOf<Picture>()
-
         imageUris.forEachIndexed { index, uri ->
             try {
-                println("Uploading image ${index + 1}/${imageUris.size}...")
-
-                // 1. Create unique name for the image
                 val imageName = "image_${index}_${UUID.randomUUID()}.jpg"
-
-                // 2. Create Storage reference
                 val storageRef = storage.reference
                     .child("housing_posts")
                     .child(postId)
                     .child(imageName)
 
-                // 3. Upload the image
-                val uploadTask = storageRef.putFile(uri).await()
-
-                // 4. Get download URL
+                storageRef.putFile(uri).await()
                 val downloadUrl = storageRef.downloadUrl.await().toString()
 
-                // 5. Create Picture object
-                val picture = Picture(
-                    photoPath = downloadUrl,
-                    name = imageName
+                uploadedPictures.add(
+                    Picture(
+                        PhotoPath = downloadUrl,
+                        name = imageName
+                    )
                 )
-
-                uploadedPictures.add(picture)
-                println("Image ${index + 1} uploaded: $imageName")
-
-            } catch (e: Exception) {
-                println("Error uploading image ${index + 1}: ${e.message}")
-                // Continue with the remaining images even if one fails
+            } catch (_: Exception) {
+                // continúa con las demás imágenes
             }
         }
-
         return uploadedPictures
     }
 
-    /**
-     * Updates or creates a HousingTag by adding a HousingPreview
-     * If the tag doesn't exist, it creates it. If it exists, it adds the preview to the list
-     */
     private suspend fun updateHousingTagWithPreview(
         housingTagId: String,
         postId: String,
@@ -231,56 +347,38 @@ class HousingPostRepository {
             val housingTagRef = db.collection("HousingTag").document(housingTagId)
             val housingTagDoc = housingTagRef.get().await()
 
-            // Create the HousingPreview
             val housingPreview = mapOf(
                 "id" to postId,
                 "title" to title,
                 "price" to price,
                 "rating" to rating,
                 "photoPath" to thumbnailUrl,
-                "housing" to db.collection("HousingPost").document(postId),
+                "housing" to db.collection("HousingPost").document(postId), // ref en preview
                 "reviewsCount" to 0
             )
 
             if (housingTagDoc.exists()) {
-                // The tag exists, add the preview to the list
-                println("HousingTag $housingTagId already exists, adding preview...")
-
                 val currentPreviews = housingTagDoc.get("housingPreview") as? List<*> ?: emptyList<Any>()
-                val updatedPreviews = currentPreviews.toMutableList().apply {
-                    add(housingPreview)
-                }
-
+                val updatedPreviews = currentPreviews.toMutableList().apply { add(housingPreview) }
                 housingTagRef.update("housingPreview", updatedPreviews).await()
-                println("Preview added to existing HousingTag")
-
             } else {
-                // The tag doesn't exist, create it
-                println("Creating new HousingTag $housingTagId...")
-
-                val tagName = when(housingTagId) {
+                val tagName = when (housingTagId) {
                     "HousingTag1" -> "House"
                     "HousingTag2" -> "Apartment"
                     "HousingTag3" -> "Cabin"
                     "HousingTag11" -> "Residence"
                     else -> "Unknown"
                 }
-
                 val newHousingTag = hashMapOf(
                     "id" to housingTagId,
                     "name" to tagName,
                     "iconPath" to "/storage/icons/housingtags/${tagName.lowercase()}.png",
                     "housingPreview" to listOf(housingPreview)
                 )
-
                 housingTagRef.set(newHousingTag).await()
-                println("New HousingTag created with preview")
             }
-
-        } catch (e: Exception) {
-            println("Error updating HousingTag: ${e.message}")
-            e.printStackTrace()
-            // Do not throw an exception so the post is created even if this fails
+        } catch (_: Exception) {
+            // best-effort: no rompemos el create si esto falla
         }
     }
 }

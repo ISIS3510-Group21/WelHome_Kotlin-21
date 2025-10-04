@@ -10,7 +10,7 @@ class StudentUserProfileRepository {
     private val db = FirebaseFirestore.getInstance()
     private val studentUserCollection = db.collection("StudentUserProfile")
     //Se usa un id provisional para probar
-    private val auth = "StudentUser1"
+    private val auth = "tcGfBwE5JbhMFbrnfAzHyXolT0t1"
     //private val auth = FirebaseAuth.getInstance().currentUser?.uid
 
     suspend fun getStudentUserProfile(): StudentUserProfile? {

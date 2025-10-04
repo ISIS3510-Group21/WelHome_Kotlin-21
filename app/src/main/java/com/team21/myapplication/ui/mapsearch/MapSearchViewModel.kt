@@ -24,13 +24,13 @@ class MapSearchViewModel: ViewModel() {
         viewModelScope.launch {
             val posts = repository.getHousingPosts()
 
-            val locations = posts.map { post ->
-                post.location.let { location ->
+            val locations = posts.mapNotNull { post ->
+                post.location?.let { loc ->
                     MapLocation(
                         title = post.title,
-                        position = LatLng(location.lat, location.lng),
+                        position = LatLng(loc.lat, loc.lng),
                         rating = post.rating,
-                        price = "$" + post.price.toString() + "/month",
+                        price = "$${post.price}/month",
                         imageUrl = post.thumbnail
                     )
                 }
