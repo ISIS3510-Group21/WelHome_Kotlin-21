@@ -60,7 +60,7 @@ class MainViewModel(
             try {
                 // Obtain current user
                 //val auth = FirebaseAuth.getInstance().currentUser?.uid
-                val auth = "StudentUser99" //TODO:prueba
+                val auth = "StudentUser12" //TODO:prueba
                 Log.d("MainViewModel", "Buscando usuario con ID: $auth")
                 val studentUser = repositoryStudentUser.getStudentUser(auth)
 

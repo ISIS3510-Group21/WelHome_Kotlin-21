@@ -40,6 +40,7 @@ class AnalyticsHelper(context: Context) {
             param("housing_category", housingCategory)
             param("price", price)
             param("user_nationality", userNationality)
+            param("nationality_tag", "${userNationality}_${housingCategory}")
             param(FirebaseAnalytics.Param.CONTENT_TYPE, "housing_post")
         }
     }
