@@ -59,7 +59,8 @@ import com.team21.myapplication.ui.createPostView.state.CreatePostOperationState
 fun CreatePostScreenLayout(
     viewModel: CreatePostViewModel = viewModel(),
     onPostCreated: () -> Unit = {},
-    onNavigateBack: () -> Unit = {}
+    onNavigateBack: () -> Unit = {},
+    onOpenAmenities: () -> Unit = {}
 ) {
     val context = LocalContext.current
     // --- VIEWMODEL STATES ---
@@ -71,9 +72,6 @@ fun CreatePostScreenLayout(
     val scope = rememberCoroutineScope()
     var photoUri by remember { mutableStateOf<Uri?>(null) }
 
-    // STATE FOR DIALOG AND AMENITIES VIEWMODEL ---
-    var showAmenitiesDialog by remember { mutableStateOf(false) }
-    val amenitiesViewModel: AmenitiesViewModel = viewModel() // Vi
 
     // --- LAUNCHER FOR SELECTING MAIN PHOTO ---
     val mainPhotoPickerLauncher = rememberLauncherForActivityResult(
@@ -334,7 +332,7 @@ fun CreatePostScreenLayout(
                         .width(85.dp)
                         .clip(RoundedCornerShape(20.dp)),
                     text = "Add",
-                    onClick = {showAmenitiesDialog = true }
+                    onClick = {onOpenAmenities() }
                 )
                 if (uiState.selectedAmenities.isNotEmpty()) {
                     HorizontalCarousel(
@@ -599,28 +597,6 @@ fun CreatePostScreenLayout(
                 .align(Alignment.BottomCenter)
                 .padding(16.dp)
         )
-    }
-
-    // Dialog for selecting amenities
-    if (showAmenitiesDialog) {
-        Dialog(onDismissRequest = { showAmenitiesDialog = false }) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(0.8f),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                AddAmenitiesLayout(
-                    viewModel = amenitiesViewModel,
-                    initialAmenities = uiState.selectedAmenities,
-                    onSave = { newAmenities ->
-                        viewModel.updateSelectedAmenities(newAmenities)
-                        showAmenitiesDialog = false
-                    },
-                    onBack = { showAmenitiesDialog = false }
-                )
-            }
-        }
     }
 }
 
