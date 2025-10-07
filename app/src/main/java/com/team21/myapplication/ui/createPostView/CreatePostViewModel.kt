@@ -9,7 +9,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import android.net.Uri
+import com.google.firebase.Timestamp
 import com.team21.myapplication.data.model.Ammenities
+import com.team21.myapplication.data.model.Location
 import com.team21.myapplication.ui.createPostView.state.CreatePostOperationState
 import com.team21.myapplication.ui.createPostView.state.CreatePostUiState
 
@@ -121,7 +123,7 @@ class CreatePostViewModel : ViewModel() {
 
     // --- MAIN FUNCTION: CREATE POST ---
 
-    fun createPost() {
+    fun createPost(onDone: (Boolean, String?) -> Unit = { _, _ -> }) {
         val state = _uiState.value
 
         // 1. DATA VALIDATION
@@ -136,34 +138,56 @@ class CreatePostViewModel : ViewModel() {
         // 2. CHANGE STATE TO LOADING
         _uiState.value = state.copy(operationState = CreatePostOperationState.Loading)
 
-        // 3. EXECUTE ASYNCHRONOUS OPERATION
         viewModelScope.launch {
-            // Prepare all photos (main + additional)
-            val allPhotos = mutableListOf<Uri>()
-            state.mainPhoto?.let { allPhotos.add(it) }
-            allPhotos.addAll(state.additionalPhotos)
+            try {
 
-            // Call the Repository with the images
-            val result = repository.createHousingPost(
-                title = state.title.trim(),
-                description = state.description.trim(),
-                price = state.price.toDoubleOrNull() ?: 0.0,
-                address = state.address.trim(),
-                imageUris = allPhotos,
-                selectedTagId = state.selectedTagId,
-                selectedAmenities = state.selectedAmenities
-            )
-
-            // 4. UPDATE STATE ACCORDING TO RESULT
-            _uiState.value = _uiState.value.copy(
-                operationState = if (result.isSuccess) {
-                    CreatePostOperationState.Success(result.getOrNull()!!)
-                } else {
-                    CreatePostOperationState.Error(
-                        result.exceptionOrNull()?.message ?: "Unknown error while creating the post"
-                    )
+                val allPhotos = buildList {
+                    state.mainPhoto?.let { add(it) }
+                    addAll(state.additionalPhotos)
                 }
-            )
+
+                if (allPhotos.isEmpty()) {
+                    _uiState.value = _uiState.value.copy(
+                        operationState = CreatePostOperationState.Error("You must attach at least one image")
+                    )
+                    return@launch
+                }
+
+                val post = HousingPost(
+                    id = "",   // "" para autogenerar
+                    address = state.address.trim(),
+                    closureDate = null,
+                    creationDate = Timestamp.now(),
+                    description = state.description.trim(),
+                    host = "temporary_user_${System.currentTimeMillis()}", //todo: fix user
+                    location = Location(lat = 4.6097, lng = -74.0817), //todo: fix location
+                    price = state.price.toDoubleOrNull() ?: 0.0,
+                    rating = 5.0,
+                    status = "Available",
+                    statusChange = Timestamp.now(),
+                    title = state.title.trim(),
+                    updatedAt = Timestamp.now(),
+                    thumbnail = ""
+                )
+                val res = repository.createHousingPost(
+                    post,
+                    state.selectedAmenities,
+                    imageUris = allPhotos,
+                    selectedTagId = state.selectedTagId)
+
+                // UPDATE STATE ACCORDING TO RESULT
+                _uiState.value = _uiState.value.copy(
+                    operationState = if (res.isSuccess) {
+                        CreatePostOperationState.Success(res.getOrNull()!!)
+                    } else {
+                        CreatePostOperationState.Error(
+                            res.exceptionOrNull()?.message ?: "Unknown error while creating the post"
+                        )
+                    }
+                )
+            } catch (e: Exception) {
+                onDone(false, e.message)
+            }
         }
     }
 
@@ -183,9 +207,12 @@ class CreatePostViewModel : ViewModel() {
         return when {
             state.title.isBlank() -> "The title is mandatory"
             state.title.length < 3 -> "The title must have at least 3 characters"
-            state.address.isBlank() -> "The address is mandatory"
+            state.description.isBlank() -> "The description is mandatory"
             state.price.toDoubleOrNull() == null || state.price.toDouble() <= 0 ->
                 "Enter a valid price greater than 0"
+            state.selectedTagId?.isBlank() ?: true -> "You must select a tag"
+            state.selectedAmenities.isEmpty() -> "You must select at least one amenity"
+            state.address.isBlank() -> "The address is mandatory"
             state.mainPhoto == null -> "You must add a main photo"
             else -> null
         }
