@@ -6,6 +6,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.team21.myapplication.data.model.OwnerUser
 import com.team21.myapplication.data.model.StudentUser
 import kotlinx.coroutines.tasks.await
+import com.google.firebase.firestore.SetOptions
 
 class AuthRepository {
     private val auth = FirebaseAuth.getInstance()
@@ -23,7 +24,7 @@ class AuthRepository {
         gender: String,
         nationality: String,
         language: String,
-        birthDate: String,
+        birthDate: Timestamp,
         isStudent: Boolean
     ): Result<String> {
         return try {
@@ -34,45 +35,42 @@ class AuthRepository {
 
             // 2. Save data in Firestore based on user type
             if (isStudent) {
-                val studentUser = StudentUser(
-                    id = userId,
-                    name = name,
-                    email = email,
-                    phoneNumber = phoneNumber,
-                    photoPath = "", // Empty by default
-                    gender = gender,
-                    password = "", //Never save password
-                    nationality = nationality,
-                    language = language,
-                    birthDate = Timestamp.now(), //TODO: adjust
-                    university = "Traingle Insitute", //by default
-                    roomieTags = emptyList(),
-                    savedBookings = emptyList(),
-                    savedHousing = emptyList()
+                val studentPayload = mapOf(
+                    "id" to userId,
+                    "name" to name,
+                    "email" to email,
+                    "phoneNumber" to phoneNumber,
+                    "photoPath" to "",                 // default
+                    "gender" to gender,
+                    "password" to "",
+                    "nationality" to nationality,
+                    "language" to language,
+                    "birthDate" to birthDate,
+                    "university" to "Triangle Institute" // default
                 )
 
                 firestore.collection("StudentUser")
                     .document(userId)
-                    .set(studentUser)
+                    .set(studentPayload, SetOptions.merge())
                     .await()
             } else {
-                val ownerUser = OwnerUser(
-                    id = userId,
-                    name = name,
-                    email = email,
-                    phoneNumber = phoneNumber,
-                    photoPath = "", // empty by default
-                    gender = gender,
-                    password = "", // Never save password
-                    nationality = nationality,
-                    language = language,
-                    birthDate = birthDate,
-                    rating = 0.0f // Initial rating
+                val ownerPayload = mapOf(
+                    "id" to userId,
+                    "name" to name,
+                    "email" to email,
+                    "phoneNumber" to phoneNumber,
+                    "photoPath" to "",      // default
+                    "gender" to gender,
+                    "password" to "",
+                    "nationality" to nationality,
+                    "language" to language,
+                    "birthDate" to birthDate,
+                    "rating" to 5
                 )
 
                 firestore.collection("OwnerUser")
                     .document(userId)
-                    .set(ownerUser)
+                    .set(ownerPayload, SetOptions.merge())
                     .await()
             }
 
