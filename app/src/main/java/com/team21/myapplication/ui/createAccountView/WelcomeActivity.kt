@@ -10,12 +10,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 import com.team21.myapplication.ui.main.MainActivity
 import com.team21.myapplication.ui.theme.AppTheme
 
 class WelcomeActivity : ComponentActivity() {
 
     private val viewModel: WelcomeViewModel by viewModels()
+    private val signUpViewModel: SignUpViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -26,20 +30,37 @@ class WelcomeActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    WelcomeLayout(
-                        viewModel = viewModel,
-                        onSignInSuccess = {
-                            // Navigate to the principal screen
-                            val intent = Intent(this, MainActivity::class.java)
-                            startActivity(intent)
-                            finish()
-                        },
-                        onNavigateToSignUp = {
-                            // Navigate to SignUpActivity
-                            val intent = Intent(this, SignUpActivity::class.java)
-                            startActivity(intent)
+                    val navController = rememberNavController()
+
+                    NavHost(navController = navController, startDestination = "signin") {
+                        composable("signin") {
+                            WelcomeLayout(
+                                viewModel = viewModel,
+                                onSignInSuccess = {
+                                    // Navigate to the principal screen, eliminates back to auth
+                                    startActivity(Intent(this@WelcomeActivity, MainActivity::class.java))
+                                    finish()
+                                },
+                                onNavigateToSignUp = {
+                                    // Navigate to SignUpActivity
+                                    navController.navigate("signup")
+                                }
+                            )
                         }
-                    )
+                        composable("signup") {
+                            SignUpLayout(
+                                viewModel = signUpViewModel, // SignUpViewModel
+                                onSignUpSuccess = {
+                                    // Volver a SignIn para que el usuario inicie sesión
+                                    navController.popBackStack() // vuelve a "signin"
+                                    Toast.makeText(this@WelcomeActivity, "Account created!", Toast.LENGTH_LONG).show()
+                                },
+                                onNavigateBack = { navController.popBackStack() }
+                            )
+                        }
+
+                    }
+
                 }
             }
         }
