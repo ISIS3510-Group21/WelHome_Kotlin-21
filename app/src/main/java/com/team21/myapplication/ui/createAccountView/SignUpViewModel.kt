@@ -9,6 +9,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import com.team21.myapplication.ui.createAccountView.state.SignUpUiState
+import com.google.firebase.Timestamp
+import java.util.Calendar
+import java.util.TimeZone
 
 class SignUpViewModel : ViewModel() {
     private val repository = AuthRepository()
@@ -83,8 +86,17 @@ class SignUpViewModel : ViewModel() {
 
         viewModelScope.launch {
             val state = _uiState.value
-            val birthDate = "${state.birthDay}/${state.birthMonth}/${state.birthYear}"
             val fullPhoneNumber = "${state.phonePrefix}${state.phoneNumber}"
+            val birthRes = buildBirthTimestampOrError(state)
+
+            if (birthRes.isFailure) {
+                _uiState.value = _uiState.value.copy(
+                    operationState = OperationState.Error(birthRes.exceptionOrNull()?.message ?: "Invalid birth date")
+                )
+                return@launch
+            }
+
+            val birthDate = birthRes.getOrThrow()
 
             val result = repository.registerUser(
                 email = state.email.trim(),
@@ -128,11 +140,38 @@ class SignUpViewModel : ViewModel() {
             else -> null
         }
     }
-}
 
-//sealed class SignUpState {
-//    object Idle : SignUpState()
-//    object Loading : SignUpState()
-//    data class Success(val userId: String) : SignUpState()
-//    data class Error(val message: String) : SignUpState()
-//}
+    // Valida y construye el Timestamp de nacimiento
+    private fun buildBirthTimestampOrError(state: SignUpUiState): Result<Timestamp> {
+        val day = state.birthDay.trim().toIntOrNull()
+            ?: return Result.failure(IllegalArgumentException("Day must be a number"))
+        val month = state.birthMonth.trim().toIntOrNull()
+            ?: return Result.failure(IllegalArgumentException("Month must be a number"))
+        val year = state.birthYear.trim().toIntOrNull()
+            ?: return Result.failure(IllegalArgumentException("Year must be a number"))
+
+        if (month !in 1..12) return Result.failure(IllegalArgumentException("Month must be between 1 and 12"))
+        if (day !in 1..31)  return Result.failure(IllegalArgumentException("Day must be between 1 and 31"))
+        if (year !in 1900..Calendar.getInstance().get(Calendar.YEAR))
+            return Result.failure(IllegalArgumentException("Enter a valid year"))
+
+        val tz = TimeZone.getTimeZone("GMT-4")
+        val cal = Calendar.getInstance(tz).apply {
+            isLenient = false
+            set(Calendar.YEAR, year)
+            set(Calendar.MONTH, month - 1)
+            set(Calendar.DAY_OF_MONTH, day)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+
+        return try {
+            Result.success(Timestamp(cal.time))
+        } catch (e: Exception) {
+            Result.failure(IllegalArgumentException("Enter a valid date"))
+        }
+    }
+
+}
