@@ -6,4 +6,5 @@ data class HomeState (
     val isLoading: Boolean = false,
     val recommendedHousings: List<HousingPreview> = emptyList(),
     val recentlySeenHousings: List<HousingPreview> = emptyList(),
+    val currentUserId: String? = null,
 )

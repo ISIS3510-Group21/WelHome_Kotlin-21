@@ -135,7 +135,7 @@ fun MainScreen(
 
     Scaffold { innerPadding ->
         if (state.isLoading) {
-            LoadingScreen()
+            LoadingScreen(modifier = Modifier.padding(innerPadding))
         } else {
             LazyColumn(
                 modifier = Modifier

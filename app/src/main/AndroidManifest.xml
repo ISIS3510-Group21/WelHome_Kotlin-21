@@ -32,10 +32,11 @@
             android:label="@string/app_name"
             android:theme="@style/Theme.WelHome"
             android:launchMode="singleTop">
-            <intent-filter>
+            <!--intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            -->
 
             <!-- (Opcional) para abrir con welhome://filterResults -->
             <intent-filter>
@@ -75,7 +76,12 @@
         <activity
             android:name=".ui.createAccountView.WelcomeActivity"
             android:exported="true"
-            android:theme="@style/Theme.WelHome" />
+            android:theme="@style/Theme.WelHome">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".ui.createAccountView.SignUpActivity"
             android:exported="false"

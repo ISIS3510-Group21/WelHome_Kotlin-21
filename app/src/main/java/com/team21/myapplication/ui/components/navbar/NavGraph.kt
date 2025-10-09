@@ -1,5 +1,6 @@
 package com.team21.myapplication.ui.components.navbar
 
+import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -9,9 +10,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import androidx.compose.material3.Text
+import androidx.compose.ui.platform.LocalContext
 import com.team21.myapplication.ui.filterView.FilterRoute
 import com.team21.myapplication.ui.filterView.results.FilterResultsCache
 import com.team21.myapplication.ui.filterView.results.FilterResultsRoute
+import com.team21.myapplication.ui.mapsearch.MapSearchActivity
 
 object DetailRoutes {
     const val DETAIL_PATTERN = "detail/{housingId}"
@@ -23,6 +26,7 @@ fun AppNavGraph(
     navController: NavHostController,
     modifier: Modifier = Modifier
 ) {
+    val ctx = LocalContext.current
     NavHost(
         navController = navController,
         startDestination = AppDest.Home.route,
@@ -47,6 +51,9 @@ fun AppNavGraph(
                 },
                 onOpenDetail = { housingId ->
                     navController.navigate(DetailRoutes.detail(housingId))
+                },
+                onMapSearch = {
+                    ctx.startActivity(Intent(ctx, MapSearchActivity::class.java))
                 }
             )
         }
@@ -105,6 +112,9 @@ fun AppNavGraph(
                 },
                 onOpenDetail = { housingId ->
                     navController.navigate(DetailRoutes.detail(housingId))
+                },
+                onMapSearch = {
+                    ctx.startActivity(Intent(ctx, MapSearchActivity::class.java))
                 }
             )
         }
