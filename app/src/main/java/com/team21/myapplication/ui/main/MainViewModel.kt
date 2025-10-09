@@ -45,7 +45,7 @@ class MainViewModel(
              // Guarda el uid en el estado (útil para otras consultas)
              _homeState.value = _homeState.value.copy(currentUserId = uid)
 
-             val userProfile = repositoryStudentUserProfile.getStudentUserProfile("StudentUser10")
+             val userProfile = repositoryStudentUserProfile.getStudentUserProfile(uid)
 
              Log.d("UserProfile", userProfile.toString())
              _homeState.value = _homeState.value.copy(
