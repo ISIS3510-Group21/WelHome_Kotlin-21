@@ -8,8 +8,12 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import com.team21.myapplication.ui.theme.AppTheme
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 
 /**
  * Activity for creating a new housing post
@@ -35,25 +39,46 @@ class CreatePostActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    // Render the post creation view
-                    CreatePostScreenLayout(
-                        viewModel = viewModel,
-                        onPostCreated = {
-                            // Callback when the post is successfully created
-                            Toast.makeText(
-                                this@CreatePostActivity,
-                                "Post created successfully",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                    val navController = rememberNavController()
+                    NavHost(navController = navController, startDestination = "createPost"){
+                        composable("createPost"){
+                            // Render the post creation view
+                            CreatePostScreenLayout(
+                                viewModel = viewModel,
+                                onPostCreated = {
+                                    // Callback when the post is successfully created
+                                    Toast.makeText(
+                                        this@CreatePostActivity,
+                                        "Post created successfully",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
 
-                            // Finish the Activity and return to the previous one
-                            finish()
-                        },
-                        onNavigateBack = {
-                            // Callback for the back button
-                            finish()
+                                    // Finish the Activity and return to the previous one
+                                    finish()
+                                },
+                                onNavigateBack = {
+                                    // Callback for the back button
+                                    finish()
+                                },
+                                onOpenAmenities  = {
+                                    navController.navigate("amenities")
+                                }
+                            )
                         }
-                    )
+                        composable("amenities"){
+                            val postUiState = viewModel.uiState.collectAsState().value
+                            AddAmenitiesLayout(
+                                initialAmenities = postUiState.selectedAmenities, //precargar seleccionados
+                                onSaveToPost = { selected ->
+                                    viewModel.updateSelectedAmenities(selected)
+                                    navController.popBackStack()
+                                },
+                                onBack = { navController.popBackStack() },
+                            )
+                        }
+                    }
+
+
                 }
             }
         }

@@ -56,6 +56,8 @@ object AppIcons {
     val SquareMeters: ImageVector = Icons.Default.CropFree
 
     val People: ImageVector = Icons.Outlined.Groups
+
+    val Close: ImageVector = Icons.Outlined.Close
 }
 
 @Composable

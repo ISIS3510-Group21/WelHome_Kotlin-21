@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -59,7 +60,8 @@ import com.team21.myapplication.ui.createPostView.state.CreatePostOperationState
 fun CreatePostScreenLayout(
     viewModel: CreatePostViewModel = viewModel(),
     onPostCreated: () -> Unit = {},
-    onNavigateBack: () -> Unit = {}
+    onNavigateBack: () -> Unit = {},
+    onOpenAmenities: () -> Unit = {}
 ) {
     val context = LocalContext.current
     // --- VIEWMODEL STATES ---
@@ -71,9 +73,6 @@ fun CreatePostScreenLayout(
     val scope = rememberCoroutineScope()
     var photoUri by remember { mutableStateOf<Uri?>(null) }
 
-    // STATE FOR DIALOG AND AMENITIES VIEWMODEL ---
-    var showAmenitiesDialog by remember { mutableStateOf(false) }
-    val amenitiesViewModel: AmenitiesViewModel = viewModel() // Vi
 
     // --- LAUNCHER FOR SELECTING MAIN PHOTO ---
     val mainPhotoPickerLauncher = rememberLauncherForActivityResult(
@@ -261,7 +260,7 @@ fun CreatePostScreenLayout(
             Spacer(modifier = Modifier.height(8.dp))
 
 
-            // Define the tag IDs according to your Firebase
+            // Define the tag IDs according to Firebase
             val housingTags = listOf(
                 "HousingTag1" to "House" to AppIcons.Home,
                 "HousingTag2" to "Apartment" to AppIcons.Apartments,
@@ -316,7 +315,7 @@ fun CreatePostScreenLayout(
             }
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- AMENITIES (For now just visual) ---
+            // --- AMENITIES
             BlackText(
                 text = "Amenities",
                 size = 16.sp,
@@ -334,7 +333,7 @@ fun CreatePostScreenLayout(
                         .width(85.dp)
                         .clip(RoundedCornerShape(20.dp)),
                     text = "Add",
-                    onClick = {showAmenitiesDialog = true }
+                    onClick = {onOpenAmenities() }
                 )
                 if (uiState.selectedAmenities.isNotEmpty()) {
                     HorizontalCarousel(
@@ -434,18 +433,18 @@ fun CreatePostScreenLayout(
                                 onClick = { viewModel.removeMainPhoto() },
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
-                                    .padding(8.dp)
-                                    .size(32.dp)
+                                    .padding(6.dp)
+                                    .size(20.dp)
                                     .background(
                                         MaterialTheme.colorScheme.error,
-                                        RoundedCornerShape(16.dp)
+                                        CircleShape
                                     )
                             ) {
                                 Icon(
-                                    imageVector = AppIcons.ArrowDropDown,
+                                    imageVector = AppIcons.Close,
                                     contentDescription = "Remove",
                                     tint = MaterialTheme.colorScheme.onError,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(12.dp)
                                 )
                             }
                         }
@@ -525,17 +524,18 @@ fun CreatePostScreenLayout(
                                         onClick = { viewModel.removeAdditionalPhoto(uri) },
                                         modifier = Modifier
                                             .align(Alignment.TopEnd)
-                                            .size(24.dp)
+                                            .padding(4.dp)
+                                            .size(18.dp)
                                             .background(
                                                 MaterialTheme.colorScheme.error,
-                                                RoundedCornerShape(12.dp)
+                                                CircleShape
                                             )
                                     ) {
                                         Icon(
-                                            imageVector = AppIcons.ArrowDropDown,
+                                            imageVector = AppIcons.Close,
                                             contentDescription = "Remove",
                                             tint = MaterialTheme.colorScheme.onError,
-                                            modifier = Modifier.size(16.dp)
+                                            modifier = Modifier.size(10.dp)
                                         )
                                     }
                                 }
@@ -575,7 +575,7 @@ fun CreatePostScreenLayout(
                 text = if (uiState.operationState is CreatePostOperationState.Loading) "Creating..." else "Create",
                 onClick = {
                     // Call the ViewModel function to create the post
-                    viewModel.createPost()
+                    viewModel.createPost { ok, infoOrErr -> }
                 },
                 enabled = uiState.operationState  !is CreatePostOperationState.Loading // Disable if loading
             )
@@ -599,28 +599,6 @@ fun CreatePostScreenLayout(
                 .align(Alignment.BottomCenter)
                 .padding(16.dp)
         )
-    }
-
-    // Dialog for selecting amenities
-    if (showAmenitiesDialog) {
-        Dialog(onDismissRequest = { showAmenitiesDialog = false }) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(0.8f),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                AddAmenitiesLayout(
-                    viewModel = amenitiesViewModel,
-                    initialAmenities = uiState.selectedAmenities,
-                    onSave = { newAmenities ->
-                        viewModel.updateSelectedAmenities(newAmenities)
-                        showAmenitiesDialog = false
-                    },
-                    onBack = { showAmenitiesDialog = false }
-                )
-            }
-        }
     }
 }
 

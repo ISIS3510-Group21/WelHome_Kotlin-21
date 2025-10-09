@@ -11,7 +11,7 @@ class AmenityRepository {
     private val amenitiesCollection = db.collection("Amenities")
     private val auth = FirebaseAuth.getInstance().currentUser?.uid
 
-    suspend fun getHousingPosts(): List<Ammenities> {
+    suspend fun getAmenities(): List<Ammenities> {
         val querySnapshot = amenitiesCollection.get().await()
         return querySnapshot.documents.mapNotNull { document ->
             document.toObject(Ammenities::class.java)

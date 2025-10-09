@@ -203,108 +203,129 @@ class HousingPostRepository {
     // ------------------------------
 
     /**
-     * CREATE: respeta tu enfoque "todo en uno" (root con listas embebidas).
-     * Sube imágenes a Storage y guarda thumbnail + listas.
+     * CREATE: uploads a new housing post (with subollections
+     * of 'Ammenities', 'Pictures' and 'Tag')
      */
     suspend fun createHousingPost(
-        title: String,
-        description: String,
-        price: Double,
-        address: String,
+        housingPost: HousingPost,          // model con id, title, address, etc.
+        selectedAmenities: List<Ammenities>,
         imageUris: List<Uri>,
-        selectedTagId: String? = null,
-        selectedAmenities: List<Ammenities> = emptyList()
+        selectedTagId: String? = null
     ): Result<HousingPost> {
         return try {
-            val postId = housingPostsCollection.document().id
+            // Si viene sin id, generamos uno antes de escribir
+            val posts = db.collection(CollectionNames.HOUSING_POST)
+            val docRef = if (housingPost.id.isBlank()) posts.document() else posts.document(
+                housingPost.id
+            )
+            val finalId = docRef.id
 
-            // Subir imágenes
-            val uploadedPictures = uploadImages(postId, imageUris)
-            if (imageUris.isEmpty()) return Result.failure(Exception("You must attach at least one image"))
-            if (uploadedPictures.isEmpty()) return Result.failure(Exception("Image upload failed."))
-
-            val currentUserId = auth ?: "temporary_user_${System.currentTimeMillis()}"
-            val thumbnailUrl = uploadedPictures.firstOrNull()?.PhotoPath
-                ?: "https://img.freepik.com/free-photo/beautiful-interior-shot-modern-house-with-white-relaxing-walls-furniture-technology_181624-3828.jpg?semt=ais_hybrid&w=740&q=80"
-
-            // Tag embebido (si aplica) — GUARDA **String** (path o id), no DocumentReference
-            val embeddedTags = if (selectedTagId != null) {
-                val tagUuid = "tag_${System.currentTimeMillis()}"
-                val tagName = when (selectedTagId) {
-                    "HousingTag1" -> "House"
-                    "HousingTag2" -> "Apartment"
-                    "HousingTag3" -> "Cabin"
-                    "HousingTag11" -> "Residence"
-                    else -> "Unknown"
-                }
-                listOf(
-                    TagHousingPost(
-                        id = tagUuid,
-                        name = tagName,
-                        // Elige: guardar el PATH completo...
-                        housingTag = db.collection("HousingTag").document(selectedTagId).path
-                        // ...o solo el ID:
-                        // housingTag = selectedTagId
-                    )
-                )
-            } else emptyList()
-
-            // Amenidades embebidas
-            val embeddedAmm = selectedAmenities.map { a ->
-                Ammenities(id = a.id, name = a.name, iconPath = a.iconPath)
+            // subir imagenes
+            if (imageUris.isEmpty()) {
+                return Result.failure(Exception("You must attach at least one image"))
+            }
+            val uploadedPictures = uploadImages(finalId, imageUris)
+            if (uploadedPictures.isEmpty()) {
+                return Result.failure(Exception("Image upload failed."))
             }
 
-            // Roomies embebidos (placeholder)
-            val embeddedRoomies = listOf(
-                RoomateProfile(
-                    id = "",
-                    name = "No roommates yet",
-                    StudentUserID = ""
-                )
+            val thumbnailUrl = uploadedPictures.first().PhotoPath
+
+            val batch = db.batch()
+
+            // 1) Documento padre del post
+            val postPayload = mapOf(
+                "id" to finalId,
+                "address" to housingPost.address,
+                "closureDate" to housingPost.closureDate,
+                "creationDate" to housingPost.creationDate,
+                "description" to housingPost.description,
+                "host" to housingPost.host,
+                "location" to housingPost.location,
+                "price" to housingPost.price,
+                "rating" to housingPost.rating,
+                "status" to housingPost.status,
+                "statusChange" to housingPost.statusChange,
+                "title" to housingPost.title,
+                "updatedAt" to housingPost.updatedAt,
+                "thumbnail" to thumbnailUrl,
             )
+            batch.set(docRef, postPayload, com.google.firebase.firestore.SetOptions.merge())
 
-            val housingPost = HousingPost(
-                id = postId,
-                creationDate = Timestamp.now(),
-                updatedAt = Timestamp.now(),
-                closureDate = Timestamp.now(),
-                address = address,
-                price = price,
-                rating = 0.0,
-                title = title,
-                description = description,
-                location = Location( // guardamos como mapa {lat,lng}
-                    lat = 4.6097,  // Bogotá por defecto
-                    lng = -74.0817
-                ),
-                thumbnail = thumbnailUrl,
-                host = currentUserId,
-                reviews = "",
-                bookingDates = "",
-
-                pictures = uploadedPictures,
-                tag = embeddedTags,           // ← housingTag String
-                ammenities = embeddedAmm,
-                roomateProfile = embeddedRoomies
-            )
-
-            housingPostsCollection.document(postId).set(housingPost).await()
-
-            // Actualizar HousingTag con preview (best effort)
-            if (selectedTagId != null) {
-                updateHousingTagWithPreview(
-                    housingTagId = selectedTagId,
-                    postId = postId,
-                    title = title,
-                    price = price,
-                    rating = 0f,
-                    thumbnailUrl = thumbnailUrl
+            // 2) Subcolección Ammenities
+            val sub = docRef.collection(CollectionNames.AMMENITIES)
+            selectedAmenities.forEach { am ->
+                val amDoc = sub.document(am.id)
+                val amPayload = mapOf(
+                    "id" to am.id,
+                    "name" to am.name,
+                    "iconPath" to am.iconPath
                 )
+                batch.set(amDoc, amPayload)
             }
 
+            // 3) subcoleccion de imagenes
+            val picsCol = docRef.collection(CollectionNames.PICTURES) // ya lo usas en lecturas
+            uploadedPictures.forEach { pic ->
+                val picId = pic.id.takeIf { it.isNotBlank() } ?: picsCol.document().id
+                val picDoc = picsCol.document(picId)
+                val picPayload = mapOf(
+                    "id" to picId,
+                    "name" to pic.name,
+                    "PhotoPath" to pic.PhotoPath
+                )
+                batch.set(picDoc, picPayload) // adicionar
+            }
+
+            // 4) Subcolección Tag
+            if (!selectedTagId.isNullOrBlank()) {
+                // Lee el tag
+                val masterSnap = db.collection("HousingTag").document(selectedTagId).get().await()
+                val tagName = (masterSnap.get("name") as? String)
+                    ?: when (selectedTagId) {          // fallback por si no existiera el doc (hardcode previo)
+                        "HousingTag1" -> "House"
+                        "HousingTag2" -> "Apartment"
+                        "HousingTag3" -> "Cabin"
+                        "HousingTag11" -> "Residence"
+                        else -> "Unknown"
+                    }
+
+                val tagCol = docRef.collection(CollectionNames.TAG)
+                val tagDoc = tagCol.document(selectedTagId)
+                val tagId = tagDoc.id
+                val tagPayload = mapOf(
+                    "id" to "tag_$tagId", //id tag unico
+                    "name" to tagName,
+                    "housingTag" to selectedTagId // referencia al tag
+                )
+                batch.set(tagDoc, tagPayload)
+            }
+            // 5) Subcolección de PREVIEW en HousingTag/<idTag>/HousingPreview/<postId>
+            if (!selectedTagId.isNullOrBlank()) {
+                val previewCol = db
+                    .collection("HousingTag")
+                    .document(selectedTagId)
+                    .collection("HousingPreview")
+
+                // postId como id del preview
+                val previewDoc = previewCol.document(finalId)
+                val previewId = previewDoc.id
+
+                val previewPayload = mapOf(
+                    "id" to "Preview_$previewId",
+                    "housing" to finalId,
+                    "title" to housingPost.title,
+                    "price" to housingPost.price,
+                    "rating" to housingPost.rating,
+                    "photoPath" to thumbnailUrl
+                )
+
+                batch.set(previewDoc, previewPayload) // adicionar preview
+            }
+
+            batch.commit().await()
             Result.success(housingPost)
         } catch (e: Exception) {
-            e.printStackTrace()
             Result.failure(e)
         }
     }

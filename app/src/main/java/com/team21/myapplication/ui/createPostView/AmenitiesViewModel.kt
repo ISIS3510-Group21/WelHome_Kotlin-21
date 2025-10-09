@@ -32,7 +32,7 @@ class AmenitiesViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {
-                val amenities = repository.getHousingPosts()
+                val amenities = repository.getAmenities()
                 _uiState.value = _uiState.value.copy(
                     amenitiesList = amenities,
                     isLoading = false
