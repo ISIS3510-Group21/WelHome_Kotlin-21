@@ -17,7 +17,8 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun FilterRoute(
     onNavigateToResults: (items: List<PreviewCardUi>) -> Unit,
-    onOpenDetail: (String) -> Unit
+    onOpenDetail: (String) -> Unit,
+    onMapSearch: () -> Unit
 ) {
     val vm: FilterViewModel = viewModel()
     val state = vm.state.collectAsStateWithLifecycle().value
@@ -39,6 +40,7 @@ fun FilterRoute(
         state = state,
         onToggleTag = vm::toggleTag,
         onSearch = { vm.search(FilterMode.AND) }, // AND por defecto (intersección)
-        onOpenDetail = onOpenDetail
+        onOpenDetail = onOpenDetail,
+        onMapSearch = onMapSearch,
     )
 }

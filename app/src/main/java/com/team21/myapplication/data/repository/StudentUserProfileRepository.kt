@@ -1,6 +1,7 @@
 package com.team21.myapplication.data.repository
 
 import android.util.Log
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.team21.myapplication.data.model.HousingPreview
 import com.team21.myapplication.data.model.StudentUserProfile
@@ -10,10 +11,10 @@ class StudentUserProfileRepository {
     private val db = FirebaseFirestore.getInstance()
     private val studentUserCollection = db.collection("StudentUserProfile")
     //Se usa un id provisional para probar
-    private val auth = "tcGfBwE5JbhMFbrnfAzHyXolT0t1"
+    //private val auth = "tcGfBwE5JbhMFbrnfAzHyXolT0t1"
     //private val auth = FirebaseAuth.getInstance().currentUser?.uid
 
-    suspend fun getStudentUserProfile(): StudentUserProfile? {
+    suspend fun getStudentUserProfile(auth: String): StudentUserProfile? {
         val querySnapshot = studentUserCollection
             .whereEqualTo("userId", auth)
             .get()

@@ -111,4 +111,44 @@ class AuthRepository {
     fun getCurrentUserId(): String? {
         return auth.currentUser?.uid
     }
+
+    // Modelo simple para la UI del perfil
+    data class BasicProfile(
+        val name: String = "",
+        val email: String = "",
+        val nationality: String = "",
+        val phoneNumber: String = "",
+    )
+
+    // Obtiene el perfil básico desde StudentUser o OwnerUser (el que exista)
+    suspend fun fetchBasicProfile(userId: String): Result<BasicProfile> {
+        return try {
+            // 1) Intentar StudentUser
+            val studentSnap = firestore.collection("StudentUser").document(userId).get().await()
+            if (studentSnap.exists()) {
+                val name = studentSnap.getString("name").orEmpty()
+                val email = studentSnap.getString("email").orEmpty()
+                val nationality = studentSnap.getString("nationality").orEmpty()
+                val phone = studentSnap.getString("phoneNumber").orEmpty()
+                return Result.success(BasicProfile(name, email, nationality, phone))
+            }
+
+            // 2) Intentar OwnerUser
+            val ownerSnap = firestore.collection("OwnerUser").document(userId).get().await()
+            if (ownerSnap.exists()) {
+                val name = ownerSnap.getString("name").orEmpty()
+                val email = ownerSnap.getString("email").orEmpty()
+                val nationality = ownerSnap.getString("nationality").orEmpty()
+                val phone = ownerSnap.getString("phoneNumber").orEmpty()
+                return Result.success(BasicProfile(name, email, nationality, phone))
+            }
+
+            Result.failure(IllegalStateException("Profile not found for $userId"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+
+
 }
