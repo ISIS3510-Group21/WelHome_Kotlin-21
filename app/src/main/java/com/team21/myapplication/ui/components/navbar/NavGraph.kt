@@ -15,6 +15,11 @@ import com.team21.myapplication.ui.filterView.FilterRoute
 import com.team21.myapplication.ui.filterView.results.FilterResultsCache
 import com.team21.myapplication.ui.filterView.results.FilterResultsRoute
 import com.team21.myapplication.ui.mapsearch.MapSearchActivity
+import android.app.Activity
+import androidx.compose.ui.platform.LocalContext
+import com.team21.myapplication.data.repository.AuthRepository
+import com.team21.myapplication.ui.createAccountView.WelcomeActivity
+import com.team21.myapplication.ui.profileView.ProfileRoute
 
 object DetailRoutes {
     const val DETAIL_PATTERN = "detail/{housingId}"
@@ -119,7 +124,25 @@ fun AppNavGraph(
             )
         }
         composable(AppDest.Visits.route)  { Text("Visits") }
-        composable(AppDest.Profile.route) { Text("Profile") }
+        composable(AppDest.Profile.route) {
+            val ctx = LocalContext.current
+            ProfileRoute(
+                onLogout =
+                {
+                    // cerrar sesion
+                    AuthRepository().signOut()
+
+                    // devolver a la pantalla de welcome y limpiar backstack
+                    val intent = Intent(ctx, WelcomeActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                    }
+                    ctx.startActivity(intent)
+
+                    // asegurar cierre de MainActivity actual
+                    (ctx as? Activity)?.finish()
+                }
+            )
+        }
 
         // DETALLE
         composable(
