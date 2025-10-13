@@ -42,6 +42,7 @@ object AppIcons {
     val Message: ImageVector = Icons.Outlined.ChatBubbleOutline
     val ArrowDropDown: ImageVector = Icons.Outlined.KeyboardArrowDown
     val PasswordEye: ImageVector = Icons.Outlined.Visibility
+    val PasswordEyeOff: ImageVector = Icons.Outlined.VisibilityOff
     val Add: ImageVector = Icons.Outlined.Add
     val CameraAlt: ImageVector = Icons.Outlined.CameraAlt
     val Queue: ImageVector = Icons.Outlined.Queue
@@ -104,6 +105,7 @@ fun Preview_AppIcons_All() {
             "Message" to AppIcons.Message,
             "ArrowDropDown" to AppIcons.ArrowDropDown,
             "PasswordEye" to AppIcons.PasswordEye,
+            "PasswordEyeOff" to AppIcons.PasswordEyeOff,
             "Add" to AppIcons.Add,
             "Queue" to AppIcons.Queue,
             "Profile" to AppIcons.ProfilePicture,
