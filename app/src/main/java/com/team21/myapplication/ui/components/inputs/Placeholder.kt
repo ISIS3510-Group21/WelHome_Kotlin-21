@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.VisualTransformation
 
 @Composable
 fun PlaceholderTextField(
@@ -45,7 +46,8 @@ fun PlaceholderTextField(
     value: String,
     onValueChange: (String) -> Unit,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    trailingIcon: @Composable (() -> Unit)? = null // Optional Composable for the icon
+    trailingIcon: @Composable (() -> Unit)? = null,// Optional Composable for the icon
+    visualTransformation: VisualTransformation = VisualTransformation.None
 ) {
 
     val shape = RoundedCornerShape(8.dp)
@@ -72,6 +74,7 @@ fun PlaceholderTextField(
                 fontWeight = FontWeight.Normal,
                 color = textColor
             ),
+            visualTransformation = visualTransformation,
             placeholder = {
                 when (textColor) {
                     BlackText -> BlackText(text = placeholderText, size = tfSize)
