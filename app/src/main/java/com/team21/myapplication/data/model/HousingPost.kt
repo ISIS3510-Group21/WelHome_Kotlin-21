@@ -27,7 +27,7 @@ data class HousingPost(
     var location: Location? = null,
     var status: String = "",
     var statusChange: Timestamp? = null,
-    var thumbnail: String = "",
+    var thumbnail: String = "https://www.howtobogota.com/wp-content/uploads/2014/03/Santa_Barbara_Bogota-1024x768.jpg",
     var reviews: String = "",
     var bookingDates: String = "",
     var pictures: List<Picture> = emptyList(),
