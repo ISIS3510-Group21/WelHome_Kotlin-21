@@ -37,7 +37,7 @@ fun HousingInfoCard(
     onClick: (() -> Unit)? = null
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier.width(300.dp).height(270.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = WhiteBackground),
         elevation = CardDefaults.cardElevation(2.dp),
@@ -47,7 +47,7 @@ fun HousingInfoCard(
 
             val imgModifier = Modifier
                 .fillMaxWidth()
-                .height(180.dp)
+                .height(170.dp)
                 .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
 
             when {
