@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -32,6 +33,8 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -40,7 +43,6 @@ import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MarkerState
-import com.team21.myapplication.R
 import com.team21.myapplication.ui.components.cards.HousingCardListItem
 import com.team21.myapplication.ui.components.inputs.SearchBar
 import com.team21.myapplication.ui.components.navbar.AppNavBar
@@ -51,12 +53,30 @@ import com.google.maps.android.compose.rememberCameraPositionState
 class MapSearchActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContent {
             AppTheme {
                 val navController = rememberNavController()
-                MapSearchView(navController = navController)
+                NavHost(navController = navController, startDestination = "mapSearch"){
+                    composable("mapSearch"){
+                        MapSearchView(
+                            navController = navController,
+                            onNavigateToDetail = {id ->
+                                navController.navigate("detail/$id")
+                            }
+
+                        )
+                    }
+                }
             }
         }
+    }
+}
+
+private fun resolveHousingId(p: MapLocation): String? {
+    return when (val h = p.id) {
+        //is com.google.firebase.firestore.DocumentReference -> h.id
+        else -> if (h.contains("/")) h.substringAfterLast("/") else h
     }
 }
 
@@ -64,7 +84,8 @@ class MapSearchActivity : ComponentActivity() {
 fun MapSearchView(
     navController: NavController,
     modifier: Modifier = Modifier,
-    mapViewModel: MapSearchViewModel = viewModel()
+    mapViewModel: MapSearchViewModel = viewModel(),
+    onNavigateToDetail: (String) -> Unit
 ) {
     val state by mapViewModel.state.collectAsState()
 
@@ -192,9 +213,15 @@ fun MapSearchView(
                     HousingCardListItem(
                         imageUrl = housingItem.imageUrl,
                         title = housingItem.title,
-                        rating = housingItem.rating.toDouble(),
+                        rating = housingItem.rating,
                         price = housingItem.price,
-                        modifier = Modifier.padding(horizontal = 2.dp)
+                        modifier = Modifier.padding(horizontal = 2.dp),
+                        onClick = {
+                            resolveHousingId(housingItem)?.let { id ->
+                                onNavigateToDetail(id)
+                            }
+                        }
+
                     )
                 }
             }
@@ -207,6 +234,6 @@ fun MapSearchView(
 fun MapSearchViewPreview() {
     AppTheme {
         val navController = rememberNavController()
-        MapSearchView(navController = navController)
+        MapSearchView(navController = navController, onNavigateToDetail = {})
     }
 }

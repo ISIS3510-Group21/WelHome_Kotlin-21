@@ -27,6 +27,7 @@ class MapSearchViewModel: ViewModel() {
             val locations = posts.mapNotNull { post ->
                 post.location?.let { loc ->
                     MapLocation(
+                        id = post.id,
                         title = post.title,
                         position = LatLng(loc.lat, loc.lng),
                         rating = post.rating,
