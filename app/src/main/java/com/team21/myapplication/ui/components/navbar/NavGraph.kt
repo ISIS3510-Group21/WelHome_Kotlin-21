@@ -14,11 +14,11 @@ import androidx.compose.ui.platform.LocalContext
 import com.team21.myapplication.ui.filterView.FilterRoute
 import com.team21.myapplication.ui.filterView.results.FilterResultsCache
 import com.team21.myapplication.ui.filterView.results.FilterResultsRoute
-import com.team21.myapplication.ui.mapsearch.MapSearchActivity
 import android.app.Activity
 import androidx.compose.ui.platform.LocalContext
 import com.team21.myapplication.data.repository.AuthRepository
 import com.team21.myapplication.ui.createAccountView.WelcomeActivity
+import com.team21.myapplication.ui.mapsearch.MapSearchView
 import com.team21.myapplication.ui.profileView.ProfileRoute
 
 object DetailRoutes {
@@ -26,11 +26,13 @@ object DetailRoutes {
     fun detail(id: String) = "detail/$id"
 }
 
+
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
     modifier: Modifier = Modifier
 ) {
+    val mapSearchRoute = "mapSearch"
     val ctx = LocalContext.current
     NavHost(
         navController = navController,
@@ -58,7 +60,7 @@ fun AppNavGraph(
                     navController.navigate(DetailRoutes.detail(housingId))
                 },
                 onMapSearch = {
-                    ctx.startActivity(Intent(ctx, MapSearchActivity::class.java))
+                    navController.navigate(mapSearchRoute)
                 }
             )
         }
@@ -106,6 +108,15 @@ fun AppNavGraph(
             )
         }
 
+        // MAPA
+        composable(mapSearchRoute) {
+            MapSearchView(
+                navController = navController,
+                onNavigateToDetail = { id ->
+                    navController.navigate(DetailRoutes.detail(id)) }
+            )
+        }
+
         // OTROS (placeholders)
         composable(AppDest.Saved.route)   { Text("Saved") }
         composable(AppDest.Forum.route)   {
@@ -119,7 +130,7 @@ fun AppNavGraph(
                     navController.navigate(DetailRoutes.detail(housingId))
                 },
                 onMapSearch = {
-                    ctx.startActivity(Intent(ctx, MapSearchActivity::class.java))
+                    navController.navigate(mapSearchRoute)
                 }
             )
         }

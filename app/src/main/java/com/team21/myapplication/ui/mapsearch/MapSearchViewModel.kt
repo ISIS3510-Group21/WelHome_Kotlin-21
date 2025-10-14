@@ -27,11 +27,14 @@ class MapSearchViewModel: ViewModel() {
             val locations = posts.mapNotNull { post ->
                 post.location?.let { loc ->
                     MapLocation(
+                        id = post.id,
                         title = post.title,
                         position = LatLng(loc.lat, loc.lng),
                         rating = post.rating,
                         price = "$${post.price}/month",
-                        imageUrl = post.thumbnail
+                        imageUrl = post.thumbnail.ifBlank {
+                            "https://www.howtobogota.com/wp-content/uploads/2014/03/Santa_Barbara_Bogota-1024x768.jpg"
+                        }
                     )
                 }
             }
