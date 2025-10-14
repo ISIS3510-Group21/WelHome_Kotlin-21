@@ -168,9 +168,6 @@ fun MapSearchView(
                 )
             }
         },
-        bottomBar = {
-            AppNavBar(navController = navController)
-        },
         modifier = modifier.fillMaxSize()
     ) { innerPadding ->
         Column(
