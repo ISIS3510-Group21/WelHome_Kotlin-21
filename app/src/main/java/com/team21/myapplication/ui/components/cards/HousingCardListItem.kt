@@ -38,7 +38,8 @@ fun HousingCardListItem(
     imageUrl: String? = null,
     title: String,
     rating: Double,
-    price: String
+    price: String,
+    onClick: (() -> Unit)? = null
 ){
     Card(
         modifier = modifier
@@ -48,7 +49,8 @@ fun HousingCardListItem(
         //elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color.Transparent
-        )
+        ),
+        onClick = onClick ?: {}
     ) {
 
         Row(
