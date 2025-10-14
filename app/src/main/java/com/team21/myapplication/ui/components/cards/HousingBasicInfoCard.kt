@@ -112,9 +112,9 @@ fun HousingBasicInfoCard(
 @Composable
 private fun HousingInfoCard_Preview() {
     AppTheme {
-        HousingInfoCard(
+        HousingBasicInfoCard(
             title = "Portal de los Rosales",
-            rating = 4.95,
+            rating = 4.95f,
             reviewsCount = 22,
             pricePerMonthLabel = "$700’000 /month",
             imageRes = R.drawable.sample_house

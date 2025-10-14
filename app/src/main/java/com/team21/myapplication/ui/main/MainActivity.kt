@@ -1,8 +1,6 @@
 package com.team21.myapplication.ui.main
 
-import android.annotation.SuppressLint
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -44,12 +42,6 @@ import android.Manifest
 import android.app.Activity
 import android.os.Build
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.platform.LocalContext
-import androidx.navigation.compose.rememberNavController
-import com.team21.myapplication.ui.components.navbar.AppNavBar
-import com.team21.myapplication.ui.components.navbar.AppNavGraph
-import com.team21.myapplication.ui.theme.AppTheme
 
 class MainActivity : ComponentActivity() {
 
@@ -80,11 +72,12 @@ class MainActivity : ComponentActivity() {
                     (ctx as? Activity)?.intent?.let { navController.handleDeepLink(it) }
                 }
 
-                androidx.compose.material3.Scaffold(
+                Scaffold(
                     bottomBar = { AppNavBar(navController) }
                 ) { inner ->
                     AppNavGraph(
                         navController = navController,
+                        modifier = Modifier.padding(inner)
                     )
                 }
             }
@@ -92,7 +85,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-
+/*
 @Composable
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 private fun MainEntry() {
@@ -105,6 +98,7 @@ private fun MainEntry() {
         )
     }
 }
+*/
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -112,7 +106,6 @@ fun MainScreen(
     onOpenFilters: () -> Unit,
     onOpenDetail: (String) -> Unit,
     onNavigateToDetail: (String) -> Unit,
-    //viewModel: MainViewModel = viewModel()
 ) {
     val appContext = LocalContext.current.applicationContext
 
@@ -213,7 +206,7 @@ fun MainScreen(
 /** Resuelve el ID del housing venga como DocumentReference o como String/path. */
 private fun resolveHousingId(p: HousingPreview): String? {
     return when (val h = p.housing) {
-        is com.google.firebase.firestore.DocumentReference -> h.id
+        //is com.google.firebase.firestore.DocumentReference -> h.id
         is String -> if (h.contains("/")) h.substringAfterLast("/") else h
         else -> null
     }
