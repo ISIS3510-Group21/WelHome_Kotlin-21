@@ -29,6 +29,11 @@ import com.team21.myapplication.ui.components.text.BlueText
 import com.team21.myapplication.ui.theme.*
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.ui.text.input.KeyboardType
 import com.team21.myapplication.ui.createAccountView.state.OperationState
 
 @Composable
@@ -110,7 +115,8 @@ fun SignUpLayout(
         PlaceholderTextField(
             placeholderText = "Jhoan Doe",
             value = uiState.name,
-            onValueChange = {viewModel.updateName(it) }
+            onValueChange = {viewModel.updateName(it) },
+            maxChars = 50
         )
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -125,8 +131,17 @@ fun SignUpLayout(
         PlaceholderTextField(
             placeholderText = "youremail@example.com",
             value = uiState.email,
-            onValueChange = { viewModel.updateEmail(it) }
+            onValueChange = { viewModel.updateEmail(it) },
+            maxChars = 50,
+            modifier = Modifier.onFocusChanged { st -> viewModel.onEmailFocusChanged(st.hasFocus) }
         )
+        if (uiState.emailError != null) {
+            Text(
+                text = uiState.emailError!!,
+                color = MaterialTheme.colorScheme.error,
+                fontSize = 12.sp
+            )
+        }
         Spacer(modifier = Modifier.height(16.dp))
 
         // Input Field: Password
@@ -147,7 +162,8 @@ fun SignUpLayout(
                     contentDescription = "Info",
                     tint = GrayIcon
                 )
-            }
+            },
+            maxChars = 50
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -171,7 +187,9 @@ fun SignUpLayout(
                 onValueChange = { viewModel.updateBirthDay(it) },
                 modifier = Modifier
                     .height(50.dp)
-                    .weight(1f)
+                    .weight(1f),
+                maxChars = 3,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
 
             // Placeholder for Month dropdown
@@ -181,7 +199,9 @@ fun SignUpLayout(
                 onValueChange = { viewModel.updateBirthMonth(it) },
                 modifier = Modifier
                     .height(50.dp)
-                    .weight(1f)
+                    .weight(1f),
+                maxChars = 3,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
             // Placeholder for Year dropdown
             PlaceholderTextField(
@@ -190,7 +210,9 @@ fun SignUpLayout(
                 onValueChange = { viewModel.updateBirthYear(it) },
                 modifier = Modifier
                     .height(50.dp)
-                    .weight(1f)
+                    .weight(1f),
+                maxChars = 5,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
         }
 
@@ -229,6 +251,8 @@ fun SignUpLayout(
                 placeholderText = "(999) 111-0000",
                 value = uiState.phoneNumber,
                 onValueChange = { viewModel.updatePhoneNumber(it)},
+                maxChars = 15,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
         }
 

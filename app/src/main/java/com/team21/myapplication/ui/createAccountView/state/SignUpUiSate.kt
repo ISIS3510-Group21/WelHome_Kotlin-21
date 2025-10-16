@@ -15,6 +15,8 @@ data class SignUpUiState(
     val language: String = "",
     val isStudent: Boolean = false,
     val isHost: Boolean = false,
+    val emailError: String? = null,
+    val emailTouched: Boolean = false,
 
     // Operation state
     val operationState: OperationState = OperationState.Idle

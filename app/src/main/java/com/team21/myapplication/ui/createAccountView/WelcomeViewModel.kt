@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import android.util.Patterns
 import com.team21.myapplication.ui.createAccountView.state.SignInUiState
 
 
@@ -18,7 +19,11 @@ class WelcomeViewModel : ViewModel() {
     val uiState: StateFlow<SignInUiState> = _uiState.asStateFlow()
 
     fun updateEmail(value: String) {
-        _uiState.value = _uiState.value.copy(email = value)
+        val touched = _uiState.value.emailTouched
+        _uiState.value = _uiState.value.copy(
+            email = value,
+            emailError = if (touched && value.isNotBlank() && !isValidEmail(value)) "Not valid email" else null
+        )
     }
 
     fun updatePassword(value: String) {
@@ -28,16 +33,8 @@ class WelcomeViewModel : ViewModel() {
     fun signIn() {
         val state = _uiState.value
         // email validation
-        if (state.email.isBlank() || !state.email.contains("@")) {
-            _uiState.value = state.copy(
-                operationState = SignInOperationState.Error("Enter a valid email")
-            )
-            return
-        }
-        if (state.password.length< 6) { //password validation
-            _uiState.value = state.copy(
-                operationState = SignInOperationState.Error("Password must contain at least 6 characters")
-            )
+        if (!isValidEmail(state.email)) {
+            _uiState.value = state.copy(emailError = "Email is not valid")
             return
         }
 
@@ -59,11 +56,17 @@ class WelcomeViewModel : ViewModel() {
     fun resetState() {
         _uiState.value = _uiState.value.copy(operationState = SignInOperationState.Idle)
     }
-}
 
-//sealed class SignInState {
-//    object Idle : SignInState()
-//    object Loading : SignInState()
-//    data class Success(val userId: String) : SignInState()
-//    data class Error(val message: String) : SignInState()
-//}
+    private fun isValidEmail(email: String): Boolean =
+        Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
+
+    fun onEmailFocusChanged(focused: Boolean) {
+        val current = _uiState.value
+        if (!focused) { // lost focus
+            _uiState.value = current.copy(
+                emailTouched = true,
+                emailError = if (current.email.isNotBlank() && !isValidEmail(current.email)) "Not valid email" else null
+            )
+        }
+    }
+}

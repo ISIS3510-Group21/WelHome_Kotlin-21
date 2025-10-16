@@ -3,6 +3,8 @@ package com.team21.myapplication.ui.createAccountView.state
 data class SignInUiState(
     val email: String = "",
     val password: String = "",
+    val emailError: String? = null,
+    val emailTouched: Boolean = false,
     val operationState: SignInOperationState = SignInOperationState.Idle
 )
 

@@ -69,7 +69,10 @@ class MainActivity : ComponentActivity() {
                 // Manejar deep link del intent que abrió la Activity
                 val ctx = LocalContext.current
                 LaunchedEffect(Unit) {
-                    (ctx as? Activity)?.intent?.let { navController.handleDeepLink(it) }
+                    if ((ctx as? Activity)?.intent?.getBooleanExtra("login_success", false) == true) {
+                        android.widget.Toast.makeText(ctx, "Successful login!", android.widget.Toast.LENGTH_SHORT).show()
+                        ctx.intent.removeExtra("login_success")
+                    }
                 }
 
                 Scaffold(

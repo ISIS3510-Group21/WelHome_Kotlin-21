@@ -12,6 +12,7 @@ import com.team21.myapplication.ui.createAccountView.state.SignUpUiState
 import com.google.firebase.Timestamp
 import java.util.Calendar
 import java.util.TimeZone
+import android.util.Patterns
 
 class SignUpViewModel : ViewModel() {
     private val repository = AuthRepository()
@@ -26,7 +27,11 @@ class SignUpViewModel : ViewModel() {
     }
 
     fun updateEmail(value: String) {
-        _uiState.value = _uiState.value.copy(email = value)
+        val touched = _uiState.value.emailTouched
+        _uiState.value = _uiState.value.copy(
+            email = value,
+            emailError = if (touched && value.isNotBlank() && !isValidEmail(value)) "Enter a valid email address" else null
+        )
     }
 
     fun updatePassword(value: String) {
@@ -34,7 +39,8 @@ class SignUpViewModel : ViewModel() {
     }
 
     fun updatePhoneNumber(value: String) {
-        _uiState.value = _uiState.value.copy(phoneNumber = value)
+        val clean = value.filter { it.isDigit() }
+        _uiState.value = _uiState.value.copy(phoneNumber = clean)
     }
 
     fun updatePhonePrefix(value: String) {
@@ -42,15 +48,18 @@ class SignUpViewModel : ViewModel() {
     }
 
     fun updateBirthDay(value: String) {
-        _uiState.value = _uiState.value.copy(birthDay = value)
+        val clean = value.filter { it.isDigit() }
+        _uiState.value = _uiState.value.copy(birthDay = clean)
     }
 
     fun updateBirthMonth(value: String) {
-        _uiState.value = _uiState.value.copy(birthMonth = value)
+        val clean = value.filter { it.isDigit() }
+        _uiState.value = _uiState.value.copy(birthMonth = clean)
     }
 
     fun updateBirthYear(value: String) {
-        _uiState.value = _uiState.value.copy(birthYear = value)
+        val clean = value.filter { it.isDigit() }
+        _uiState.value = _uiState.value.copy(birthYear = clean)
     }
 
     fun updateGender(value: String) {
@@ -128,7 +137,7 @@ class SignUpViewModel : ViewModel() {
     private fun validateSignUpState(state: SignUpUiState): String? {
         return when {
             state.name.isBlank() -> "Name is mandatory"
-            state.email.isBlank() || !state.email.contains("@") -> "Enter a valid email address"
+            state.email.isBlank() || !isValidEmail(state.email) -> "Enter a valid email address"
             state.password.length < 6 -> "The password must be at least 6 characters long"
             state.phoneNumber.isBlank() -> "The phone number is required"
             state.birthDay.isBlank() || state.birthMonth.isBlank() || state.birthYear.isBlank() ->
@@ -171,6 +180,19 @@ class SignUpViewModel : ViewModel() {
             Result.success(Timestamp(cal.time))
         } catch (e: Exception) {
             Result.failure(IllegalArgumentException("Enter a valid date"))
+        }
+    }
+
+    private fun isValidEmail(email: String): Boolean =
+        Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
+
+    fun onEmailFocusChanged(focused: Boolean) {
+        val cur = _uiState.value
+        if (!focused) {
+            _uiState.value = cur.copy(
+                emailTouched = true,
+                emailError = if (cur.email.isNotBlank() && !isValidEmail(cur.email)) "Enter a valid email address" else null
+            )
         }
     }
 

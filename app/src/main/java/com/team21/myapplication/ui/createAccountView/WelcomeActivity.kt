@@ -38,8 +38,12 @@ class WelcomeActivity : ComponentActivity() {
                                 viewModel = viewModel,
                                 onSignInSuccess = {
                                     // Navigate to the principal screen, eliminates back to auth
-                                    startActivity(Intent(this@WelcomeActivity, MainActivity::class.java))
-                                    finish()
+                                    startActivity(
+                                        Intent(this@WelcomeActivity, MainActivity::class.java).apply{
+                                            putExtra("login_success", true)
+                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                        }
+                                    )
                                 },
                                 onNavigateToSignUp = {
                                     // Navigate to SignUpActivity

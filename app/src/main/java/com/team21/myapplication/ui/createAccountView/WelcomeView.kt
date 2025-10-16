@@ -41,6 +41,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.focus.onFocusChanged
 import com.team21.myapplication.ui.createAccountView.state.SignInOperationState
 
 @Composable
@@ -58,7 +61,7 @@ fun WelcomeLayout(
     LaunchedEffect(uiState.operationState) {
         when (val state = uiState.operationState) {
             is SignInOperationState.Success -> {
-                snackbarHostState.showSnackbar("Successful login!")
+                //snackbarHostState.showSnackbar("Successful login!")
                 onSignInSuccess()
             }
             is SignInOperationState.Error -> {
@@ -99,7 +102,18 @@ fun WelcomeLayout(
                 placeholderText = "youremail@example.com",
                 value = uiState.email,
                 onValueChange = {viewModel.updateEmail(it)},
+                modifier = Modifier.onFocusChanged { state ->
+                    viewModel.onEmailFocusChanged(state.hasFocus)
+                },
+                maxChars = 80
             )
+            if (uiState.emailTouched && uiState.emailError != null) {
+                Text(
+                    text = uiState.emailError!!,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
             Spacer(modifier = Modifier.height(32.dp))
 
             // Input Field: Password
@@ -114,6 +128,7 @@ fun WelcomeLayout(
             var passwordVisible by remember { mutableStateOf(false) }
             PlaceholderTextField(
                 placeholderText = "**********",
+                maxChars = 50,
                 value = uiState.password,
                 onValueChange = {viewModel.updatePassword(it)},
                 visualTransformation = if (passwordVisible) {
@@ -138,6 +153,8 @@ fun WelcomeLayout(
                 text = if (uiState.operationState is SignInOperationState.Loading) "Loading..." else "LogIn",
                 onClick = {viewModel.signIn() },
                 enabled = uiState.operationState !is SignInOperationState.Loading
+                        && uiState.emailError == null
+                        && uiState.email.isNotBlank()
             )
             if (uiState.operationState is SignInOperationState.Loading) {
                 Spacer(modifier = Modifier.height(16.dp))
