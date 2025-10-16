@@ -149,6 +149,14 @@ class AuthRepository {
         }
     }
 
+    suspend fun isOwner(userId: String): Boolean {
+        return try {
+            firestore.collection("OwnerUser").document(userId).get().await().exists()
+        } catch (e: Exception) {
+            false
+        }
+    }
+
 
 
 }

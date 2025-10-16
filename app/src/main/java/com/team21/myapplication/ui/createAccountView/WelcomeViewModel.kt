@@ -48,7 +48,9 @@ class WelcomeViewModel : ViewModel() {
 
             _uiState.value = _uiState.value.copy(
                 operationState = if (result.isSuccess) {
-                    SignInOperationState.Success(result.getOrNull()!!)
+                    val uid = result.getOrNull()!!
+                    val owner = repository.isOwner(uid)
+                    SignInOperationState.Success(uid, owner)
                 } else {
                     SignInOperationState.Error(result.exceptionOrNull()?.message ?: "Error logging in")
                 }
