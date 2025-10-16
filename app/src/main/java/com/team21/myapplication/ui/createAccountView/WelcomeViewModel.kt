@@ -22,7 +22,7 @@ class WelcomeViewModel : ViewModel() {
         val touched = _uiState.value.emailTouched
         _uiState.value = _uiState.value.copy(
             email = value,
-            emailError = if (touched && !isValidEmail(value) && value.isNotBlank()) "Not valid email" else null
+            emailError = if (touched && value.isNotBlank() && !isValidEmail(value)) "Not valid email" else null
         )
     }
 
@@ -65,7 +65,7 @@ class WelcomeViewModel : ViewModel() {
         if (!focused) { // lost focus
             _uiState.value = current.copy(
                 emailTouched = true,
-                emailError = if (!isValidEmail(current.email) && current.email.isNotBlank()) "Not valid email" else null
+                emailError = if (current.email.isNotBlank() && !isValidEmail(current.email)) "Not valid email" else null
             )
         }
     }

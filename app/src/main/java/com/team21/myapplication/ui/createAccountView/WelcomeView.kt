@@ -61,7 +61,7 @@ fun WelcomeLayout(
     LaunchedEffect(uiState.operationState) {
         when (val state = uiState.operationState) {
             is SignInOperationState.Success -> {
-                snackbarHostState.showSnackbar("Successful login!")
+                //snackbarHostState.showSnackbar("Successful login!")
                 onSignInSuccess()
             }
             is SignInOperationState.Error -> {
@@ -107,14 +107,11 @@ fun WelcomeLayout(
                 },
                 maxChars = 80
             )
-            if (uiState.emailError != null) {
-                BlackText(
+            if (uiState.emailTouched && uiState.emailError != null) {
+                Text(
                     text = uiState.emailError!!,
-                    size = 12.sp,
-                    fontWeight = FontWeight.Normal,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 4.dp),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.error
                 )
             }
             Spacer(modifier = Modifier.height(32.dp))
