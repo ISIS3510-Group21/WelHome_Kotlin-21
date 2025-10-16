@@ -41,9 +41,11 @@ class WelcomeActivity : ComponentActivity() {
                                     val target = if (isOwner) OwnerMainActivity::class.java else MainActivity::class.java
                                     // Navigate to the principal screen, eliminates back to auth
                                     startActivity(
-                                        Intent(this@WelcomeActivity, target)
+                                        Intent(this@WelcomeActivity, target).apply{
+                                            putExtra("login_success", true)
+                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                        }
                                     )
-                                    finish()
                                 },
                                 onNavigateToSignUp = {
                                     // Navigate to SignUpActivity
