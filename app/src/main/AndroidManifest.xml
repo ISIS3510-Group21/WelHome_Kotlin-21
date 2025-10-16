@@ -101,5 +101,15 @@
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="trending_filters" />
 
+        <activity
+            android:name=".ui.ownerMainView.OwnerMainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.WelHome">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
     </application>
 </manifest>
