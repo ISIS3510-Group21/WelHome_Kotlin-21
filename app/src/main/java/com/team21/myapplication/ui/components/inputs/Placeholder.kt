@@ -30,6 +30,9 @@ import com.team21.myapplication.ui.theme.Poppins
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.VisualTransformation
@@ -47,73 +50,112 @@ fun PlaceholderTextField(
     onValueChange: (String) -> Unit,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     trailingIcon: @Composable (() -> Unit)? = null,// Optional Composable for the icon
-    visualTransformation: VisualTransformation = VisualTransformation.None
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    maxChars: Int? = null,
+    maxCharsMessage: String = "You have reached the maximum number of characters."
+
 ) {
 
     val shape = RoundedCornerShape(8.dp)
     val coercedHeight = if (height < 56.dp) 56.dp else height
     val tfSize = 16.sp
     val endPaddingForIcon = if (trailingIcon != null) 36.dp else 0.dp
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(coercedHeight)
-            .background(backgroundColor, RoundedCornerShape(8.dp))
-            .border(borderWidth, borderColor, RoundedCornerShape(8.dp))
-            .padding(horizontal = 4.dp)
+    var showMaxMsg by remember { mutableStateOf(false) }
+
+    LaunchedEffect(value, maxChars) {
+        showMaxMsg = if (maxChars != null) value.length >= maxChars else false
+    }
+
+    Column(
+        modifier = modifier.fillMaxWidth()
     ) {
-        TextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(end = endPaddingForIcon),
-            textStyle = TextStyle(
-                fontFamily = Poppins,
-                fontSize = tfSize,
-                fontWeight = FontWeight.Normal,
-                color = textColor
-            ),
-            visualTransformation = visualTransformation,
-            placeholder = {
-                when (textColor) {
-                    BlackText -> BlackText(text = placeholderText, size = tfSize)
-                    BlueCallToAction -> BlueText(text = placeholderText, size = tfSize)
-                    GrayIcon -> GrayText(text = placeholderText, size = tfSize)
-                    WhiteBackground -> WhiteText(text = placeholderText, size = tfSize)
-                    else -> GrayText(text = placeholderText, size = tfSize)
-                }
-            },
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = backgroundColor,
-                unfocusedContainerColor = backgroundColor,
-                disabledContainerColor = backgroundColor,
-                errorContainerColor = backgroundColor,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                disabledIndicatorColor = Color.Transparent,
-                errorIndicatorColor = Color.Transparent,
-                cursorColor = textColor
-            ),
-            shape = shape,
-            singleLine = height <= 56.dp,
-            minLines = when {
-                height >= 100.dp -> 4
-                height >= 76.dp -> 3
-                height > 56.dp -> 2
-                else -> 1
-            },
-            keyboardOptions = keyboardOptions,
-        )
-        if (trailingIcon != null){
-            Box(
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .height(coercedHeight)
+                .background(backgroundColor, RoundedCornerShape(8.dp))
+                .border(borderWidth, borderColor, RoundedCornerShape(8.dp))
+                .padding(horizontal = 4.dp)
+        ) {
+            TextField(
+                value = value,
+                onValueChange = { newValue ->
+                    if (maxChars != null) {
+                        when {
+                            newValue.length <= maxChars -> {
+                                onValueChange(newValue)  // update value
+                                showMaxMsg = (newValue.length == maxChars) //shows warning of limit
+                            }
+                            else -> {
+                                showMaxMsg = true //allow visible message
+                            }
+                        }
+                    } else {
+                        onValueChange(newValue)
+                        showMaxMsg = false
+                    }
+                },
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 14.dp, end = 16.dp)
+                    .fillMaxSize()
+                    .defaultMinSize(minHeight = coercedHeight)
+                    .padding(end = endPaddingForIcon),
+                textStyle = TextStyle(
+                    fontFamily = Poppins,
+                    fontSize = tfSize,
+                    fontWeight = FontWeight.Normal,
+                    color = textColor
+                ),
+                visualTransformation = visualTransformation,
+                placeholder = {
+                    when (textColor) {
+                        BlackText -> BlackText(text = placeholderText, size = tfSize)
+                        BlueCallToAction -> BlueText(text = placeholderText, size = tfSize)
+                        GrayIcon -> GrayText(text = placeholderText, size = tfSize)
+                        WhiteBackground -> WhiteText(text = placeholderText, size = tfSize)
+                        else -> GrayText(text = placeholderText, size = tfSize)
+                    }
+                },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = backgroundColor,
+                    unfocusedContainerColor = backgroundColor,
+                    disabledContainerColor = backgroundColor,
+                    errorContainerColor = backgroundColor,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    disabledIndicatorColor = Color.Transparent,
+                    errorIndicatorColor = Color.Transparent,
+                    cursorColor = textColor
+                ),
+                shape = shape,
+                singleLine = height <= 56.dp,
+                minLines = when {
+                    height >= 100.dp -> 4
+                    height >= 76.dp -> 3
+                    height > 56.dp -> 2
+                    else -> 1
+                },
+                keyboardOptions = keyboardOptions,
             )
-            {
-                trailingIcon()
+            if (trailingIcon != null) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 14.dp, end = 16.dp)
+                )
+                {
+                    trailingIcon()
+                }
             }
+        }
+        if (showMaxMsg) {
+            Text(
+                text = maxCharsMessage,
+                color = MaterialTheme.colorScheme.error,
+                fontSize = 12.sp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp, start = 4.dp)
+            )
         }
     }
 }
@@ -165,7 +207,8 @@ private fun PlaceholderTextFieldPreview() {
                     tint = BlueCallToAction
                 )
             },
-            borderColor = BlueCallToAction
+            borderColor = BlueCallToAction,
+            maxChars = 40
         )
 
         // 4. Placeholder with a different height and an icon on top-right. Black text
