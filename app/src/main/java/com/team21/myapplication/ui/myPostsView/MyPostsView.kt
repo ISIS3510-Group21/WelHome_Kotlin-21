@@ -1,0 +1,168 @@
+package com.team21.myapplication.ui.myPostsView
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.team21.myapplication.R
+import com.team21.myapplication.ui.components.buttons.BlueButtonWithIcon
+import com.team21.myapplication.ui.components.cards.BasicHousingInfoCard
+import com.team21.myapplication.ui.components.inputs.SearchBar
+import com.team21.myapplication.ui.components.text.BlackText
+import com.team21.myapplication.ui.components.icons.AppIcons
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.LaunchedEffect
+import com.team21.myapplication.data.model.BasicHousingPost
+import android.content.Intent
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import com.team21.myapplication.ui.createPostView.CreatePostActivity
+
+@Composable
+fun MyPostsScreen() {
+    val vm: MyPostsViewModel = viewModel()
+    val state = vm.state.collectAsStateWithLifecycle().value
+    val ctx = LocalContext.current
+
+    LaunchedEffect(Unit) { vm.loadMyPosts() }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                vm.loadMyPosts()   // recarga al volver a la pestaña
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    when {
+        state.error != null -> {
+            // TODO: mostrar texto de error
+            MyPostsScreenLayout(
+                posts = emptyList(),
+                onAddPostClick = {
+                    ctx.startActivity(Intent(ctx, CreatePostActivity::class.java))
+                })
+
+        }
+        else -> {
+            MyPostsScreenLayout(
+                posts = state.posts,
+                onAddPostClick = {
+                    ctx.startActivity(Intent(ctx, CreatePostActivity::class.java))
+                })
+            if (state.isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(36.dp),
+                        strokeWidth = 3.dp
+                    )
+                }
+            }
+        }
+    }
+}
+@Composable
+fun MyPostsScreenLayout(
+    posts: List<BasicHousingPost>,
+    onAddPostClick: () -> Unit = {}
+) {
+    // Principal component as Column
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()) // allows scrolling
+            .padding(16.dp)
+    ) {
+        Spacer(modifier = Modifier.height(8.dp))
+
+        BlackText(
+            text = "My posts",
+            size = 30.sp,
+            fontWeight = FontWeight.Bold,
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ){
+            SearchBar(
+                query = "",
+                onQueryChange = {},
+                placeholder = "Search",
+                asButton = true,
+                modifier = Modifier.weight(4f),
+                onClick = {}
+            )
+
+            BlueButtonWithIcon(
+                text = "",
+                imageVector = AppIcons.Add,
+                modifier = Modifier.weight(1f),
+                onClick = onAddPostClick
+            )
+
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        posts.forEachIndexed { idx, post ->
+            Box(contentAlignment = Alignment.Center) {
+                BasicHousingInfoCard(
+                    title = post.title,
+                    pricePerMonthLabel = "$${post.price}/month",
+                    imageUrl = post.photoPath.takeIf { it.isNotBlank() },
+                    imageRes = if (post.photoPath.isNotBlank()) null else R.drawable.sample_house,
+                    modifier = Modifier.widthIn(max = 560.dp).fillMaxWidth()
+                )
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+
+    }
+}
+
+// Preview of the component
+@Preview(showBackground = true)
+@Composable
+fun MyPostsScreenLayoutScreenLayoutPreview() {
+    val example = BasicHousingPost(
+        id = "0",
+        title = "example house",
+        photoPath = "",
+        price = 100.0
+    )
+
+    val posts: List<BasicHousingPost> = listOf(example, example, example)
+    MyPostsScreenLayout(posts)
+}

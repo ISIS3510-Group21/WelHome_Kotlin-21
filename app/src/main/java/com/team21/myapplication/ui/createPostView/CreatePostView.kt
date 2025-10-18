@@ -5,7 +5,6 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -22,7 +21,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -183,14 +181,15 @@ fun CreatePostScreenLayout(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = AppIcons.ArrowDropDown,
-                    contentDescription = "Back",
-                    tint = BlueCallToAction,
-                    modifier = Modifier
-                        .rotate(90f)
-                        .size(32.dp)
-                )
+                IconButton(onClick = onNavigateBack) {
+                    Icon(
+                        imageVector = AppIcons.GoBack,
+                        contentDescription = "Back",
+                        modifier = Modifier
+                            .size(32.dp),
+                        tint = BlueCallToAction
+                    )
+                }
                 BlackText(
                     text = "Create a new post",
                     size = 24.sp,

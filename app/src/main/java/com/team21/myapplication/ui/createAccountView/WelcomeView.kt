@@ -49,7 +49,7 @@ import com.team21.myapplication.ui.createAccountView.state.SignInOperationState
 @Composable
 fun WelcomeLayout(
     viewModel: WelcomeViewModel = viewModel(),
-    onSignInSuccess: () -> Unit = {},
+    onSignInSuccess: (Boolean) -> Unit = {},
     onNavigateToSignUp: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -62,7 +62,7 @@ fun WelcomeLayout(
         when (val state = uiState.operationState) {
             is SignInOperationState.Success -> {
                 //snackbarHostState.showSnackbar("Successful login!")
-                onSignInSuccess()
+                onSignInSuccess(state.isOwner)
             }
             is SignInOperationState.Error -> {
                 snackbarHostState.showSnackbar(state.message)

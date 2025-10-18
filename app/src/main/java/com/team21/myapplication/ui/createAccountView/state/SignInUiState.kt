@@ -11,6 +11,6 @@ data class SignInUiState(
 sealed class SignInOperationState {
     object Idle : SignInOperationState()
     object Loading : SignInOperationState()
-    data class Success(val userId: String) : SignInOperationState()
+    data class Success(val userId: String, val isOwner: Boolean) : SignInOperationState()
     data class Error(val message: String) : SignInOperationState()
 }

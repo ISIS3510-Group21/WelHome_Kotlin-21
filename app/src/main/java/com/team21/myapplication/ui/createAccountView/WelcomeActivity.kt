@@ -15,6 +15,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.team21.myapplication.ui.main.MainActivity
 import com.team21.myapplication.ui.theme.AppTheme
+import com.team21.myapplication.ui.ownerMainView.OwnerMainActivity
 
 class WelcomeActivity : ComponentActivity() {
 
@@ -36,10 +37,11 @@ class WelcomeActivity : ComponentActivity() {
                         composable("signin") {
                             WelcomeLayout(
                                 viewModel = viewModel,
-                                onSignInSuccess = {
+                                onSignInSuccess = { isOwner ->
+                                    val target = if (isOwner) OwnerMainActivity::class.java else MainActivity::class.java
                                     // Navigate to the principal screen, eliminates back to auth
                                     startActivity(
-                                        Intent(this@WelcomeActivity, MainActivity::class.java).apply{
+                                        Intent(this@WelcomeActivity, target).apply{
                                             putExtra("login_success", true)
                                             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                                         }
