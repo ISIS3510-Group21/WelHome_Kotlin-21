@@ -189,23 +189,27 @@ class CreatePostViewModel : ViewModel() {
                     selectedTagId = state.selectedTagId
                 )
 
+                val result =  res.getOrNull()!!
+
                 if (res.isSuccess){
-                    val postId =  res.getOrNull()!!
+                    val postId = result.postId
+                    val mainUrl = result.mainPhotoUrl ?: ""
+
                     // Mapea a BasicHousingPost para la subcolección del owner.
                     val basicPost = BasicHousingPost(
-                        id = "$postId",
-                        housing = "$postId",
+                        id = postId,
+                        housing = postId,
                         title = state.title.trim(),
-                        photoPath = state.mainPhoto.toString(),
+                        photoPath = mainUrl,
                         price = state.price.toDoubleOrNull() ?: 0.0,
                     )
-                    ownerRepo.addOwnerHousingPost(ownerId, "$postId", basicPost)
+                    ownerRepo.addOwnerHousingPost(ownerId, postId, basicPost)
                 }
 
                 // UPDATE STATE ACCORDING TO RESULT
                 _uiState.value = _uiState.value.copy(
                     operationState = if (res.isSuccess) {
-                        CreatePostOperationState.Success(res.getOrNull()!!)
+                        CreatePostOperationState.Success(result.postId)
                     } else {
                         CreatePostOperationState.Error(
                             res.exceptionOrNull()?.message ?: "Unknown error while creating the post"

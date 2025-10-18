@@ -206,12 +206,14 @@ class HousingPostRepository {
      * CREATE: uploads a new housing post (with subollections
      * of 'Ammenities', 'Pictures' and 'Tag')
      */
+
+    data class CreatePostResult(val postId: String, val mainPhotoUrl: String?)
     suspend fun createHousingPost(
         housingPost: HousingPost,          // model con id, title, address, etc.
         selectedAmenities: List<Ammenities>,
         imageUris: List<Uri>,
         selectedTagId: String? = null
-    ): Result<HousingPost> {
+    ): Result<CreatePostResult> {
         return try {
             // Si viene sin id, generamos uno antes de escribir
             val posts = db.collection(CollectionNames.HOUSING_POST)
@@ -324,7 +326,7 @@ class HousingPostRepository {
             }
 
             batch.commit().await()
-            Result.success(housingPost)
+            Result.success(CreatePostResult(postId = finalId, mainPhotoUrl = thumbnailUrl))
         } catch (e: Exception) {
             Result.failure(e)
         }
