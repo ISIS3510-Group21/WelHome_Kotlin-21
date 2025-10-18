@@ -183,14 +183,15 @@ fun CreatePostScreenLayout(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = AppIcons.ArrowDropDown,
-                    contentDescription = "Back",
-                    tint = BlueCallToAction,
-                    modifier = Modifier
-                        .rotate(90f)
-                        .size(32.dp)
-                )
+                IconButton(onClick = onNavigateBack) {
+                    Icon(
+                        imageVector = AppIcons.GoBack,
+                        contentDescription = "Back",
+                        modifier = Modifier
+                            .size(32.dp),
+                        tint = BlueCallToAction
+                    )
+                }
                 BlackText(
                     text = "Create a new post",
                     size = 24.sp,

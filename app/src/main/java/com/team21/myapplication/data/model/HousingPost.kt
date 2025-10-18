@@ -70,3 +70,12 @@ data class HousingPostFull(
     @PropertyName("RoomateProfile")
     var roomateProfile: List<RoomateProfile> = emptyList()
 )
+
+// modelo para mostrar los housing pots que uin owner tiene asociados
+data class BasicHousingPost(
+    val id: String = "",
+    val title: String = "",
+    val photoPath: String = "",
+    val price: Double = 0.0,
+    val housing: String = ""
+)

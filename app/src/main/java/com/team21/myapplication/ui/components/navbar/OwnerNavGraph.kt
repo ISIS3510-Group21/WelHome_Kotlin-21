@@ -11,6 +11,7 @@ import androidx.navigation.compose.composable
 import com.team21.myapplication.ui.createAccountView.WelcomeActivity
 import com.team21.myapplication.ui.ownerMainView.OwnerMainScreen
 import com.team21.myapplication.ui.profileView.ProfileRoute
+import com.team21.myapplication.ui.myPostsView.MyPostsScreen
 
 @Composable
 fun OwnerNavGraph(
@@ -23,7 +24,7 @@ fun OwnerNavGraph(
         modifier = modifier
     ) {
         composable(OwnerDest.Home.route)    { OwnerMainScreen() }
-        composable(OwnerDest.MyPosts.route) { Text("My posts") }
+        composable(OwnerDest.MyPosts.route) { MyPostsScreen() }
         composable(OwnerDest.Forum.route)   { Text("Forum") }
         composable(OwnerDest.Visits.route)  { Text("Visits") }
         composable(OwnerDest.Profile.route) {
@@ -37,7 +38,7 @@ fun OwnerNavGraph(
                     )
                 }
             )
-        }    // o tu ProfileRoute
+        }
     }
 }
 

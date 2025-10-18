@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.team21.myapplication.data.model.HousingPost
 import com.team21.myapplication.data.repository.HousingPostRepository
+import com.team21.myapplication.data.repository.AuthRepository
+import com.team21.myapplication.data.repository.OwnerUserRepository
+import com.team21.myapplication.data.model.BasicHousingPost
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,6 +30,8 @@ class CreatePostViewModel : ViewModel() {
 
     // Repository instance to access Firebase
     private val repository = HousingPostRepository()
+    private val authRepo = AuthRepository()
+    private val ownerRepo = OwnerUserRepository()
 
     // StateFlow with all the state
     private val _uiState = MutableStateFlow(CreatePostUiState())
@@ -153,13 +158,21 @@ class CreatePostViewModel : ViewModel() {
                     return@launch
                 }
 
+                val ownerId = authRepo.getCurrentUserId()
+                if (ownerId == null) {
+                    _uiState.value = _uiState.value.copy(
+                        operationState = CreatePostOperationState.Error("Error obtaining user")
+                    )
+                    return@launch
+                }
+
                 val post = HousingPost(
                     id = "",   // "" para autogenerar
                     address = state.address.trim(),
                     closureDate = null,
                     creationDate = Timestamp.now(),
                     description = state.description.trim(),
-                    host = "temporary_user_${System.currentTimeMillis()}", //todo: fix user
+                    host = ownerId,
                     location = Location(lat = 4.6097, lng = -74.0817), //todo: fix location
                     price = state.price.toDoubleOrNull() ?: 0.0,
                     rating = 5.0,
@@ -173,7 +186,21 @@ class CreatePostViewModel : ViewModel() {
                     post,
                     state.selectedAmenities,
                     imageUris = allPhotos,
-                    selectedTagId = state.selectedTagId)
+                    selectedTagId = state.selectedTagId
+                )
+
+                if (res.isSuccess){
+                    val postId =  res.getOrNull()!!
+                    // Mapea a BasicHousingPost para la subcolección del owner.
+                    val basicPost = BasicHousingPost(
+                        id = "$postId",
+                        housing = "$postId",
+                        title = state.title.trim(),
+                        photoPath = state.mainPhoto.toString(),
+                        price = state.price.toDoubleOrNull() ?: 0.0,
+                    )
+                    ownerRepo.addOwnerHousingPost(ownerId, "$postId", basicPost)
+                }
 
                 // UPDATE STATE ACCORDING TO RESULT
                 _uiState.value = _uiState.value.copy(
