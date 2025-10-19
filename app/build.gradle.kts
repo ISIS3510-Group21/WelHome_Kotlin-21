@@ -88,4 +88,7 @@ dependencies {
 
     // Para obtener imágenes de la galería y cámara
     implementation("androidx.activity:activity-compose:1.8.2")
+
+    //Cloudinary
+    implementation("com.cloudinary:cloudinary-android:2.3.1")
 }

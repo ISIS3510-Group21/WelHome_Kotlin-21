@@ -19,7 +19,7 @@ class HousingPostRepository {
     private val col = db.collection(CollectionNames.HOUSING_POST)
     private val housingPostsCollection = col
     private val auth = FirebaseAuth.getInstance().currentUser?.uid
-    private val storage = FirebaseStorage.getInstance()
+    //private val storage = FirebaseStorage.getInstance()
 
     // ------------------------------
     // Helpers de coerción / parseo
@@ -333,22 +333,19 @@ class HousingPostRepository {
     }
 
     private suspend fun uploadImages(postId: String, imageUris: List<Uri>): List<Picture> {
+        val uploader = com.team21.myapplication.data.storage.Providers.storageUploader
+        val folder = "housing_posts/$postId"
+
         val uploadedPictures = mutableListOf<Picture>()
         imageUris.forEachIndexed { index, uri ->
             try {
-                val imageName = "image_${index}_${UUID.randomUUID()}.jpg"
-                val storageRef = storage.reference
-                    .child("housing_posts")
-                    .child(postId)
-                    .child(imageName)
-
-                storageRef.putFile(uri).await()
-                val downloadUrl = storageRef.downloadUrl.await().toString()
+                val desired = "image_${index}_${UUID.randomUUID()}.jpg"
+                val res = uploader.upload(uri = uri, folder = folder, desiredName = desired)
 
                 uploadedPictures.add(
                     Picture(
-                        PhotoPath = downloadUrl,
-                        name = imageName
+                        PhotoPath =  res.url,
+                        name = res.suggestedName
                     )
                 )
             } catch (_: Exception) {

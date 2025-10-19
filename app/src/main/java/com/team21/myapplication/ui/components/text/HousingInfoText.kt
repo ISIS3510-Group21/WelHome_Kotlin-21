@@ -14,6 +14,7 @@ import com.team21.myapplication.ui.theme.GrayIcon
 import com.team21.myapplication.ui.theme.LocalDSTypography
 import com.team21.myapplication.ui.theme.AppTheme
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.material3.MaterialTheme
 
 @Composable
 fun HousingInfoText(
@@ -29,7 +30,7 @@ fun HousingInfoText(
         Text(
             text = title,
             style = LocalDSTypography.current.Section,
-            color = BlackText
+            color = MaterialTheme.colorScheme.onSurface
         )
 
         Spacer(Modifier.height(6.dp))
@@ -39,20 +40,20 @@ fun HousingInfoText(
             Icon(
                 imageVector = Icons.Filled.Star,
                 contentDescription = null,
-                tint = BlackText,
+                tint = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(18.dp)
             )
             Spacer(Modifier.width(6.dp))
             Text(
                 text = String.format("%.2f", rating),
                 style = LocalDSTypography.current.Description,
-                color = BlackText
+                color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(Modifier.width(8.dp))
             Text(
                 text = "$reviewsCount reviews",
                 style = LocalDSTypography.current.Description,
-                color = GrayIcon
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -62,7 +63,7 @@ fun HousingInfoText(
         Text(
             text = pricePerMonthLabel,
             style = LocalDSTypography.current.Description,
-            color = BlackText
+            color = MaterialTheme.colorScheme.onSurface
         )
     }
 }
