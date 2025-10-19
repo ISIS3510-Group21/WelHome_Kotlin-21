@@ -56,6 +56,12 @@
             android:label="Biometric Login"
             android:screenOrientation="portrait" />
 
+        <activity
+            android:name=".ui.forgot.ForgotPasswordActivity"
+            android:exported="false"
+            android:label="Forgot Password"
+            android:screenOrientation="portrait" />
+
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyDw_k90Gzr2HIC3lbizsqcOrFSBecEZkWg" />

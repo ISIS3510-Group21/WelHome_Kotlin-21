@@ -150,7 +150,14 @@ fun WelcomeLayout(
                 }
             )
             Spacer(modifier = Modifier.height(8.dp))
-            BlueText(text = "Forgot password?")
+            BlueText(
+                text = "Forgot password?",
+                modifier = Modifier.clickable {
+                    context.startActivity(
+                        Intent(context, com.team21.myapplication.ui.forgot.ForgotPasswordActivity::class.java)
+                    )
+                }
+            )
             Spacer(modifier = Modifier.height(32.dp))
             // Blue Button: "LogIn"
             BlueButton(
