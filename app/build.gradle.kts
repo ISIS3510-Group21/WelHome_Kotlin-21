@@ -91,4 +91,10 @@ dependencies {
 
     //Cloudinary
     implementation("com.cloudinary:cloudinary-android:2.3.1")
+
+    //Biometrics
+    implementation("androidx.biometric:biometric:1.1.0")
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    implementation("androidx.compose.material3:material3:1.2.1")
+
 }

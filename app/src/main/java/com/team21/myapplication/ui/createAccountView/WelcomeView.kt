@@ -43,6 +43,10 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Button
+import android.content.Intent
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.ui.focus.onFocusChanged
 import com.team21.myapplication.ui.createAccountView.state.SignInOperationState
 
@@ -53,7 +57,7 @@ fun WelcomeLayout(
     onNavigateToSignUp: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
-
+    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
 
 
@@ -80,7 +84,7 @@ fun WelcomeLayout(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(36.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
             Image(
                 painter = painterResource(R.drawable.app_logo),
@@ -114,7 +118,7 @@ fun WelcomeLayout(
                     color = MaterialTheme.colorScheme.error
                 )
             }
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
             // Input Field: Password
             BlueText(
@@ -146,7 +150,14 @@ fun WelcomeLayout(
                 }
             )
             Spacer(modifier = Modifier.height(8.dp))
-            BlueText(text = "Forgot password?")
+            BlueText(
+                text = "Forgot password?",
+                modifier = Modifier.clickable {
+                    context.startActivity(
+                        Intent(context, com.team21.myapplication.ui.forgot.ForgotPasswordActivity::class.java)
+                    )
+                }
+            )
             Spacer(modifier = Modifier.height(32.dp))
             // Blue Button: "LogIn"
             BlueButton(
@@ -161,7 +172,18 @@ fun WelcomeLayout(
                 CircularProgressIndicator()
             }
 
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(Modifier.height(12.dp))
+            Button(
+                onClick = {
+                    context.startActivity(
+                        Intent(context, com.team21.myapplication.ui.biometric.BiometricLoginActivity::class.java)
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) { Text("Login with fingerprint") }
+
+            Spacer(modifier = Modifier.height(20.dp))
             BlackText(text = "Not a member?")
 
             Spacer(modifier = Modifier.height(8.dp))
