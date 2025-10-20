@@ -62,6 +62,24 @@
             android:label="Forgot Password"
             android:screenOrientation="portrait" />
 
+        <activity
+            android:name=".ui.filterView.FilterActivity"
+            android:exported="false"
+            android:label="Filters"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".ui.filterView.results.FilterResultsActivity"
+            android:exported="false"
+            android:label="Results"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".ui.detailView.DetailHousingActivity"
+            android:exported="false"
+            android:label="Detail"
+            android:screenOrientation="portrait" />
+
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyDw_k90Gzr2HIC3lbizsqcOrFSBecEZkWg" />

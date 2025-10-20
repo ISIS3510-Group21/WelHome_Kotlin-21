@@ -14,6 +14,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.team21.myapplication.R
+import androidx.compose.foundation.clickable
 import com.team21.myapplication.ui.components.buttons.BlueButton
 import com.team21.myapplication.ui.components.buttons.GrayButton
 import com.team21.myapplication.ui.components.cards.GrayBorderCardWithIcon
@@ -63,6 +64,7 @@ fun DetailHousingView(
                     modifier = Modifier
                         .size(30.dp)
                         .padding(4.dp)
+                        .clickable { onBack() }
                 )
                 Spacer(Modifier.weight(1f))
                 Icon(

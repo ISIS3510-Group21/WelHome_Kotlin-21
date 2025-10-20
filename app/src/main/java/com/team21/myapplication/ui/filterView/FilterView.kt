@@ -86,6 +86,8 @@ fun FilterView(
             ),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+
+
             // Título
             item {
                 Text(
@@ -94,6 +96,31 @@ fun FilterView(
                     color = BlackText
                 )
             }
+
+            // Botones Search / Map Search lado a lado bajo "Filter by"
+            item {
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    BlueButton(
+                        text = if (state.canSearch) "Search" else "Search",
+                        onClick = onSearch,
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 40.dp) // un poco más pequeño
+                    )
+                    BlueButton(
+                        text = "Map Search",
+                        onClick = onMapSearch,
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 40.dp)
+                    )
+                }
+            }
+
 
             // 4 destacados (House, Room, Cabins, Apartment)
             item {
@@ -195,22 +222,22 @@ fun FilterView(
             }
 
             // Botón Search
-            item {
-                BlueButton(
-                    text = if (state.canSearch) "Search" else "Search (select filters)",
-                    onClick = onSearch, // [CAMBIO: dispara búsqueda]
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+            //item {
+            //    BlueButton(
+            //        text = if (state.canSearch) "Search" else "Search (select filters)",
+            //        onClick = onSearch, // [CAMBIO: dispara búsqueda]
+            //        modifier = Modifier.fillMaxWidth()
+            //    )
+            //}
 
             // Botón Map Search (opcional)
-            item {
-                BlueButton(
-                    text = "Map Search",
-                    onClick = onMapSearch,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+            //item {
+            //    BlueButton(
+            //        text = "Map Search",
+            //        onClick = onMapSearch,
+            //        modifier = Modifier.fillMaxWidth()
+            //    )
+            //}
         }
     }
 }
