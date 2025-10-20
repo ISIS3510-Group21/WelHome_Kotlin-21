@@ -28,6 +28,7 @@ import com.team21.myapplication.ui.theme.BlackText
 import com.team21.myapplication.ui.theme.WhiteBackground
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.MaterialTheme
 import com.team21.myapplication.ui.filterView.state.FilterUiState
 import com.team21.myapplication.ui.filterView.state.TagChipUi
 
@@ -57,7 +58,7 @@ fun FilterView(
     modifier: Modifier = Modifier
 ) {
     Scaffold(
-        containerColor = WhiteBackground,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             Column(
                 Modifier
@@ -93,7 +94,7 @@ fun FilterView(
                 Text(
                     text = "Filter by",
                     style = AppTextStyles.TitleView,
-                    color = BlackText
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
 

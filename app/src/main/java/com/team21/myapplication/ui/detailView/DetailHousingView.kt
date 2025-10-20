@@ -15,6 +15,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.team21.myapplication.R
 import androidx.compose.foundation.clickable
+import androidx.compose.material3.MaterialTheme
 import com.team21.myapplication.ui.components.buttons.BlueButton
 import com.team21.myapplication.ui.components.buttons.GrayButton
 import com.team21.myapplication.ui.components.cards.GrayBorderCardWithIcon
@@ -40,7 +41,7 @@ fun DetailHousingView(
     onBookVisit: () -> Unit = {}
 ) {
     Scaffold(
-        containerColor = WhiteBackground,
+        containerColor = MaterialTheme.colorScheme.background,
 
     ) { innerPadding ->
         Column(
@@ -60,7 +61,7 @@ fun DetailHousingView(
                 Icon(
                     imageVector = AppIcons.GoBack,
                     contentDescription = "Back",
-                    tint = BlueCallToAction,
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
                     modifier = Modifier
                         .size(30.dp)
                         .padding(4.dp)
@@ -70,7 +71,7 @@ fun DetailHousingView(
                 Icon(
                     imageVector = AppIcons.HeartSaved,
                     contentDescription = "Save",
-                    tint = BlueCallToAction,
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
                     modifier = Modifier
                         .size(30.dp)
                         .padding(4.dp)
@@ -107,7 +108,7 @@ fun DetailHousingView(
             Text(
                 text = "Amenities",
                 style = AppTextStyles.SubtitleView,
-                color = BlackText
+                color = MaterialTheme.colorScheme.onBackground
             )
             Spacer(Modifier.height(12.dp))
 
@@ -163,7 +164,7 @@ fun DetailHousingView(
             Text(
                 text = "Roommates Profile",
                 style = AppTextStyles.SubtitleView,
-                color = BlackText
+                color = MaterialTheme.colorScheme.onBackground
             )
             Spacer(Modifier.height(20.dp))
 
@@ -204,25 +205,25 @@ fun DetailHousingView(
                     Text(
                         text = uiState.ownerName.ifBlank { "Host" },
                         style = AppTextStyles.Description,
-                        color = BlackText
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
                         text = "World-renowned startup founder", // estático
                         style = AppTextStyles.Description,
-                        color = GrayIcon
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     Icon(
                         imageVector = AppIcons.Phone,
                         contentDescription = "Call",
-                        tint = BlackText,
+                        tint = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.size(40.dp)
                     )
                     Icon(
                         imageVector = AppIcons.Message,
                         contentDescription = "Message",
-                        tint = BlackText,
+                        tint = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.size(40.dp)
                     )
                 }
@@ -234,14 +235,14 @@ fun DetailHousingView(
             Text(
                 text = "Location",
                 style = AppTextStyles.SubtitleView,
-                color = BlackText
+                color = MaterialTheme.colorScheme.onBackground
             )
             Spacer(Modifier.height(8.dp))
             if (uiState.address.isNotBlank()) {
                 Text(
                     text = uiState.address,
                     style = AppTextStyles.Description,
-                    color = GrayIcon
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(10.dp))
             }

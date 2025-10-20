@@ -24,8 +24,8 @@ fun GrayButton(
     enabled: Boolean = true,
     selected: Boolean = false          // ← NUEVO
 ) {
-    val bg = if (selected) MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f) else MaterialTheme.colorScheme.tertiaryContainer
-    val fg = if (selected) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onBackground
+    val bg = if (selected) MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.7f) else MaterialTheme.colorScheme.tertiaryContainer
+    val fg = if (selected) MaterialTheme.colorScheme.inverseOnSurface else MaterialTheme.colorScheme.onBackground
 
     Button(
         onClick = onClick,

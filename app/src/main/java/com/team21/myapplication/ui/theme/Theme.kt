@@ -4,7 +4,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.foundation.isSystemInDarkTheme
 
@@ -19,7 +18,9 @@ private val DarkColors = darkColorScheme(
     onSurfaceVariant = GrayIcon_Dark,
     onSecondaryContainer = GrayIcon_Dark, //border button
     tertiaryContainer = Lavender_Dark,
-    onTertiaryContainer = OnBackground_Dark //grayButtonWithIcon
+    onTertiaryContainer = OnBackground_Dark, //grayButtonWithIcon
+    surfaceContainer = OnBackground_Dark, //GreyButton - selected
+    inverseOnSurface = Background_Dark
     )
 
 
@@ -34,7 +35,9 @@ private val LightColors = lightColorScheme(
     onSurfaceVariant = GrayIcon,
     onSecondaryContainer = BlueCallToAction, //border button
     tertiaryContainer = LavanderLight,
-    onTertiaryContainer = BlueCallToAction //grayButtonWithIcon
+    onTertiaryContainer = BlueCallToAction, //grayButtonWithIcon
+    surfaceContainer = LavanderLight, //GreyButton - selected
+    inverseOnSurface = BlueCallToAction
 )
 
 @Composable

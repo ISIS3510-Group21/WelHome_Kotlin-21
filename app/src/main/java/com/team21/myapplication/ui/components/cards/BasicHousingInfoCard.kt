@@ -38,7 +38,7 @@ fun BasicHousingInfoCard(
     Card(
         modifier = modifier.width(300.dp).height(250.dp),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(6.dp),
         onClick = onClick ?: {}
     ) {
