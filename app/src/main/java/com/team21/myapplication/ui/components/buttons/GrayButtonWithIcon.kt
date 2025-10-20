@@ -16,6 +16,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material3.MaterialTheme
 import com.team21.myapplication.ui.theme.AppTheme
 import com.team21.myapplication.ui.theme.BlackText
 import com.team21.myapplication.ui.theme.BlueCallToAction
@@ -32,9 +33,9 @@ fun GrayButtonWithIcon(
     contentDescription: String? = null,
     selected: Boolean = false,               // ← NUEVO
 ) {
-    val bg = if (selected) LavanderLight.copy(alpha = 0.7f) else LavanderLight
-    val fg = if (selected) BlueCallToAction else BlackText
-    val border = if (selected) BorderStroke(2.dp, BlueCallToAction) else null
+    val bg = if (selected) MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f) else MaterialTheme.colorScheme.tertiaryContainer
+    val fg = if (selected) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onBackground
+    val border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.onTertiaryContainer) else null
 
     Card(
         modifier = modifier.size(width = 120.dp, height = 80.dp),

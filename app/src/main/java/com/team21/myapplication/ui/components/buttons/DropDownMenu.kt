@@ -30,12 +30,12 @@ fun CustomDropdownMenu(
     items: List<String>,
     onItemSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
-    backgroundColor: Color = LavanderLight,
+    backgroundColor: Color = MaterialTheme.colorScheme.tertiaryContainer,
     borderColor: Color = Color.Transparent,
     borderWidth: Dp = 1.dp,
-    textColor: Color = GrayIcon,
+    textColor: Color = MaterialTheme.colorScheme.onBackground,
     height: Dp = 52.dp,
-    menuBackgroundColor: Color = LavanderLight
+    menuBackgroundColor: Color = MaterialTheme.colorScheme.tertiaryContainer
 ) {
     var expanded by remember { mutableStateOf(false) }
     var selectedText by remember { mutableStateOf(placeholderText) }

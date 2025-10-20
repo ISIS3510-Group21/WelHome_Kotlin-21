@@ -17,6 +17,7 @@ import com.team21.myapplication.ui.theme.GrayIcon
 import com.team21.myapplication.ui.theme.WhiteBackground
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material3.MaterialTheme
 
 @Composable
 fun GrayButtonOnlyIcon(
@@ -34,8 +35,8 @@ fun GrayButtonOnlyIcon(
         modifier = modifier.size(size.dp),
         shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = GrayIcon,
-            contentColor = WhiteBackground
+            containerColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            contentColor = MaterialTheme.colorScheme.background
         ),
         contentPadding = PaddingValues(0.dp)
     ) {
@@ -43,12 +44,12 @@ fun GrayButtonOnlyIcon(
             imageVector != null -> Icon(
                 imageVector = imageVector,
                 contentDescription = contentDescription,
-                tint = WhiteBackground
+                tint = MaterialTheme.colorScheme.background
             )
             painter != null -> Icon(
                 painter = painter,
                 contentDescription = contentDescription,
-                tint = WhiteBackground
+                tint = MaterialTheme.colorScheme.background
             )
         }
     }

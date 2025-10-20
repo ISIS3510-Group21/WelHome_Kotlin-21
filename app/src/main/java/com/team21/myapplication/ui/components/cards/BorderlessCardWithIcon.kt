@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -25,15 +26,15 @@ fun BorderlessCardWithIcon(
     painter: Painter? = null,
     contentDescription: String? = null,
     onClick: (() -> Unit)? = null,
-    iconTint: androidx.compose.ui.graphics.Color = LavanderLight,
-    textColor: androidx.compose.ui.graphics.Color = BlackText,
+    iconTint: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.tertiaryContainer,
+    textColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onBackground,
     cornerRadiusDp: Int = 12
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
             .background(
-                color = WhiteBackground,
+                color = MaterialTheme.colorScheme.background,
                 shape = RoundedCornerShape(cornerRadiusDp.dp)
             )
             .clickable(enabled = onClick != null) { onClick?.invoke() }

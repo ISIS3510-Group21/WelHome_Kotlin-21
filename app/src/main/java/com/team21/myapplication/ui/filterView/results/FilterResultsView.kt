@@ -3,6 +3,7 @@ package com.team21.myapplication.ui.filterView.results
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,7 +25,7 @@ fun FilterResultsView(
     modifier: Modifier = Modifier
 ) {
     Scaffold(
-        containerColor = WhiteBackground,
+        containerColor = MaterialTheme.colorScheme.background,
     ) { inner ->
         LazyColumn(
             modifier = modifier
@@ -37,7 +38,7 @@ fun FilterResultsView(
                 Text(
                     text = "Results (${items.size})",
                     style = AppTextStyles.TitleView,
-                    color = BlackText
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Spacer(Modifier.height(8.dp))
             }

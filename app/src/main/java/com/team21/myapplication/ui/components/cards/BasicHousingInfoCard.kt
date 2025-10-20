@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -24,7 +25,7 @@ import com.team21.myapplication.ui.theme.GrayIcon
 import com.team21.myapplication.ui.theme.LocalDSTypography
 import com.team21.myapplication.ui.theme.AppTheme
 import com.team21.myapplication.ui.theme.WhiteBackground
-
+import androidx.compose.material3.surfaceColorAtElevation
 @Composable
 fun BasicHousingInfoCard(
     title: String,
@@ -37,8 +38,8 @@ fun BasicHousingInfoCard(
     Card(
         modifier = modifier.width(300.dp).height(250.dp),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = WhiteBackground),
-        elevation = CardDefaults.cardElevation(2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(6.dp),
         onClick = onClick ?: {}
     ) {
         Column(Modifier.fillMaxWidth()) {
@@ -67,7 +68,7 @@ fun BasicHousingInfoCard(
                 Text(
                     text = title,
                     style = LocalDSTypography.current.Section,
-                    color = BlackText
+                    color = MaterialTheme.colorScheme.onBackground
                 )
 
                 Spacer(Modifier.height(6.dp))
@@ -75,7 +76,7 @@ fun BasicHousingInfoCard(
                 Text(
                     text = pricePerMonthLabel,
                     style = LocalDSTypography.current.Description,
-                    color = BlackText
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
         }

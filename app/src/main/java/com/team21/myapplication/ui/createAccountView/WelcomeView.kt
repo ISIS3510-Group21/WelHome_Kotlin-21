@@ -87,7 +87,7 @@ fun WelcomeLayout(
             Spacer(modifier = Modifier.height(18.dp))
 
             Image(
-                painter = painterResource(R.drawable.app_logo),
+                painter = painterResource(R.drawable.welhome_logo),
                 contentDescription = "App Logo",
                 modifier = Modifier.size(250.dp),
             )

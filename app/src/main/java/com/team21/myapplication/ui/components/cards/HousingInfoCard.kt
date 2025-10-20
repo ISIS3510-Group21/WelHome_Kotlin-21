@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -39,8 +40,8 @@ fun HousingInfoCard(
     Card(
         modifier = modifier.width(300.dp).height(270.dp),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = WhiteBackground),
-        elevation = CardDefaults.cardElevation(2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(4.dp),
         onClick = onClick ?: {}
     ) {
         Column(Modifier.fillMaxWidth()) {
@@ -69,7 +70,7 @@ fun HousingInfoCard(
                 Text(
                     text = title,
                     style = LocalDSTypography.current.Section,
-                    color = BlackText
+                    color = MaterialTheme.colorScheme.onBackground
                 )
 
                 Spacer(Modifier.height(6.dp))
@@ -79,20 +80,20 @@ fun HousingInfoCard(
                     Icon(
                         imageVector = Icons.Filled.Star,
                         contentDescription = null,
-                        tint = BlackText,
+                        tint = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
                         text = String.format("%.2f", rating),
                         style = LocalDSTypography.current.Description,
-                        color = BlackText
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = "$reviewsCount reviews",
                         style = LocalDSTypography.current.Description,
-                        color = GrayIcon
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
@@ -101,7 +102,7 @@ fun HousingInfoCard(
                 Text(
                     text = pricePerMonthLabel,
                     style = LocalDSTypography.current.Description,
-                    color = BlackText
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
         }

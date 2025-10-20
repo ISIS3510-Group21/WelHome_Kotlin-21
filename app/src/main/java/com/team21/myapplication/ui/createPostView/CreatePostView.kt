@@ -283,7 +283,7 @@ fun CreatePostScreenLayout(
                             Icon(
                                 imageVector = icon,
                                 contentDescription = tagName,
-                                tint = if (isSelected) BlueCallToAction else BlackText
+                                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
                             )
                         }
                     )
@@ -306,7 +306,7 @@ fun CreatePostScreenLayout(
                             Icon(
                                 imageVector = icon,
                                 contentDescription = tagName,
-                                tint = if (isSelected) BlueCallToAction else BlackText
+                                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
                             )
                         }
                     )
@@ -393,7 +393,7 @@ fun CreatePostScreenLayout(
                     Icon(
                         imageVector = AppIcons.Add,
                         contentDescription = "Add main photo",
-                        tint = BlueCallToAction
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                 }
             )
@@ -414,7 +414,7 @@ fun CreatePostScreenLayout(
                         Text(
                             text = "Main Photo",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Box {
@@ -461,7 +461,7 @@ fun CreatePostScreenLayout(
                     Icon(
                         imageVector = AppIcons.CameraAlt,
                         contentDescription = "Take photos",
-                        tint = BlueCallToAction
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                 }
             )
@@ -476,7 +476,7 @@ fun CreatePostScreenLayout(
                     Icon(
                         imageVector = AppIcons.Queue,
                         contentDescription = "Add photos",
-                        tint = BlueCallToAction
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                 },
                 enabled = uiState.additionalPhotos.size < 9

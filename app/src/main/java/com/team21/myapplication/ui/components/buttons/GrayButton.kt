@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -23,8 +24,8 @@ fun GrayButton(
     enabled: Boolean = true,
     selected: Boolean = false          // ← NUEVO
 ) {
-    val bg = if (selected) LavanderLight.copy(alpha = 0.7f) else LavanderLight
-    val fg = if (selected) BlueCallToAction else BlackText
+    val bg = if (selected) MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.7f) else MaterialTheme.colorScheme.tertiaryContainer
+    val fg = if (selected) MaterialTheme.colorScheme.inverseOnSurface else MaterialTheme.colorScheme.onBackground
 
     Button(
         onClick = onClick,

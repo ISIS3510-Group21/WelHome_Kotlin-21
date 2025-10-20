@@ -13,7 +13,7 @@ fun OwnerNavBar(
     currentRoute: String?,
     onNavigate: (String) -> Unit,
 ) {
-    NavigationBar(containerColor = WhiteBackground, tonalElevation = 0.dp) {
+    NavigationBar(containerColor = MaterialTheme.colorScheme.background, tonalElevation = 0.dp) {
         val selectedRoute = OwnerDest.byRoute(currentRoute).route
         OwnerDest.All.forEach { dest ->
             val selected = dest.route == selectedRoute
@@ -24,23 +24,23 @@ fun OwnerNavBar(
                     Icon(
                         imageVector = dest.icon,
                         contentDescription = dest.label,
-                        tint = if (selected) BlueCallToAction else GrayIcon
+                        tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 },
                 label = {
                     Text(
                         text = dest.label,
                         style = LocalDSTypography.current.NavBarDescription,
-                        color = if (selected) BlueCallToAction else GrayIcon
+                        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 },
                 alwaysShowLabel = true,
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = BlueCallToAction,
-                    unselectedIconColor = GrayIcon,
-                    selectedTextColor = BlueCallToAction,
-                    unselectedTextColor = GrayIcon,
-                    indicatorColor = WhiteBackground
+                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    indicatorColor = MaterialTheme.colorScheme.background
                 )
             )
         }

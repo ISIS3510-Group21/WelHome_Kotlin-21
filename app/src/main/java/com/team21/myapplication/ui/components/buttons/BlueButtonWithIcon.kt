@@ -32,8 +32,8 @@ fun BlueButtonWithIcon(text: String, onClick: () -> Unit, modifier: Modifier = M
             .fillMaxWidth()
             .height(52.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = BlueCallToAction,
-            contentColor = WhiteBackground
+            containerColor =  MaterialTheme.colorScheme.primary,
+            contentColor =  MaterialTheme.colorScheme.background
         ),
         shape = MaterialTheme.shapes.medium
     ) {
@@ -42,13 +42,13 @@ fun BlueButtonWithIcon(text: String, onClick: () -> Unit, modifier: Modifier = M
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             when {
-                imageVector != null -> Icon(imageVector, contentDescription = null, tint = WhiteBackground)
-                painter != null     -> Icon(painter, contentDescription = null, tint = WhiteBackground)
+                imageVector != null -> Icon(imageVector, contentDescription = null, tint =  MaterialTheme.colorScheme.background)
+                painter != null     -> Icon(painter, contentDescription = null, tint =  MaterialTheme.colorScheme.background)
             }
             Text(
                 text = text,
                 style = LocalDSTypography.current.Description,
-                color = WhiteBackground
+                color =  MaterialTheme.colorScheme.background
             )
         }
     }

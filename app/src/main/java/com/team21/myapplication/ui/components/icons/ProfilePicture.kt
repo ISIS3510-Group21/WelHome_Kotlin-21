@@ -17,6 +17,7 @@ import com.team21.myapplication.ui.components.icons.AppIcons
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.res.painterResource
 import com.team21.myapplication.R
 import com.team21.myapplication.ui.theme.WhiteBackground
@@ -27,7 +28,7 @@ fun ProfilePicture(
     painter: Painter,
     modifier: Modifier = Modifier,
     backgroundColor: Color = WhiteBackground,
-    borderColor: Color = GrayIcon
+    borderColor: Color = MaterialTheme.colorScheme.onSurfaceVariant
 ) {
     Box(
         modifier = modifier
