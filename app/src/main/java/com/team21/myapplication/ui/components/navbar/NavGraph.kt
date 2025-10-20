@@ -15,11 +15,13 @@ import com.team21.myapplication.ui.filterView.FilterRoute
 import com.team21.myapplication.ui.filterView.results.FilterResultsCache
 import com.team21.myapplication.ui.filterView.results.FilterResultsRoute
 import android.app.Activity
+import com.team21.myapplication.ui.filterView.FilterActivity
 import androidx.compose.ui.platform.LocalContext
 import com.team21.myapplication.data.repository.AuthRepository
 import com.team21.myapplication.ui.createAccountView.WelcomeActivity
 import com.team21.myapplication.ui.mapsearch.MapSearchView
 import com.team21.myapplication.ui.profileView.ProfileRoute
+import com.team21.myapplication.ui.detailView.DetailHousingActivity
 
 object DetailRoutes {
     const val DETAIL_PATTERN = "detail/{housingId}"
@@ -34,6 +36,7 @@ fun AppNavGraph(
 ) {
     val mapSearchRoute = "mapSearch"
     val ctx = LocalContext.current
+    val context = LocalContext.current
     NavHost(
         navController = navController,
         startDestination = AppDest.Home.route,
@@ -41,9 +44,12 @@ fun AppNavGraph(
     ) {
 
         // HOME
+
         composable(AppDest.Home.route) {
             com.team21.myapplication.ui.main.MainScreen(
-                onOpenFilters = { navController.navigate("filters") },
+                onOpenFilters = {
+                    context.startActivity(Intent(context, FilterActivity::class.java))
+                },
                 onOpenDetail  = { id -> navController.navigate(DetailRoutes.detail(id)) },
                 onNavigateToDetail = { id -> navController.navigate(DetailRoutes.detail(id)) }
             )
@@ -57,7 +63,10 @@ fun AppNavGraph(
                     navController.navigate("filterResults")
                 },
                 onOpenDetail = { housingId ->
-                    navController.navigate(DetailRoutes.detail(housingId))
+                    context.startActivity(
+                        Intent(context, DetailHousingActivity::class.java)
+                            .putExtra(DetailHousingActivity.EXTRA_HOUSING_ID, housingId)
+                    )
                 },
                 onMapSearch = {
                     navController.navigate(mapSearchRoute)
@@ -92,7 +101,10 @@ fun AppNavGraph(
         composable("filterResults") {
             FilterResultsRoute(
                 onOpenDetail = { housingId ->
-                    navController.navigate(DetailRoutes.detail(housingId))
+                    context.startActivity(
+                        Intent(context, DetailHousingActivity::class.java)
+                            .putExtra(DetailHousingActivity.EXTRA_HOUSING_ID, housingId)
+                    )
                 },
                 onNavigateBottomBar = { route ->
                     if (route != navController.currentDestination?.route) {
