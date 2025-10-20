@@ -41,9 +41,9 @@ fun BorderButton(
             .height(52.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = Color.Transparent, // No fill
-            contentColor = BlackText // Text and icon color
+            contentColor =  MaterialTheme.colorScheme.background // Text and icon color
         ),
-        border = BorderStroke(1.dp, BlueCallToAction), // Blue border
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSecondaryContainer), // Blue border
         shape = MaterialTheme.shapes.medium
     ) {
         Row(
@@ -79,7 +79,7 @@ private fun BorderButton_Preview() {
                     Icon(
                         imageVector = AppIcons.Home, // Using your custom icon
                         contentDescription = "Add main photo icon",
-                        tint = BlackText
+                        tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
             )

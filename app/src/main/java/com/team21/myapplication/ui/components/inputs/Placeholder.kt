@@ -41,8 +41,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 fun PlaceholderTextField(
     placeholderText: String,
     modifier: Modifier = Modifier,
-    backgroundColor: Color = LavanderLight,
-    textColor: Color = GrayIcon,
+    backgroundColor: Color = MaterialTheme.colorScheme.tertiaryContainer,
+    textColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     borderColor: Color = Color.Transparent,
     borderWidth: Dp = 1.dp,
     height: Dp = 52.dp,

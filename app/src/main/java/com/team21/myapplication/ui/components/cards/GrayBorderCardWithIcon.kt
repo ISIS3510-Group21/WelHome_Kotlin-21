@@ -15,6 +15,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.material3.MaterialTheme
 import com.team21.myapplication.ui.theme.*
 
 @Composable
@@ -28,8 +29,8 @@ fun GrayBorderCardWithIcon(
     OutlinedCard(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, GrayIcon),
-        colors = CardDefaults.outlinedCardColors(containerColor = WhiteBackground),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurfaceVariant),
+        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.background),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
@@ -42,14 +43,14 @@ fun GrayBorderCardWithIcon(
             Icon(
                 imageVector = icon,
                 contentDescription = contentDescription,
-                tint = BlackText,
+                tint = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = text,
                 style = LocalDSTypography.current.Description,
-                color = BlackText
+                color = MaterialTheme.colorScheme.onBackground
             )
         }
     }

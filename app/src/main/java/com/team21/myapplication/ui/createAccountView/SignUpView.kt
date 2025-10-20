@@ -282,9 +282,6 @@ fun SignUpLayout(
             placeholderText = uiState.gender.ifEmpty { "Select" },
             items = genres,
             onItemSelected = { viewModel.updateGender(it) },
-            textColor = GrayIcon,
-            backgroundColor = LavanderLight,
-            menuBackgroundColor = WhiteBackground
         )
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -304,9 +301,6 @@ fun SignUpLayout(
             placeholderText = uiState.nationality.ifEmpty { "Select" },
             items = nationalities,
             onItemSelected = { viewModel.updateNationality(it)  },
-            textColor = GrayIcon,
-            backgroundColor = LavanderLight,
-            menuBackgroundColor = WhiteBackground
         )
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -327,9 +321,6 @@ fun SignUpLayout(
             placeholderText = uiState.language.ifEmpty { "Select" },
             items = languages,
             onItemSelected = { viewModel.updateLanguage(it) },
-            textColor = GrayIcon,
-            backgroundColor = LavanderLight,
-            menuBackgroundColor = WhiteBackground
         )
 
         Spacer(modifier = Modifier.height(32.dp))

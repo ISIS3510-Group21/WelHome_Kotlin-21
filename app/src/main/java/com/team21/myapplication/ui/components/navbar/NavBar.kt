@@ -42,7 +42,7 @@ fun AppNavBar(
         Divider(color = GrayIcon, thickness = 1.dp, modifier = Modifier.fillMaxWidth())
     }
 
-    NavigationBar(containerColor = WhiteBackground, tonalElevation = 0.dp, modifier = modifier) {
+    NavigationBar(containerColor = MaterialTheme.colorScheme.background, tonalElevation = 0.dp, modifier = modifier) {
         val selectedRoute = AppDest.byRoute(currentRoute).route
         AppDest.All.forEach { dest ->
             val selected = dest.route == selectedRoute
@@ -54,23 +54,23 @@ fun AppNavBar(
                     Icon(
                         imageVector = dest.icon,
                         contentDescription = dest.label,
-                        tint = if (selected) BlueCallToAction else GrayIcon
+                        tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 },
                 label = {
                     Text(
                         text = dest.label,
                         style = labelStyle,
-                        color = if (selected) BlueCallToAction else GrayIcon
+                        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 },
                 alwaysShowLabel = true,
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = BlueCallToAction,
-                    unselectedIconColor = GrayIcon,
-                    selectedTextColor = BlueCallToAction,
-                    unselectedTextColor = GrayIcon,
-                    indicatorColor = WhiteBackground
+                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    indicatorColor = MaterialTheme.colorScheme.background
                 )
             )
         }

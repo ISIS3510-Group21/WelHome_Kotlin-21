@@ -24,15 +24,15 @@ fun BlackButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier
             .fillMaxWidth()
             .height(52.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = BlackText,
-            contentColor = WhiteBackground
+            containerColor = MaterialTheme.colorScheme.onBackground,
+            contentColor = MaterialTheme.colorScheme.background
         ),
         shape = MaterialTheme.shapes.medium
     ) {
         Text(
             text = text,
             style = LocalDSTypography.current.Description,
-            color = WhiteBackground
+            color = MaterialTheme.colorScheme.background
         )
     }
 }

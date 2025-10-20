@@ -22,6 +22,7 @@ import com.team21.myapplication.ui.theme.GrayIcon
 import com.team21.myapplication.ui.theme.WhiteBackground
 import com.team21.myapplication.ui.theme.LocalDSTypography
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.material3.MaterialTheme
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -71,13 +72,13 @@ fun ImageCarouselCard(
                     .align(Alignment.BottomStart)
                     .padding(12.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(GrayIcon)
+                    .background(MaterialTheme.colorScheme.onSurfaceVariant)
                     .padding(horizontal = 10.dp, vertical = 6.dp)
             ) {
                 Text(
                     text = counterFormatter(pagerState.currentPage, total),
                     style = LocalDSTypography.current.IconText,
-                    color = WhiteBackground,
+                    color = MaterialTheme.colorScheme.background,
                     textAlign = TextAlign.Center
                 )
             }

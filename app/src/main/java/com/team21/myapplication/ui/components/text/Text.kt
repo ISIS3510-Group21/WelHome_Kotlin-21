@@ -15,6 +15,7 @@ import com.team21.myapplication.ui.theme.BlueCallToAction
 import com.team21.myapplication.ui.theme.GrayIcon
 import com.team21.myapplication.ui.theme.WhiteBackground
 import com.team21.myapplication.ui.theme.Poppins
+import androidx.compose.material3.MaterialTheme
 
 @Composable
 fun BlueText(
@@ -34,7 +35,7 @@ fun BlueText(
             fontWeight = fontWeight,
             fontStyle = fontStyle,
             textDecoration = if (underline) TextDecoration.Underline else TextDecoration.None,
-            color = BlueCallToAction
+            color = MaterialTheme.colorScheme.primary
         )
     )
 }
@@ -57,7 +58,7 @@ fun WhiteText(
             fontWeight = fontWeight,
             fontStyle = fontStyle,
             textDecoration = if (underline) TextDecoration.Underline else TextDecoration.None,
-            color = WhiteBackground
+            color = MaterialTheme.colorScheme.onPrimary
         )
     )
 }
@@ -80,7 +81,7 @@ fun GrayText(
             fontWeight = fontWeight,
             fontStyle = fontStyle,
             textDecoration = if (underline) TextDecoration.Underline else TextDecoration.None,
-            color = GrayIcon
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     )
 }
@@ -103,7 +104,7 @@ fun BlackText(
             fontWeight = fontWeight,
             fontStyle = fontStyle,
             textDecoration = if (underline) TextDecoration.Underline else TextDecoration.None,
-            color = BlackText
+            color = MaterialTheme.colorScheme.onSurface
         )
     )
 }

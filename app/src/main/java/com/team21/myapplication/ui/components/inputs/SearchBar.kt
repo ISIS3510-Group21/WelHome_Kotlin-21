@@ -42,7 +42,7 @@ fun SearchBar(
                     onClick = { onClick?.invoke() }
                 ),
             shape = RoundedCornerShape(24.dp),
-            color = LavanderLight,
+            color = MaterialTheme.colorScheme.tertiaryContainer,
             tonalElevation = 0.dp,
             shadowElevation = 0.dp
         ) {
@@ -55,13 +55,13 @@ fun SearchBar(
                 Icon(
                     imageVector = Icons.Filled.Search,
                     contentDescription = null,
-                    tint = GrayIcon
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = placeholder,
                     style = LocalDSTypography.current.Description,
-                    color = GrayIcon
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -82,14 +82,14 @@ fun SearchBar(
             Icon(
                 imageVector = Icons.Filled.Search,
                 contentDescription = null,
-                tint = GrayIcon
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         },
         placeholder = {
             Text(
                 text = placeholder,
                 style = LocalDSTypography.current.Description,
-                color = GrayIcon
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         },
         textStyle = LocalDSTypography.current.Description,
@@ -101,23 +101,23 @@ fun SearchBar(
             onSearch = { onSearch?.invoke(query) }
         ),
         colors = TextFieldDefaults.colors(
-            focusedContainerColor = LavanderLight,
-            unfocusedContainerColor = LavanderLight,
-            disabledContainerColor = LavanderLight.copy(alpha = 0.6f),
+            focusedContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            unfocusedContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            disabledContainerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f),
 
-            focusedTextColor = GrayIcon,
-            unfocusedTextColor = GrayIcon,
-            disabledTextColor = GrayIcon.copy(alpha = 0.6f),
+            focusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            disabledTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
 
-            cursorColor = GrayIcon,
+            cursorColor = MaterialTheme.colorScheme.onSurfaceVariant,
             focusedIndicatorColor = Color.Transparent,
             unfocusedIndicatorColor = Color.Transparent,
             disabledIndicatorColor = Color.Transparent,
-            focusedLeadingIconColor = GrayIcon,
-            unfocusedLeadingIconColor = GrayIcon,
-            disabledLeadingIconColor = GrayIcon.copy(alpha = 0.6f),
-            focusedPlaceholderColor = GrayIcon,
-            unfocusedPlaceholderColor = GrayIcon
+            focusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            disabledLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+            focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant
         )
     )
 }

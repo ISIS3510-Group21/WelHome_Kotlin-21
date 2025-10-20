@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -41,10 +42,10 @@ fun ExpandableCard(
             .padding(vertical = 6.dp)
             .border(
                 width = 1.dp,
-                color = GrayIcon,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 shape = RoundedCornerShape(12.dp)
             ),
-        colors = CardDefaults.cardColors(containerColor = WhiteBackground),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -61,19 +62,19 @@ fun ExpandableCard(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = BlackText,
+                    tint = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.padding(end = 8.dp)
                 )
                 Text(
                     text = title,
                     style = LocalDSTypography.current.Description,
-                    color = BlackText,
+                    color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.weight(1f)
                 )
                 Icon(
                     imageVector = Icons.Default.KeyboardArrowDown,
                     contentDescription = null,
-                    tint = BlackText,
+                    tint = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.rotate(rotation)
                 )
             }
@@ -103,7 +104,7 @@ private fun ExpandableCard_Preview() {
                 Text(
                     text = "Here goes the content for general questions.",
                     style = LocalDSTypography.current.IconText,
-                    color = BlackText
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
 
@@ -114,7 +115,7 @@ private fun ExpandableCard_Preview() {
                 Text(
                     text = "Details about food services go here.",
                     style = LocalDSTypography.current.IconText,
-                    color = BlackText
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
         }

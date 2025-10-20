@@ -62,7 +62,7 @@ object AppIcons {
 }
 
 @Composable
-fun IconTile(label: String, icon: ImageVector, iconColor: Color = GrayIcon) {
+fun IconTile(label: String, icon: ImageVector, iconColor: Color = MaterialTheme.colorScheme.onSurfaceVariant) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.width(80.dp)

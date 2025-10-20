@@ -98,7 +98,8 @@ fun HousingCardListItem(
                 Text(
                     text = title,
                     style = LocalDSTypography.current.SubtitleView,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
                 )
 
                 Spacer(modifier = Modifier.height(2.dp))
@@ -107,14 +108,14 @@ fun HousingCardListItem(
                     Icon(
                         imageVector = Icons.Filled.Star,
                         contentDescription = "Rating",
-                        tint = Color.Black,
+                        tint = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(2.dp))
                     Text(
                         text = String.format("%.2f", rating),
                         style = LocalDSTypography.current.IconText,
-                        color = Color.Black
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                 }
 
@@ -122,7 +123,8 @@ fun HousingCardListItem(
 
                 Text(
                     text = price,
-                    style = LocalDSTypography.current.Description
+                    style = LocalDSTypography.current.Description,
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
         }
