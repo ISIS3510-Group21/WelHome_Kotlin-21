@@ -59,6 +59,10 @@ object AppIcons {
     val People: ImageVector = Icons.Outlined.Groups
 
     val Close: ImageVector = Icons.Outlined.Close
+
+    val Lightbulb: ImageVector = Icons.Outlined.Lightbulb
+
+    val Check: ImageVector = Icons.Outlined.Check
 }
 
 @Composable

@@ -221,34 +221,136 @@ fun CreatePostScreenLayout(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            // FIELD: PRICE
-            BlackText(
-                text = "Rent (per month)",
-                size = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
+            // FIELD: PRICE (con botón de sugerencia)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                BlackText(
+                    text = "Rent (per month)",
+                    size = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                val disabled = uiState.isSuggestingPrice
+
+                IconButton(
+                    onClick = { viewModel.suggestPrice() },
+                    enabled = !disabled
+                ) {
+                    if (uiState.isSuggestingPrice) {
+                        CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                    } else {
+                        Icon(
+                            imageVector = AppIcons.Lightbulb,
+                            contentDescription = "Suggest price",
+                            tint = if (disabled) MaterialTheme.colorScheme.outline else BlueCallToAction
+                        )
+                    }
+                }
+            }
             Spacer(modifier = Modifier.height(8.dp))
+
+
             PlaceholderTextField(
-                placeholderText = "Ex: 950000",
+                placeholderText = uiState.pricePlaceholder,
                 value = uiState.price,
-                onValueChange = { viewModel.updatePrice(it) } // Filters and updates
+                onValueChange = { viewModel.updatePrice(it) }
             )
+
+        // Mensaje cuando falta Type of housing
+            uiState.suggestPriceError?.let { err ->
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = err,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
+        // (Opcional) info de sugerencia (rango/nota) si quieres mantenerlo
+            uiState.suggestedPrice?.let { sp ->
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Suggested: ${sp.value.toInt()} (range ${sp.low.toInt()}–${sp.high.toInt()})",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
-            // FIELD: DESCRIPTION
-            BlackText(
-                text = "Description",
-                size = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+
+
+
+            // ----- Sección DESCRIPTION -----
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                BlackText(text = "Description", size = 16.sp, fontWeight = FontWeight.Bold)
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (uiState.showDescReviewControls) {
+                        IconButton(onClick = { viewModel.acceptGeneratedDescription() }) {
+                            Icon(
+                                imageVector = AppIcons.Check, // usa el tuyo (Check / CheckCircle)
+                                contentDescription = "Accept",
+                                tint = BlueCallToAction
+                            )
+                        }
+                        IconButton(onClick = { viewModel.revertGeneratedDescription() }) {
+                            Icon(
+                                imageVector = AppIcons.Close, // usa el tuyo (Close / Clear)
+                                contentDescription = "Revert",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
+                    }
+
+                    // Botón "copilot" (Lightbulb)
+                    IconButton(
+                        onClick = { viewModel.generateOrRewriteDescription(/* city, neighborhood si los tienes */) },
+                        enabled = !uiState.isDescGenerating
+                    ) {
+                        if (uiState.isDescGenerating) {
+                            CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                        } else {
+                            Icon(
+                                imageVector = AppIcons.Lightbulb, // (Regla 1)
+                                contentDescription = "Generate description",
+                                tint = BlueCallToAction
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // Campo de descripción (usa tu TextField)
             PlaceholderTextField(
                 placeholderText = "Ex: The neighborhood is pretty quiet and nice",
-                height = 100.dp,
                 value = uiState.description,
-                onValueChange = { viewModel.updateDescription(it) }
+                onValueChange = { viewModel.updateDescription(it) },
+                height = 100.dp
+                
             )
-            Spacer(modifier = Modifier.height(16.dp))
+
+            // Mensajes de error específicos de esta sección
+            uiState.descError?.let { msg ->
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = msg,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
 
             // --- HOUSING TYPE (tag)
             BlackText(
