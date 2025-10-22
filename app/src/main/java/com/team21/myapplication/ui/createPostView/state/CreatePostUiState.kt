@@ -17,7 +17,19 @@ data class CreatePostUiState(
     val additionalPhotos: List<Uri> = emptyList(),
 
     // Operation state
-    val operationState: CreatePostOperationState = CreatePostOperationState.Idle
+    val operationState: CreatePostOperationState = CreatePostOperationState.Idle,
+
+    // Recommendation
+    val isSuggestingPrice: Boolean = false,
+    val suggestedPrice: SuggestedPrice? = null,
+    val suggestPriceError: String? = null,
+    val pricePlaceholder: String = "Ex: 9500",
+
+    val isDescGenerating: Boolean = false,
+    val descError: String? = null,
+    val previousDescription: String? = null,
+    val showDescReviewControls: Boolean = false,
+    val selectedTagLabel: String? = null
 )
 
 sealed class CreatePostOperationState {

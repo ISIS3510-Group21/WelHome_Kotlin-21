@@ -52,7 +52,8 @@ fun PlaceholderTextField(
     trailingIcon: @Composable (() -> Unit)? = null,// Optional Composable for the icon
     visualTransformation: VisualTransformation = VisualTransformation.None,
     maxChars: Int? = null,
-    maxCharsMessage: String = "You have reached the maximum number of characters."
+    maxCharsMessage: String = "You have reached the maximum number of characters.",
+    maxLines: Int = 1
 
 ) {
 
@@ -72,7 +73,7 @@ fun PlaceholderTextField(
         Box(
             modifier = modifier
                 .fillMaxWidth()
-                .height(coercedHeight)
+                .defaultMinSize(minHeight = height)
                 .background(backgroundColor, RoundedCornerShape(8.dp))
                 .border(borderWidth, borderColor, RoundedCornerShape(8.dp))
                 .padding(horizontal = 4.dp)
@@ -127,13 +128,9 @@ fun PlaceholderTextField(
                     cursorColor = textColor
                 ),
                 shape = shape,
-                singleLine = height <= 56.dp,
-                minLines = when {
-                    height >= 100.dp -> 4
-                    height >= 76.dp -> 3
-                    height > 56.dp -> 2
-                    else -> 1
-                },
+                singleLine = false,
+                minLines = 1,
+                maxLines = 10,
                 keyboardOptions = keyboardOptions,
             )
             if (trailingIcon != null) {
