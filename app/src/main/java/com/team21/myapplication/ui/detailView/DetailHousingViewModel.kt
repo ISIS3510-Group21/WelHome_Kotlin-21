@@ -1,7 +1,6 @@
 package com.team21.myapplication.ui.detailView
 
 import android.util.Log
-import androidx.compose.runtime.remember
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FieldValue
@@ -21,7 +20,6 @@ import com.team21.myapplication.ui.detailView.state.DetailHousingUiState
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 
 /**
@@ -107,7 +105,7 @@ class DetailHousingViewModel(
                 userNationality = nationality
             )
 
-            // Ejecuta ambas cosas en un bloque NO cancelable y en IO
+            // Ejecuta ambas cosas en un bloque no cancelable y en IO
             withContext(NonCancellable + Dispatchers.IO) {
 
                 try {
@@ -123,7 +121,7 @@ class DetailHousingViewModel(
                 }
 
                 try {
-                    // 2) Calcular top y suscribirse al topic; además escribe _top y _topic
+                    // 2) Calcular top y suscribirse al topic además escribe _top y _topic
                     updateUserPreferredTopic(
                         firestore = firestore,
                         messaging = messaging,
