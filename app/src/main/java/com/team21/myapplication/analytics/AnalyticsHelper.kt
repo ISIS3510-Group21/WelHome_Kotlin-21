@@ -56,4 +56,29 @@ class AnalyticsHelper(context: Context) {
         firebaseAnalytics.setUserProperty("language", language)
     }
 
+    fun logHousingDetailViewTime(
+        postId: String,
+        postTitle: String,
+        tags: List<String>,
+        durationMs: Long,
+        userNationality: String
+    ) {
+        // Un evento por tag para facilitar agregación en Analytics/BigQuery
+        tags.ifEmpty { listOf("Unknown") }.forEach { tag ->
+            Log.d("AnalyticsHelper", "logHousingDetailViewTime -> tag=$tag duration=$durationMs post=$postId")
+            firebaseAnalytics.logEvent("housing_detail_view_time") {
+                param("post_id", postId)
+                param("post_title", postTitle)
+                param("housing_tag", tag)
+                param("duration_ms", durationMs)
+                param("user_nationality", userNationality)
+                param(FirebaseAnalytics.Param.CONTENT_TYPE, "housing_post")
+            }
+        }
+    }
+
+    fun setUserPreferredTag(tagSlug: String) {
+        firebaseAnalytics.setUserProperty("preferred_tag", tagSlug)
+    }
+
 }

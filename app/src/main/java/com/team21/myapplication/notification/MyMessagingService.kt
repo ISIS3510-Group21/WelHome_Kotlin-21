@@ -1,6 +1,7 @@
 package com.team21.myapplication.notification
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -23,6 +24,10 @@ class MyMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(message: RemoteMessage) {
         // Título/cuerpo: prioriza notification; si no viene, prueba data
+
+        val route = message.data["route"]
+        val housingId = message.data["housingId"]
+
         val title = message.notification?.title
             ?: message.data["title"]
             ?: "Trending ahora"
@@ -30,10 +35,56 @@ class MyMessagingService : FirebaseMessagingService() {
             ?: message.data["body"]
             ?: "Toca para ver resultados"
 
+        if (route == "detail" && !housingId.isNullOrBlank()) {
+            showDetailNotification(this, title, body, housingId) 
+            return
+        }
+
         // CSV de tags desde data
         val tagsCsv = message.data["tags"].orEmpty()
 
         showTrending(this, title, body, tagsCsv)
+    }
+    @SuppressLint("MissingPermission")
+    private fun showDetailNotification(
+        ctx: Context,
+        title: String,
+        body: String,
+        housingId: String
+    ) {
+        ensureChannel(ctx)
+        val intent = Intent(ctx, com.team21.myapplication.ui.detailView.DetailHousingActivity::class.java).apply {
+            putExtra(com.team21.myapplication.ui.detailView.DetailHousingActivity.EXTRA_HOUSING_ID, housingId)
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+
+        val pi = PendingIntent.getActivity(
+            ctx,
+            housingId.hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS)
+            != PackageManager.PERMISSION_GRANTED
+        ) return
+
+        val smallIcon = runCatching { R.drawable.ic_notification }.getOrDefault(R.mipmap.ic_launcher)
+
+        val notif = NotificationCompat.Builder(ctx, CHANNEL_ID)
+            .setSmallIcon(smallIcon)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setAutoCancel(true)
+            .setContentIntent(pi)
+            .build()
+
+        try {
+            NotificationManagerCompat.from(ctx).notify(housingId.hashCode(), notif)
+        } catch (_: SecurityException) { /* no crashea si falta permiso */ }
+
     }
 
     private fun showTrending(ctx: Context, title: String, body: String, tagsCsv: String) {
