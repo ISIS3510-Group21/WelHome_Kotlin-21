@@ -1,6 +1,7 @@
 package com.team21.myapplication.ui.mapsearch
 
 import android.app.Activity
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -54,6 +55,7 @@ import com.team21.myapplication.ui.components.navbar.AppNavBar
 import com.team21.myapplication.ui.theme.AppTheme
 import com.team21.myapplication.ui.theme.LocalDSTypography
 import com.google.maps.android.compose.rememberCameraPositionState
+import com.team21.myapplication.ui.detailView.DetailHousingActivity
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
@@ -64,16 +66,19 @@ class MapSearchActivity : ComponentActivity() {
         setContent {
             AppTheme {
                 val navController = rememberNavController()
-                NavHost(navController = navController, startDestination = "mapSearch"){
-                    composable("mapSearch"){
-                        MapSearchView(
-                            navController = navController,
-                            onNavigateToDetail = {id ->
-                                navController.navigate("detail/$id")
-                            }
-
-                        )
-                    }
+                Scaffold(
+                    bottomBar = { AppNavBar(navController) }
+                ){ innerPadding ->
+                    MapSearchView(
+                        navController,
+                        modifier = Modifier.padding(innerPadding),
+                        onNavigateToDetail = { housingId ->
+                            startActivity(
+                                Intent(this, DetailHousingActivity::class.java)
+                                    .putExtra(DetailHousingActivity.EXTRA_HOUSING_ID, housingId)
+                            )
+                        }
+                    )
                 }
             }
         }
