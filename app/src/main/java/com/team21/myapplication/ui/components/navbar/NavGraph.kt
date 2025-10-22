@@ -35,7 +35,6 @@ fun AppNavGraph(
     modifier: Modifier = Modifier
 ) {
     val mapSearchRoute = "mapSearch"
-    val ctx = LocalContext.current
     val context = LocalContext.current
     NavHost(
         navController = navController,
