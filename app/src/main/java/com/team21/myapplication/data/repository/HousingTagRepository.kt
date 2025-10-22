@@ -107,6 +107,11 @@ class HousingTagRepository {
         }
     }
 
+    suspend fun getTagNameById(tagId: String): String? {
+        val doc = tagCol.document(tagId).get().await()
+        return doc.getString("name")
+    }
+
     /**
      * Busca previews por múltiples tags.
      *  - OR: unión de resultados.
