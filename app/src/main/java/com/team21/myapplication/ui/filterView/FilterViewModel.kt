@@ -104,6 +104,24 @@ class FilterViewModel(
         if (selected.isEmpty()) return
         _state.value = _state.value.copy(isLoading = true, error = null)
 
+        // Mapa id -> label (de tu propio UI state)
+        val labelMap = (_state.value.featuredTags + _state.value.otherTags)
+            .associate { it.id to it.label }
+
+        // --- Analytics agregado (agregado + por tag con nombre)
+        Firebase.analytics.logEvent("filter_search") {
+            param("selected_count", selected.size.toLong())
+            param("selected_ids_csv", selected.joinToString(","))
+            param("mode", mode.name)
+        }
+
+        // Evento NUEVO por tag con NOMBRE
+        selected.forEach { tagId ->
+            val tagName = labelMap[tagId] ?: tagId
+            Firebase.analytics.logEvent("filterNotificationTag") {
+                param("tag_name", tagName)
+            }
+        }
         // --- Analytics agregado (agregado + por tag)
         val csv = selected.joinToString(",")
         Firebase.analytics.logEvent("filter_search") {
@@ -168,6 +186,16 @@ class FilterViewModel(
                 )
             )
         }
+
+        val colNotif = db.collection("filterNotificationTag")
+        selectedIds.forEach { id ->
+            val tagName = labelMap[id] ?: id
+            batch.set(colNotif.document(), mapOf(
+                "tagName" to tagName,
+                "ts" to FieldValue.serverTimestamp()
+            ))
+        }
+
         batch.commit().await()
     }
 }
