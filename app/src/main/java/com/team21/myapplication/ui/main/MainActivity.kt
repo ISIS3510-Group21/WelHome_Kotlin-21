@@ -82,7 +82,7 @@ class MainActivity : ComponentActivity() {
                 ) { inner ->
                     AppNavGraph(
                         navController = navController,
-                        modifier = Modifier.padding(inner)
+                        //modifier = Modifier.padding(inner)
                     )
                 }
             }

@@ -19,6 +19,7 @@ import com.team21.myapplication.ui.main.MainActivity
 import com.team21.myapplication.ui.theme.AppTheme
 import com.team21.myapplication.ui.ownerMainView.OwnerMainActivity
 
+private const val EXTRA_BYPASS_AUTH_GUARD = "EXTRA_BYPASS_AUTH_GUARD"
 class WelcomeActivity : ComponentActivity() {
 
     private val viewModel: WelcomeViewModel by viewModels()
@@ -31,7 +32,37 @@ class WelcomeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Suscribe al topic una vez (ok si se llama repetido)
+        // 🔹 Detecta si viene de una notificación (bypass) o si el usuario ya está autenticado
+        val bypass = intent?.getBooleanExtra(EXTRA_BYPASS_AUTH_GUARD, false) == true
+        val currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+
+        if (bypass && currentUser != null) {
+            // El usuario ya estaba autenticado y venía desde una notificación:
+            // saltamos directo al MainActivity (o OwnerMainActivity)
+            val target = com.team21.myapplication.ui.main.MainActivity::class.java
+            startActivity(
+                Intent(this, target).apply {
+                    putExtra(EXTRA_BYPASS_AUTH_GUARD, true)
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                }
+            )
+            finish()
+            return
+        }
+
+        // 🔹 Si está logueado pero no venía desde notificación, también salta al Main
+        if (currentUser != null) {
+            val target = com.team21.myapplication.ui.main.MainActivity::class.java
+            startActivity(
+                Intent(this, target).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                }
+            )
+            finish()
+            return
+        }
+
+        // 🔹 Si no está logueado, seguimos con el flujo normal de login
         FirebaseMessaging.getInstance().subscribeToTopic("trending_filters")
         FirebaseMessaging.getInstance().subscribeToTopic("all")
 
