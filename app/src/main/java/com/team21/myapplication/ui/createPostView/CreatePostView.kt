@@ -40,6 +40,24 @@ import com.team21.myapplication.ui.components.inputs.PlaceholderTextField
 import com.team21.myapplication.ui.components.text.BlackText
 import com.team21.myapplication.ui.theme.*
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.runtime.*
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
+
+
 import java.io.File
 import androidx.compose.ui.window.Dialog
 import com.team21.myapplication.ui.createPostView.state.CreatePostOperationState
@@ -220,137 +238,6 @@ fun CreatePostScreenLayout(
                 onValueChange = { viewModel.updateTitle(it) } // Updates the ViewModel
             )
             Spacer(modifier = Modifier.height(16.dp))
-
-            // FIELD: PRICE (con botón de sugerencia)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                BlackText(
-                    text = "Rent (per month)",
-                    size = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                val disabled = uiState.isSuggestingPrice
-
-                IconButton(
-                    onClick = { viewModel.suggestPrice() },
-                    enabled = !disabled
-                ) {
-                    if (uiState.isSuggestingPrice) {
-                        CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                    } else {
-                        Icon(
-                            imageVector = AppIcons.Lightbulb,
-                            contentDescription = "Suggest price",
-                            tint = if (disabled) MaterialTheme.colorScheme.outline else BlueCallToAction
-                        )
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-
-
-            PlaceholderTextField(
-                placeholderText = uiState.pricePlaceholder,
-                value = uiState.price,
-                onValueChange = { viewModel.updatePrice(it) }
-            )
-
-        // Mensaje cuando falta Type of housing
-            uiState.suggestPriceError?.let { err ->
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = err,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-
-        // (Opcional) info de sugerencia (rango/nota) si quieres mantenerlo
-            uiState.suggestedPrice?.let { sp ->
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "Suggested: ${sp.value.toInt()} (range ${sp.low.toInt()}–${sp.high.toInt()})",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-
-
-
-            // ----- Sección DESCRIPTION -----
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                BlackText(text = "Description", size = 16.sp, fontWeight = FontWeight.Bold)
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (uiState.showDescReviewControls) {
-                        IconButton(onClick = { viewModel.acceptGeneratedDescription() }) {
-                            Icon(
-                                imageVector = AppIcons.Check, // usa el tuyo (Check / CheckCircle)
-                                contentDescription = "Accept",
-                                tint = BlueCallToAction
-                            )
-                        }
-                        IconButton(onClick = { viewModel.revertGeneratedDescription() }) {
-                            Icon(
-                                imageVector = AppIcons.Close, // usa el tuyo (Close / Clear)
-                                contentDescription = "Revert",
-                                tint = MaterialTheme.colorScheme.error
-                            )
-                        }
-                        Spacer(Modifier.width(8.dp))
-                    }
-
-                    // Botón "copilot" (Lightbulb)
-                    IconButton(
-                        onClick = { viewModel.generateOrRewriteDescription(/* city, neighborhood si los tienes */) },
-                        enabled = !uiState.isDescGenerating
-                    ) {
-                        if (uiState.isDescGenerating) {
-                            CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                        } else {
-                            Icon(
-                                imageVector = AppIcons.Lightbulb, // (Regla 1)
-                                contentDescription = "Generate description",
-                                tint = BlueCallToAction
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            // Campo de descripción (usa tu TextField)
-            PlaceholderTextField(
-                placeholderText = "Ex: The neighborhood is pretty quiet and nice",
-                value = uiState.description,
-                onValueChange = { viewModel.updateDescription(it) },
-                height = 100.dp
-                
-            )
-
-            // Mensajes de error específicos de esta sección
-            uiState.descError?.let { msg ->
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = msg,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-
-            Spacer(Modifier.height(16.dp))
 
             // --- HOUSING TYPE (tag)
             BlackText(
@@ -659,6 +546,181 @@ fun CreatePostScreenLayout(
                 value = uiState.address,
                 onValueChange = { viewModel.updateAddress(it) }
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // FIELD: PRICE (con botón de sugerencia + tooltip por long-press)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                BlackText(
+                    text = "Rent (per month)",
+                    size = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                val disabled = uiState.isSuggestingPrice
+                var showPriceTip by remember { mutableStateOf(false) }
+                val interaction = remember { MutableInteractionSource() }
+
+                Box(modifier = Modifier.wrapContentSize()) {
+                    // 👇 Reemplaza IconButton por un contenedor con combinedClickable
+                    Box(
+                        modifier = Modifier
+                            .combinedClickable(
+                                enabled = !disabled,
+                                interactionSource = interaction,
+                                onClick = { viewModel.suggestPrice() },          // tap normal => sugerir precio
+                                onLongClick = { showPriceTip = true }            // long-press => mostrar tooltip
+                            )
+                            .padding(8.dp) // similar al padding interno del IconButton
+                    ) {
+                        if (uiState.isSuggestingPrice) {
+                            CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                        } else {
+                            Icon(
+                                imageVector = AppIcons.Lightbulb,
+                                contentDescription = "Suggest price",
+                                tint = if (disabled) MaterialTheme.colorScheme.outline else BlueCallToAction
+                            )
+                        }
+                    }
+
+                    // Tooltip casero sobre el icono (se cierra solo)
+                    if (showPriceTip) {
+                        LaunchedEffect(Unit) {
+                            delay(1500) // visible 1.5s
+                            showPriceTip = false
+                        }
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .offset(y = (-36).dp) // justo encima del icono
+                                .background(
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                    shape = RoundedCornerShape(6.dp)
+                                )
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "Intelligent suggestion for price",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
+            }
+
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+
+            PlaceholderTextField(
+                placeholderText = uiState.pricePlaceholder,
+                value = uiState.price,
+                onValueChange = { viewModel.updatePrice(it) }
+            )
+
+        // Mensaje cuando falta Type of housing
+            uiState.suggestPriceError?.let { err ->
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = err,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
+        // (Opcional) info de sugerencia (rango/nota) si quieres mantenerlo
+            uiState.suggestedPrice?.let { sp ->
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Suggested: ${sp.value.toInt()} (range ${sp.low.toInt()}–${sp.high.toInt()})",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+
+
+
+            // ----- Sección DESCRIPTION -----
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                BlackText(text = "Description", size = 16.sp, fontWeight = FontWeight.Bold)
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (uiState.showDescReviewControls) {
+                        IconButton(onClick = { viewModel.acceptGeneratedDescription() }) {
+                            Icon(
+                                imageVector = AppIcons.Check, // usa el tuyo (Check / CheckCircle)
+                                contentDescription = "Accept",
+                                tint = BlueCallToAction
+                            )
+                        }
+                        IconButton(onClick = { viewModel.revertGeneratedDescription() }) {
+                            Icon(
+                                imageVector = AppIcons.Close, // usa el tuyo (Close / Clear)
+                                contentDescription = "Revert",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
+                    }
+
+                    BlackText(
+                        text = "AI Assist",
+                        size = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    // Botón "copilot" (Lightbulb)
+                    IconButton(
+                        onClick = { viewModel.generateOrRewriteDescription(/* city, neighborhood si los tienes */) },
+                        enabled = !uiState.isDescGenerating
+                    ) {
+                        if (uiState.isDescGenerating) {
+                            CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                        } else {
+                            Icon(
+                                imageVector = AppIcons.Lightbulb, // (Regla 1)
+                                contentDescription = "Generate description",
+                                tint = BlueCallToAction
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // Campo de descripción (usa tu TextField)
+            PlaceholderTextField(
+                placeholderText = "Ex: The neighborhood is pretty quiet and nice",
+                value = uiState.description,
+                onValueChange = { viewModel.updateDescription(it) },
+                height = 100.dp
+                
+            )
+
+            // Mensajes de error específicos de esta sección
+            uiState.descError?.let { msg ->
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = msg,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             // MAP (For now just visual)
