@@ -27,6 +27,7 @@ class MyMessagingService : FirebaseMessagingService() {
 
         val route = message.data["route"]
         val housingId = message.data["housingId"]
+        val tagsCsv = message.data["tags"].orEmpty()
 
         val title = message.notification?.title
             ?: message.data["title"]
@@ -39,9 +40,10 @@ class MyMessagingService : FirebaseMessagingService() {
             showDetailNotification(this, title, body, housingId) 
             return
         }
-
-        // CSV de tags desde data
-        val tagsCsv = message.data["tags"].orEmpty()
+        if (route == "filterResults" && tagsCsv.isNotBlank()) {
+            showTrendingDirectToResults(this, title, body, tagsCsv)
+            return
+        }
 
         showTrending(this, title, body, tagsCsv)
     }
@@ -145,6 +147,44 @@ class MyMessagingService : FirebaseMessagingService() {
             }
             m.createNotificationChannel(ch)
         }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun showTrendingDirectToResults(
+        ctx: Context,
+        title: String,
+        body: String,
+        tagsCsv: String
+    ) {
+        ensureChannel(ctx)
+        val intent = Intent(ctx, com.team21.myapplication.ui.filterView.results.FilterResultsActivity::class.java).apply {
+            putExtra("EXTRA_TAGS_CSV", tagsCsv)
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pi = PendingIntent.getActivity(
+            ctx, 3001, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS)
+            != PackageManager.PERMISSION_GRANTED
+        ) return
+
+        val smallIcon = runCatching { R.drawable.ic_notification }.getOrDefault(R.mipmap.ic_launcher)
+        val notif = NotificationCompat.Builder(ctx, CHANNEL_ID)
+            .setSmallIcon(smallIcon)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setAutoCancel(true)
+            .setContentIntent(pi)
+            .build()
+
+        try {
+            NotificationManagerCompat.from(ctx)
+                .notify((System.currentTimeMillis() % Int.MAX_VALUE).toInt(), notif)
+        } catch (_: SecurityException) { }
     }
 
     companion object {

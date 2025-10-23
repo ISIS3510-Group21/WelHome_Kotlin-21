@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -13,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.google.firebase.messaging.FirebaseMessaging
 import com.team21.myapplication.ui.main.MainActivity
 import com.team21.myapplication.ui.theme.AppTheme
 import com.team21.myapplication.ui.ownerMainView.OwnerMainActivity
@@ -22,8 +24,16 @@ class WelcomeActivity : ComponentActivity() {
     private val viewModel: WelcomeViewModel by viewModels()
     private val signUpViewModel: SignUpViewModel by viewModels()
 
+    private val requestNotifPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* noop: si lo niegan, solo no mostramos notifs */ }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Suscribe al topic una vez (ok si se llama repetido)
+        FirebaseMessaging.getInstance().subscribeToTopic("trending_filters")
+        FirebaseMessaging.getInstance().subscribeToTopic("all")
 
         setContent {
             AppTheme {

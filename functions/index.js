@@ -1,100 +1,99 @@
-import { onSchedule } from "firebase-functions/v2/scheduler";
-import admin from "firebase-admin";
-import { BigQuery } from "@google-cloud/bigquery";
+const functions = require("firebase-functions");
+const admin = require("firebase-admin");
 
-try {
-  if (!admin.apps.length) admin.initializeApp();
-} catch (e) {
-  console.warn("Admin initialization skipped:", e);
-}
+admin.initializeApp();
 
-const PROJECT_ID = process.env.GCLOUD_PROJECT;
-const DATASET = "analytics_505132659";
-const BQ_LOCATION = "US";
+const db = admin.firestore();
+const messaging = admin.messaging();
 
-const bigquery = new BigQuery({ projectId: PROJECT_ID });
+/**
+ * Callable function (manual trigger):
+ * - Reads Firestore collection "filterNotificationTag"
+ * - Time window: last N hours (default 24)
+ * - Aggregates by tagName, picks the top one
+ * - Sends FCM notification to topic "all"
+ *
+ * Request body example (from Firebase Console -> Functions -> Testing):
+ *   { "windowHours": 24, "title": "Trending filter", "limitHours": 24 }
+ */
+exports.sendTrendingFilterNotification = functions.https.onCall(async (data, context) => {
+  try {
+    // (Opcional) exige auth si quieres restringir quién puede ejecutarla:
+    // if (!context.auth || !context.auth.token.admin) {
+    //   throw new functions.https.HttpsError("permission-denied", "Admin auth required.");
+    // }
 
-// ------------------------
-// Versión corta (cada 2 min) usando 30 HORAS
-// ------------------------
-export const pushTrendingFiltersShort = onSchedule(
-  { schedule: "every 2 minutes", timeZone: "America/Bogota" },
-  async () => {
-    const LOOKBACK_HOURS = 30;
-    const query = `
-      SELECT
-        (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'tag_id') AS tag_id,
-        COUNT(1) AS cnt
-      FROM \`${PROJECT_ID}.${DATASET}.events_*\`
-      WHERE event_name = 'filter_search_tag'
-        AND _TABLE_SUFFIX BETWEEN FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 2 DAY))
-                              AND FORMAT_DATE('%Y%m%d', CURRENT_DATE())
-        AND TIMESTAMP_MICROS(event_timestamp) >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL ${LOOKBACK_HOURS} HOUR)
-      GROUP BY tag_id
-      HAVING tag_id IS NOT NULL
-      ORDER BY cnt DESC
-      LIMIT 3;
-    `;
+    const windowHours = Number(data?.windowHours ?? 24);
+    const now = admin.firestore.Timestamp.now();
+    const fromTs = admin.firestore.Timestamp.fromDate(new Date(Date.now() - windowHours * 3600 * 1000));
 
-    const [job] = await bigquery.createQueryJob({ query, location: BQ_LOCATION });
-    const [rows] = await job.getQueryResults();
-    if (!rows?.length) { console.log("No trending tags in lookback window."); return; }
+    // 1) Lee últimos N horas de "filterNotificationTag"
+    const snap = await db.collection("filterNotificationTag")
+      .where("ts", ">=", fromTs)
+      .orderBy("ts", "desc")
+      .limit(5000) // tope de seguridad
+      .get();
 
-    const topTags = rows.map(r => r.tag_id).filter(Boolean);
-    const tagsCsv = topTags.join(",");
-    await admin.messaging().send({
-      topic: "trending_filters",
-      notification: { title: "🔥 Filtros populares", body: `Ahora mismo: ${topTags.join(" · ")}` },
-      data: { tags: tagsCsv, deep_link: `welhome://filterResults?tags=${encodeURIComponent(tagsCsv)}` },
-      android: { priority: "high" },
-    });
-    console.log("[Short-30h] Sent trending_filters:", tagsCsv);
+    // 2) Cuenta ocurrencias por tagName
+    const counts = new Map(); // tagName -> count
+    for (const doc of snap.docs) {
+      const tagName = (doc.get("tagName") || "").toString().trim();
+      if (!tagName) continue;
+      counts.set(tagName, (counts.get(tagName) || 0) + 1);
+    }
+
+    // 3) Determina el más usado (fallback si vacío)
+    let topTag = null;
+    let topCount = -1;
+    for (const [name, count] of counts.entries()) {
+      if (count > topCount) {
+        topTag = name;
+        topCount = count;
+      }
+    }
+    if (!topTag) {
+      // Fallback comercial si no hay datos recientes
+      topTag = "House";
+      topCount = 0;
+    }
+
+    // 4) Crea mensaje FCM (notification + data) al topic "all"
+    const title = data?.title || "Trending filter";
+    const body = `Trending filter: ${topTag}. Explore listings we think you'll love.`; // <- cuerpo comercial
+    const message = {
+      topic: "all",
+      notification: {
+        title,
+        body,
+      },
+      data: {
+        route: "filterResults",
+        tags: topTag, // ¡IMPORTANTE! enviamos NOMBRE, no ID
+        title,
+        body,
+      },
+      android: {
+        priority: "high",
+        notification: { channelId: "welhome_default" }, // usa tu canal si corresponde
+      },
+      apns: {
+        headers: { "apns-priority": "10" },
+      },
+    };
+
+    const resp = await messaging.send(message);
+
+    return {
+      ok: true,
+      sent: true,
+      fcmId: resp,
+      topTag,
+      topCount,
+      windowHours,
+      docsScanned: snap.size,
+    };
+  } catch (err) {
+    console.error("sendTrendingFilterNotification error", err);
+    throw new functions.https.HttpsError("internal", err.message || "unknown");
   }
-);
-
-// ------------------------
-// Versión full (cada 10 min) usando 30 HORAS + intraday
-// ------------------------
-export const pushTrendingFiltersFull = onSchedule(
-  { schedule: "every 10 minutes", timeZone: "America/Bogota" },
-  async () => {
-    const LOOKBACK_HOURS = 30;
-    const query = `
-      WITH unioned AS (
-        SELECT event_name, event_timestamp, event_params
-        FROM \`${PROJECT_ID}.${DATASET}.events_*\`
-        WHERE _TABLE_SUFFIX BETWEEN
-          FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 2 DAY))
-          AND FORMAT_DATE('%Y%m%d', CURRENT_DATE())
-        UNION ALL
-        SELECT event_name, event_timestamp, event_params
-        FROM \`${PROJECT_ID}.${DATASET}.events_intraday_*\`
-        WHERE _TABLE_SUFFIX = FORMAT_DATE('%Y%m%d', CURRENT_DATE())
-      )
-      SELECT
-        (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'tag_id' LIMIT 1) AS tag_id,
-        COUNT(1) AS uses
-      FROM unioned
-      WHERE event_name = 'filter_search_tag'
-        AND TIMESTAMP_MICROS(event_timestamp) >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL ${LOOKBACK_HOURS} HOUR)
-      GROUP BY tag_id
-      HAVING tag_id IS NOT NULL
-      ORDER BY uses DESC
-      LIMIT 3;
-    `;
-
-    const [job] = await bigquery.createQueryJob({ query, location: BQ_LOCATION });
-    const [rows] = await job.getQueryResults();
-    if (!rows?.length) { console.log("No trending tags found."); return; }
-
-    const topTags = rows.map(r => r.tag_id).filter(Boolean);
-    const tagsCsv = topTags.join(",");
-    await admin.messaging().send({
-      topic: "trending_filters",
-      notification: { title: "🔥 Filtros en tendencia (Full)", body: `Los más usados: ${topTags.join(" · ")}` },
-      data: { tags: tagsCsv, deep_link: `welhome://filterResults?tags=${encodeURIComponent(tagsCsv)}` },
-      android: { priority: "high" },
-    });
-    console.log("[Full-30h] Sent trending_filters:", tagsCsv);
-  }
-);
+});

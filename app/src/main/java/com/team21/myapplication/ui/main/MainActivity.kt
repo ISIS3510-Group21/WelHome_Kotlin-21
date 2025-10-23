@@ -56,6 +56,8 @@ class MainActivity : ComponentActivity() {
 
         // Suscribe al topic una vez (ok si se llama repetido)
         FirebaseMessaging.getInstance().subscribeToTopic("trending_filters")
+        FirebaseMessaging.getInstance().subscribeToTopic("all")
+
 
         // Pide permiso de notificaciones (Android 13+)
         if (Build.VERSION.SDK_INT >= 33) {
