@@ -7,6 +7,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import androidx.core.app.TaskStackBuilder
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.net.Uri
@@ -19,6 +20,8 @@ import com.google.firebase.messaging.RemoteMessage
 import com.team21.myapplication.R
 import com.team21.myapplication.ui.main.MainActivity
 import java.net.URLEncoder
+
+private const val EXTRA_BYPASS_AUTH_GUARD = "EXTRA_BYPASS_AUTH_GUARD"
 
 class MyMessagingService : FirebaseMessagingService() {
 
@@ -157,12 +160,26 @@ class MyMessagingService : FirebaseMessagingService() {
         tagsCsv: String
     ) {
         ensureChannel(ctx)
-        val intent = Intent(ctx, com.team21.myapplication.ui.filterView.results.FilterResultsActivity::class.java).apply {
-            putExtra("EXTRA_TAGS_CSV", tagsCsv)
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+
+        val mainIntent = Intent(ctx, com.team21.myapplication.ui.main.MainActivity::class.java).apply {
+            putExtra(EXTRA_BYPASS_AUTH_GUARD, true)
         }
-        val pi = PendingIntent.getActivity(
-            ctx, 3001, intent,
+
+        val resultIntent = Intent(
+            ctx,
+            com.team21.myapplication.ui.filterView.results.FilterResultsActivity::class.java
+        ).apply {
+            putExtra(com.team21.myapplication.ui.filterView.results.FilterResultsActivity.EXTRA_TAGS_CSV, tagsCsv)
+            putExtra(EXTRA_BYPASS_AUTH_GUARD, true)
+        }
+
+        val stackBuilder = TaskStackBuilder.create(ctx).apply {
+            addNextIntent(mainIntent)
+            addNextIntent(resultIntent)
+        }
+
+        val pending = stackBuilder.getPendingIntent(
+            3001,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -172,13 +189,14 @@ class MyMessagingService : FirebaseMessagingService() {
         ) return
 
         val smallIcon = runCatching { R.drawable.ic_notification }.getOrDefault(R.mipmap.ic_launcher)
+
         val notif = NotificationCompat.Builder(ctx, CHANNEL_ID)
             .setSmallIcon(smallIcon)
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setAutoCancel(true)
-            .setContentIntent(pi)
+            .setContentIntent(pending)
             .build()
 
         try {
@@ -186,6 +204,8 @@ class MyMessagingService : FirebaseMessagingService() {
                 .notify((System.currentTimeMillis() % Int.MAX_VALUE).toInt(), notif)
         } catch (_: SecurityException) { }
     }
+
+
 
     companion object {
         private const val CHANNEL_ID = "trending_filters"
