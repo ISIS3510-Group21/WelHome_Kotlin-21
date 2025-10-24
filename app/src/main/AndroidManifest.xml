@@ -26,7 +26,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.WelHome">
 
-        <!-- ✅ MAIN LAUNCHER (singleTop + deep link opcional) -->
+        <!-- MAIN LAUNCHER (singleTop + deep link opcional) -->
         <activity
             android:name=".ui.main.MainActivity"
             android:exported="true"
@@ -47,6 +47,17 @@
                 <data
                     android:scheme="welhome"
                     android:host="filterresults" />
+            </intent-filter>
+        </activity>
+
+        <!-- LAUNCHER: Splash decide Welcome vs Main/OwnerMain -->
+        <activity
+            android:name=".ui.splash.SplashActivity"
+            android:exported="true"
+            android:theme="@style/Theme.WelHome">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
@@ -114,10 +125,10 @@
             android:name=".ui.createAccountView.WelcomeActivity"
             android:exported="true"
             android:theme="@style/Theme.WelHome">
-            <intent-filter>
+            <!-- intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+            </intent-filter -->
         </activity>
         <activity
             android:name=".ui.createAccountView.SignUpActivity"
