@@ -49,6 +49,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.ui.focus.onFocusChanged
 import com.team21.myapplication.ui.createAccountView.state.SignInOperationState
+import androidx.core.view.WindowCompat
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
+import com.team21.myapplication.ui.components.banners.ConnectivityBanner
+import com.team21.myapplication.ui.components.banners.BannerPosition
+import androidx.compose.ui.graphics.luminance
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun WelcomeLayout(
@@ -59,6 +67,30 @@ fun WelcomeLayout(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
+
+    // Cambia status bar según conectividad: negra (íconos blancos) cuando está offline
+    val view = LocalView.current
+
+    val statusBarColor = if (!isOnline) {
+        androidx.compose.ui.graphics.Color.Black
+    } else {
+        MaterialTheme.colorScheme.background
+    }
+
+    SideEffect {
+        val window = (view.context as android.app.Activity).window
+        // Variable de fondo
+        window.statusBarColor = statusBarColor.toArgb()
+
+        // La lógica para decidir el color de los íconos
+        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars =
+            if (!isOnline) {
+                false // Íconos blancos para fondo negro
+            } else {
+                statusBarColor.luminance() > 0.5f // Decide según la luminancia del fondo
+            }
+    }
 
 
 
@@ -77,6 +109,11 @@ fun WelcomeLayout(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
+            ConnectivityBanner(
+                visible = !isOnline,
+                position = BannerPosition.Top,
+                modifier = Modifier.align(Alignment.TopCenter)
+            )
         Column(
             modifier = Modifier
                 .fillMaxSize()

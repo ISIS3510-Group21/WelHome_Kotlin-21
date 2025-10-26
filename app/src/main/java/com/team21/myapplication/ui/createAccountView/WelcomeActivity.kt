@@ -18,11 +18,11 @@ import com.google.firebase.messaging.FirebaseMessaging
 import com.team21.myapplication.ui.main.MainActivity
 import com.team21.myapplication.ui.theme.AppTheme
 import com.team21.myapplication.ui.ownerMainView.OwnerMainActivity
+import com.team21.myapplication.utils.App
 
 private const val EXTRA_BYPASS_AUTH_GUARD = "EXTRA_BYPASS_AUTH_GUARD"
 class WelcomeActivity : ComponentActivity() {
 
-    private val viewModel: WelcomeViewModel by viewModels()
     private val signUpViewModel: SignUpViewModel by viewModels()
 
     private val requestNotifPermission = registerForActivityResult(
@@ -66,6 +66,11 @@ class WelcomeActivity : ComponentActivity() {
         FirebaseMessaging.getInstance().subscribeToTopic("trending_filters")
         FirebaseMessaging.getInstance().subscribeToTopic("all")
 
+        val networkMonitor = (application as App).networkMonitor
+        val welcomeViewModel: WelcomeViewModel by viewModels {
+            WelcomeViewModel.WelcomeViewModelFactory((application as App).networkMonitor)
+        }
+
         setContent {
             AppTheme {
                 Surface(
@@ -77,7 +82,7 @@ class WelcomeActivity : ComponentActivity() {
                     NavHost(navController = navController, startDestination = "signin") {
                         composable("signin") {
                             WelcomeLayout(
-                                viewModel = viewModel,
+                                viewModel = welcomeViewModel,
                                 onSignInSuccess = { isOwner ->
                                     val target = if (isOwner) OwnerMainActivity::class.java else MainActivity::class.java
                                     // Navigate to the principal screen, eliminates back to auth

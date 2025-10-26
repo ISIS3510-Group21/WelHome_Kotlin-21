@@ -63,6 +63,10 @@ object AppIcons {
     val Lightbulb: ImageVector = Icons.Outlined.Lightbulb
 
     val Check: ImageVector = Icons.Outlined.Check
+
+    val WifiOff: ImageVector = Icons.Outlined.WifiOff
+
+    val CloudOff: ImageVector = Icons.Outlined.CloudOff
 }
 
 @Composable
@@ -118,8 +122,7 @@ fun Preview_AppIcons_All() {
             "SquareMeters" to AppIcons.SquareMeters,
             "People" to AppIcons.People,
             "Bath" to AppIcons.Bath,
-
-
+            "WifiOff" to AppIcons.WifiOff,
         )
 
         Column(
