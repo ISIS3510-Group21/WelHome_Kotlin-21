@@ -9,7 +9,7 @@ data class ThreadForum (
     val creationDate: Timestamp ?= null,
     val commentQuantity: Int = 0,
     val photoPath: String = "",
-    val ForumPost: List<ForumPost> = emptyList()
+    val forumPost: List<ForumPost> = emptyList()
 )
 
 data class ForumPost (
@@ -18,5 +18,7 @@ data class ForumPost (
     val positiveVotes: Int = 0,
     val negativeVotes: Int = 0,
     val creationDate: Timestamp ?= null,
-    val user: String = ""
+    val user: String = "",
+    val userNamer: String = "",
+    val userPhoto: String = ""
 )
