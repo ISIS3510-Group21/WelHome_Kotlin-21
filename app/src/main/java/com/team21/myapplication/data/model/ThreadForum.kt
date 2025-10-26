@@ -19,6 +19,6 @@ data class ForumPost (
     val negativeVotes: Int = 0,
     val creationDate: Timestamp ?= null,
     val user: String = "",
-    val userNamer: String = "",
+    val userName: String = "",
     val userPhoto: String = ""
 )
