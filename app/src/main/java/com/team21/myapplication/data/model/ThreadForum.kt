@@ -8,13 +8,14 @@ data class ThreadForum (
     val description: String = "",
     val creationDate: Timestamp ?= null,
     val commentQuantity: Int = 0,
-    val photoPath: String = ""
+    val photoPath: String = "",
+    val ForumPost: List<ForumPost> = emptyList()
 )
 
 data class ForumPost (
     val id: String = "",
     val content: String = "",
-    val positiveVotes: Int = 0q,
+    val positiveVotes: Int = 0,
     val negativeVotes: Int = 0,
     val creationDate: Timestamp ?= null,
     val user: String = ""
