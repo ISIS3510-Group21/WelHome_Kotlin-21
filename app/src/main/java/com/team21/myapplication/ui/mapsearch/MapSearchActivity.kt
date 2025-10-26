@@ -39,8 +39,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -56,8 +54,15 @@ import com.team21.myapplication.ui.theme.AppTheme
 import com.team21.myapplication.ui.theme.LocalDSTypography
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.team21.myapplication.ui.detailView.DetailHousingActivity
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import android.os.SystemClock
+import android.os.Build
+import android.content.Context
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.withFrameNanos
+import com.team21.myapplication.analytics.AnalyticsHelper
+import com.team21.myapplication.utils.getNetworkType
+
 
 class MapSearchActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -101,7 +106,23 @@ fun MapSearchView(
 ) {
     val state by mapViewModel.state.collectAsState()
 
+    // ----- Analytics + timing -----
     val context = LocalContext.current
+    val analytics = remember { AnalyticsHelper(context) }
+
+    // Guardar el momento de inicio y si ya se registro el evento (para no duplicar)
+    var loadStartMs by rememberSaveable { mutableStateOf<Long?>(null) }
+    var hasLoggedLoadingTime by rememberSaveable { mutableStateOf(false) }
+
+    // Señales de render de UI
+    var mapLoaded by rememberSaveable { mutableStateOf(false) }      // tiles iniciales listos
+    var markersDrawn by rememberSaveable { mutableStateOf(false) }   // marcadores ya dibujados en un frame
+
+
+    LaunchedEffect(Unit) {
+        analytics.logMapSearchOpen()  // Evento: map_search_open
+    }
+
     val fusedLocationClient = remember {
         LocationServices.getFusedLocationProviderClient(context)
     }
@@ -139,11 +160,33 @@ fun MapSearchView(
     // and notify the ViewModel
     LaunchedEffect(userLocation) {
         userLocation?.let {
+
+            hasLoggedLoadingTime = false // resetea el flag
+            mapLoaded = false
+            markersDrawn = false
+            loadStartMs = SystemClock.elapsedRealtime() // arranca cronómetro
+
             cameraPositionState.animate(
                 update = CameraUpdateFactory.newLatLngZoom(it, 12f),
                 durationMs = 1000
             )
             mapViewModel.onUserLocationReceived(it)
+        }
+    }
+
+    LaunchedEffect(mapLoaded, markersDrawn) {
+        val start = loadStartMs
+        if (start != null && mapLoaded && markersDrawn && !hasLoggedLoadingTime) {
+            // un frame extra para terminar pequeños layouts del resto de la pantalla
+            withFrameNanos { /* frame extra */ }
+
+            val elapsed = SystemClock.elapsedRealtime() - start
+            analytics.logMapSearchLoadingTime(
+                timeInMillis = elapsed,
+                deviceModel = Build.MODEL,
+                network = getNetworkType(context)
+            )
+            hasLoggedLoadingTime = true
         }
     }
 
@@ -192,7 +235,10 @@ fun MapSearchView(
 
                 GoogleMap (
                     modifier = Modifier.fillMaxSize(),
-                    cameraPositionState = cameraPositionState
+                    cameraPositionState = cameraPositionState,
+                    onMapLoaded = {
+                        mapLoaded = true
+                    }
                ) {
                     userLocation?.let {
                         com.google.maps.android.compose.Marker(
@@ -227,6 +273,16 @@ fun MapSearchView(
                        )
                    }
                }
+                LaunchedEffect(state.locations) {
+                    if (state.locations.isNotEmpty()) {
+                        markersDrawn = false               // reinicia la marca
+                        withFrameNanos { /* espera 1 frame */ }
+                        //  espera un frame extra para layouts/animaciones
+                        withFrameNanos { /* segundo frame */ }
+                        markersDrawn = true
+                    }
+                }
+
             }
 
             Spacer(modifier = Modifier.height(16.dp))

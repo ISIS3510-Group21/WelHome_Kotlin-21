@@ -81,4 +81,22 @@ class AnalyticsHelper(context: Context) {
         firebaseAnalytics.setUserProperty("preferred_tag", tagSlug)
     }
 
+    fun logMapSearchOpen() {
+        Log.d("AnalyticsHelper", "Logging map search open event")
+        firebaseAnalytics.logEvent("map_search_open") {}
+    }
+
+    fun logMapSearchLoadingTime(timeInMillis: Long,
+                           deviceModel: String? = null,
+                           network: String? = null
+    ) {
+        Log.d("AnalyticsHelper", "Logging map search loading time event")
+        firebaseAnalytics.logEvent("map_search_loading_time"){
+            param("time_ms", timeInMillis)
+            deviceModel?.let { param("device_model", it) }
+            network?.let { param("network_type", it) }
+        }
+    }
+
+
 }
