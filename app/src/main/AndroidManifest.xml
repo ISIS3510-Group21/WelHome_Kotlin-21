@@ -111,6 +111,18 @@
             android:label="Create Post"
             android:theme="@style/Theme.WelHome" />
 
+        <activity
+            android:name=".ui.forum.ForumActivity"
+            android:exported="true"
+            android:label="Forum"
+            android:theme="@style/Theme.WelHome" />
+
+        <activity
+            android:name=".ui.visits.VisitsActivity"
+            android:exported="true"
+            android:label="Visits"
+            android:theme="@style/Theme.WelHome" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
