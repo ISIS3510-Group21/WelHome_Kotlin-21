@@ -55,9 +55,6 @@ fun VisitsView(
         },
         modifier = modifier
     )
-
-
-
 }
 
 @Composable
