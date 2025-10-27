@@ -30,6 +30,7 @@ fun ExpandableCard(
     icon: ImageVector,
     modifier: Modifier = Modifier,
     initiallyExpanded: Boolean = false,
+    onExpand: () -> Unit = {},
     content: @Composable () -> Unit
 ) {
     var expanded by remember { mutableStateOf(initiallyExpanded) }
@@ -52,7 +53,10 @@ fun ExpandableCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { expanded = !expanded }
+                .clickable {
+                    expanded = !expanded
+                    onExpand()
+                }
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
             Row(

@@ -1,44 +1,60 @@
 package com.team21.myapplication.ui.forum
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
-import com.team21.myapplication.data.model.ForumPost
+import androidx.lifecycle.viewModelScope
 import com.team21.myapplication.data.model.ThreadForum
+import com.team21.myapplication.data.repository.ThreadForumRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 class ForumViewModel : ViewModel() {
-
-    private val _threads = MutableStateFlow<List<ThreadForum>>(emptyList())
-    val threads: StateFlow<List<ThreadForum>> = _threads
+    private val repository: ThreadForumRepository = ThreadForumRepository()
+    private val _state = MutableStateFlow(ForumState())
+    val state: StateFlow<ForumState> = _state
 
     init {
         loadThreads()
     }
 
     private fun loadThreads() {
-        val samplePosts = listOf(
-            ForumPost(
-                id = "1",
-                content = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco",
-                positiveVotes = 495,
-                negativeVotes = 5,
-                userName = "Jhon Doe",
-                userPhoto = ""
-            ),
-            ForumPost(
-                id = "2",
-                content = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud",
-                positiveVotes = 495,
-                negativeVotes = 5,
-                userName = "Jhon Doe",
-                userPhoto = ""
-            )
-        )
+        _state.value = _state.value.copy(isLoading = true)
+        viewModelScope.launch {
+            val threads = repository.getThreads()
+            Log.d("ForumViewModel", "Loaded threads: $threads")
+            _state.value = _state.value.copy(threads = threads, isLoading = false)
+        }
 
-        _threads.value = listOf(
-            ThreadForum(id = "1", title = "General Questions", forumPost = emptyList()),
-            ThreadForum(id = "2", title = "Food", forumPost = emptyList()),
-            ThreadForum(id = "3", title = "Mobility", forumPost = samplePosts)
-        )
+    }
+
+    fun selectThread(thread: ThreadForum) {
+        _state.value = _state.value.copy(selectedThread = thread)
+        Log.d("ForumViewModel", "Selected thread: $thread")
+        loadThreadPosts()
+    }
+
+    private fun loadThreadPosts() {
+        viewModelScope.launch {
+            val selectedThread = _state.value.selectedThread ?: return@launch
+            if (selectedThread.forumPost.isNotEmpty()) {
+                return@launch
+            }
+            val posts = repository.getThreadForumPosts(selectedThread.id)
+
+
+            val updatedThread = selectedThread.copy(forumPost = posts)
+
+            val updatedThreads = _state.value.threads.map { thread ->
+                if (thread.id == selectedThread.id) updatedThread else thread
+            }
+            _state.value = _state.value.copy(
+                threads = updatedThreads,
+                selectedThread = updatedThread
+            )
+
+        }
+
+
     }
 }

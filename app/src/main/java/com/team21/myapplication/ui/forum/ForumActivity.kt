@@ -15,8 +15,7 @@ class ForumActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             AppTheme {
-                val threads by viewModel.threads.collectAsState()
-                ForumScreen(threads = threads)
+                ForumScreen()
             }
         }
     }
