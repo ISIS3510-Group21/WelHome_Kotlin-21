@@ -117,6 +117,12 @@
             android:label="Forum"
             android:theme="@style/Theme.WelHome" />
 
+        <activity
+            android:name=".ui.visits.VisitsActivity"
+            android:exported="true"
+            android:label="Visits"
+            android:theme="@style/Theme.WelHome" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

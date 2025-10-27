@@ -22,6 +22,7 @@ import com.team21.myapplication.ui.filterView.results.FilterResultsRoute
 import com.team21.myapplication.ui.forum.ForumScreen
 import com.team21.myapplication.ui.mapsearch.MapSearchView
 import com.team21.myapplication.ui.profileView.ProfileRoute
+import com.team21.myapplication.ui.visits.VisitsView
 
 object DetailRoutes {
     const val DETAIL_PATTERN = "detail/{housingId}"
@@ -135,9 +136,15 @@ fun AppNavGraph(
             )
         }
 
+        // VISITAS
+        composable(AppDest.Visits.route) {
+            VisitsView(
+                navController = navController
+            )
+        }
+
         // OTROS (placeholders)
         composable(AppDest.Saved.route)   { Text("Saved") }
-        composable(AppDest.Visits.route)  { Text("Visits") }
         composable(AppDest.Profile.route) {
             val ctx = LocalContext.current
             ProfileRoute(
