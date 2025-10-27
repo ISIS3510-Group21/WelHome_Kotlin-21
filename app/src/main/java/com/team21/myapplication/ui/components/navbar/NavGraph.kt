@@ -12,14 +12,16 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
-import com.team21.myapplication.data.repository.AuthRepository
-import com.team21.myapplication.ui.createAccountView.WelcomeActivity
 import com.team21.myapplication.ui.detailView.DetailHousingActivity
-import com.team21.myapplication.ui.filterView.FilterActivity
 import com.team21.myapplication.ui.filterView.FilterRoute
 import com.team21.myapplication.ui.filterView.results.FilterResultsCache
 import com.team21.myapplication.ui.filterView.results.FilterResultsRoute
 import com.team21.myapplication.ui.forum.ForumScreen
+import com.team21.myapplication.ui.filterView.FilterActivity
+import androidx.compose.ui.platform.LocalContext
+import com.team21.myapplication.data.local.SecureSessionManager
+import com.team21.myapplication.data.repository.AuthRepository
+import com.team21.myapplication.ui.createAccountView.WelcomeActivity
 import com.team21.myapplication.ui.mapsearch.MapSearchView
 import com.team21.myapplication.ui.profileView.ProfileRoute
 import com.team21.myapplication.ui.visits.VisitsView
@@ -147,9 +149,13 @@ fun AppNavGraph(
         composable(AppDest.Saved.route)   { Text("Saved") }
         composable(AppDest.Profile.route) {
             val ctx = LocalContext.current
+            val session = SecureSessionManager(ctx.applicationContext)
             ProfileRoute(
                 onLogout =
                 {
+                    // 1) Borrar sesión y snapshot de perfil (offline/online)
+                    session.clearSession()
+
                     // cerrar sesion
                     AuthRepository().signOut()
 

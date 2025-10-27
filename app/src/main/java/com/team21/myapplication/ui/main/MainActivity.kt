@@ -42,6 +42,9 @@ import android.Manifest
 import android.app.Activity
 import android.os.Build
 import androidx.activity.result.contract.ActivityResultContracts
+import com.team21.myapplication.ui.components.banners.BannerPosition
+import com.team21.myapplication.ui.components.banners.ConnectivityBanner
+import com.team21.myapplication.utils.App
 
 class MainActivity : ComponentActivity() {
 
@@ -117,90 +120,96 @@ fun MainScreen(
     // Factory con ese context
     val viewModel: MainViewModel = viewModel(
         factory = remember {
-            object : ViewModelProvider.Factory {
-                @Suppress("UNCHECKED_CAST")
-                override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return MainViewModel(appContext) as T
-                }
-            }
+            MainViewModel.Factory(
+                context = appContext,
+                networkMonitor = (appContext as App).networkMonitor
+            )
         }
     )
     val state by viewModel.homeState.collectAsStateWithLifecycle()
+    val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.getHousingPosts()
     }
 
     Scaffold { innerPadding ->
-        if (state.isLoading) {
-            LoadingScreen(modifier = Modifier.padding(innerPadding))
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .padding(innerPadding)
-                    .fillMaxSize()
-            ) {
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                    ) {
-                        SearchBar(
-                            query = "",
-                            onQueryChange = {},
-                            placeholder = "Search",
-                            asButton = true,
-                            onClick = onOpenFilters
+        Box(modifier = Modifier.fillMaxSize()) {
+            ConnectivityBanner(
+                visible = !isOnline,
+                position = BannerPosition.Top,
+                modifier = Modifier.align(Alignment.TopCenter)
+            )
+            if (state.isLoading) {
+                LoadingScreen(modifier = Modifier.padding(innerPadding))
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .padding(innerPadding)
+                        .fillMaxSize()
+                ) {
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                        ) {
+                            SearchBar(
+                                query = "",
+                                onQueryChange = {},
+                                placeholder = "Search",
+                                asButton = true,
+                                onClick = onOpenFilters
+                            )
+                        }
+                    }
+
+                    item {
+                        SectionTitle("Recommended for you", onBellClick = {})
+                    }
+                    item {
+                        RecommendedForYouSection(
+                            recommendedItems = state.recommendedHousings,
+                            onNavigateToDetail = onNavigateToDetail
                         )
                     }
-                }
 
-                item {
-                    SectionTitle("Recommended for you", onBellClick = {})
-                }
-                item {
-                    RecommendedForYouSection(
-                        recommendedItems = state.recommendedHousings,
-                        onNavigateToDetail = onNavigateToDetail
-                    )
-                }
-
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp)
-                    ) {
-                        Text(
-                            text = "Recently seen",
-                            style = LocalDSTypography.current.Section,
-                            modifier = Modifier.weight(1f)
-                        )
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp)
+                        ) {
+                            Text(
+                                text = "Recently seen",
+                                style = LocalDSTypography.current.Section,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
-                }
 
-                items(state.recentlySeenHousings) { listing ->
-                    Row(
-                        modifier = Modifier.padding(vertical = 4.dp, horizontal = 16.dp)
-                    ) {
-                        HousingBasicInfoCard(
-                            title = listing.title,
-                            rating = listing.rating,
-                            pricePerMonthLabel = "$${listing.price}/month",
-                            imageUrl = listing.photoPath,
-                            reviewsCount = 0,
-                            onClick = {
-                                resolveHousingId(listing)?.let { id ->
-                                    onNavigateToDetail(id)
+                    items(state.recentlySeenHousings) { listing ->
+                        Row(
+                            modifier = Modifier.padding(vertical = 4.dp, horizontal = 16.dp)
+                        ) {
+                            HousingBasicInfoCard(
+                                title = listing.title,
+                                rating = listing.rating,
+                                pricePerMonthLabel = "$${listing.price}/month",
+                                imageUrl = listing.photoPath,
+                                reviewsCount = 0,
+                                onClick = {
+                                    resolveHousingId(listing)?.let { id ->
+                                        onNavigateToDetail(id)
+                                    }
+                                    viewModel.logHousingPostClick(
+                                        postId = listing.housing,
+                                        postTitle = listing.title,
+                                        price = listing.price
+                                    )
                                 }
-                                viewModel.logHousingPostClick(
-                                    postId = listing.housing,
-                                    postTitle = listing.title,
-                                    price = listing.price
-                                )
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }

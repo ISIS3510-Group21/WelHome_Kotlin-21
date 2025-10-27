@@ -12,6 +12,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -25,70 +27,178 @@ import com.team21.myapplication.ui.ownerMainView.OwnerMainActivity
 import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.team21.myapplication.data.local.SecureSessionManager
+import com.team21.myapplication.ui.components.banners.BannerPosition
+import com.team21.myapplication.ui.components.banners.ConnectivityBanner
+import com.team21.myapplication.utils.App
+import com.team21.myapplication.utils.NetworkMonitor
+import kotlinx.coroutines.withContext
 
 class BiometricLoginActivity : FragmentActivity() {
 
     private val auth by lazy { FirebaseAuth.getInstance() }
     private val repo by lazy { AuthRepository() }
     private lateinit var store: BiometricCredentialStore
+    private lateinit var networkMonitor: NetworkMonitor
+    private lateinit var sessionManager: SecureSessionManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         store = BiometricCredentialStore(this)
+        val app = application as App
+        networkMonitor = app.networkMonitor
+        sessionManager = app.sessionManager
 
         setContent {
             // Aquí uso tu Theme global; si tu app se llama distinto, cambia el wrapper.
             // WelHomeTheme {
             Surface(color = MaterialTheme.colorScheme.background) {
-                BiometricLoginScreen(
-                    biometricsAvailable = store.isBiometricAvailable(),
-                    hasLinked = store.hasLinkedFingerprint(),
-                    onOpenSettings = {
-                        // Aquí abro Settings para enrolar huella si el dispositivo no tiene.
-                        startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS))
-                    },
-                    onLink = { email, pass, onError, onSuccess ->
-                        // Aquí valido campos + formato email (por si llega sin tocar el field)
-                        if (email.isBlank() || pass.isBlank()) {
-                            onError("Please fill out all fields.")
-                            return@BiometricLoginScreen
-                        }
-                        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-                            onError("Please enter a valid email.")
-                            return@BiometricLoginScreen
-                        }
-                        if (!store.isBiometricAvailable()) {
-                            onError("No biometrics enrolled on this device.")
-                            return@BiometricLoginScreen
-                        }
+                val bg = MaterialTheme.colorScheme.background
+                val view = androidx.compose.ui.platform.LocalView.current
+                SideEffect {
+                    val window = (view.context as android.app.Activity).window
+                    // Colores de las barras
+                    window.statusBarColor = bg.toArgb()
+                    window.navigationBarColor = bg.toArgb()
 
-                        // Aquí valido contra Firebase ANTES de pedir huella (para no pedirla si credenciales están mal).
-                        lifecycleScope.launch {
-                            val signInCheck = repo.signIn(email, pass)
-                            if (signInCheck.isFailure) {
-                                val msg = signInCheck.exceptionOrNull()?.localizedMessage
-                                    ?: "Invalid email or password."
-                                onError(msg)
-                                return@launch
+                    // Íconos claros u oscuros según luminancia del fondo
+                    val controller = androidx.core.view.WindowCompat.getInsetsController(window, window.decorView)
+                    val lightIcons = bg.luminance() > 0.5f
+                    controller.isAppearanceLightStatusBars = lightIcons
+                    controller.isAppearanceLightNavigationBars = lightIcons
+                }
+                val isOnline by networkMonitor.isOnline.collectAsStateWithLifecycle()
+                Box(modifier = Modifier.fillMaxSize()) {
+                    ConnectivityBanner(
+                        visible = !isOnline,
+                        position = BannerPosition.Top,
+                        modifier = Modifier.align(Alignment.TopCenter)
+                    )
+
+                    BiometricLoginScreen(
+                        biometricsAvailable = store.isBiometricAvailable(),
+                        hasLinked = store.hasLinkedFingerprint(),
+                        isOnline = isOnline,
+                        onOpenSettings = {
+                            // Aquí abro Settings para enrolar huella si el dispositivo no tiene.
+                            startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS))
+                        },
+                        onLink = { email, pass, onError, onSuccess ->
+                            // Aquí valido campos + formato email (por si llega sin tocar el field)
+                            if (email.isBlank() || pass.isBlank()) {
+                                onError("Please fill out all fields.")
+                                return@BiometricLoginScreen
                             }
-                            // Si validó bien, cierro sesión y paso a pedir huella para cifrar y guardar localmente.
-                            FirebaseAuth.getInstance().signOut()
-
-                            // Aquí preparo el cipher en ENCRYPT y disparo el prompt biométrico para "firmar" el guardado.
-                            val encryptCipher = try {
-                                store.createEncryptCipher()
-                            } catch (e: Exception) {
-                                onError("Could not prepare secure storage.")
-                                return@launch
+                            if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                                onError("Please enter a valid email.")
+                                return@BiometricLoginScreen
+                            }
+                            if (!store.isBiometricAvailable()) {
+                                onError("No biometrics enrolled on this device.")
+                                return@BiometricLoginScreen
                             }
 
+                            // Aquí valido contra Firebase ANTES de pedir huella (para no pedirla si credenciales están mal).
+                            lifecycleScope.launch {
+                                val signInCheck = repo.signIn(email, pass)
+                                if (signInCheck.isFailure) {
+                                    val msg = signInCheck.exceptionOrNull()?.localizedMessage
+                                        ?: "Invalid email or password."
+                                    onError(msg)
+                                    return@launch
+                                }
+                                // Obtener userId e isOwner
+                                val userId = signInCheck.getOrNull()!!
+                                val isOwner = repo.isOwner(userId)
+
+                                // Si validó bien, cierro sesión y paso a pedir huella para cifrar y guardar localmente.
+                                FirebaseAuth.getInstance().signOut()
+
+                                // Aquí preparo el cipher en ENCRYPT y disparo el prompt biométrico para "firmar" el guardado.
+                                val encryptCipher = try {
+                                    store.createEncryptCipher()
+                                } catch (e: Exception) {
+                                    onError("Could not prepare secure storage.")
+                                    return@launch
+                                }
+
+                                val executor = Executors.newSingleThreadExecutor()
+                                val prompt = androidx.biometric.BiometricPrompt(
+                                    this@BiometricLoginActivity, // FragmentActivity
+                                    executor,
+                                    object :
+                                        androidx.biometric.BiometricPrompt.AuthenticationCallback() {
+
+                                        override fun onAuthenticationError(
+                                            code: Int,
+                                            errString: CharSequence
+                                        ) {
+                                            runOnUiThread { onError(errString.toString()) }
+                                        }
+
+                                        override fun onAuthenticationFailed() {
+                                            runOnUiThread { onError("Fingerprint not recognized. Try again.") }
+                                        }
+
+                                        override fun onAuthenticationSucceeded(result: androidx.biometric.BiometricPrompt.AuthenticationResult) {
+                                            // Aquí guardo credenciales cifradas usando el cipher AUTORIZADO por la huella.
+                                            val authorizedCipher = result.cryptoObject?.cipher
+                                            if (authorizedCipher == null) {
+                                                runOnUiThread { onError("Crypto error. Please try again.") }
+                                                return
+                                            }
+                                            try {
+                                                store.saveEncryptedCredentials(
+                                                    authorizedCipher,
+                                                    email,
+                                                    pass
+                                                )
+                                                // guardar sesion
+                                                sessionManager.saveSession(userId, email, isOwner)
+                                                sessionManager.saveOfflineIdentity(userId, email, isOwner)
+
+                                                runOnUiThread { onSuccess() } // regreso a las dos opciones
+                                            } catch (e: Exception) {
+                                                runOnUiThread { onError("Could not link fingerprint. Please try again.") }
+                                            }
+                                        }
+                                    }
+                                )
+
+                                val promptInfo =
+                                    androidx.biometric.BiometricPrompt.PromptInfo.Builder()
+                                        .setTitle("Link fingerprint")
+                                        .setSubtitle("Authenticate to securely store your credentials")
+                                        .setNegativeButtonText("Cancel")
+                                        .build()
+
+                                // Aquí asocio el Cipher ENCRYPT al prompt para que la clave requiera huella.
+                                val crypto =
+                                    androidx.biometric.BiometricPrompt.CryptoObject(encryptCipher)
+                                prompt.authenticate(promptInfo, crypto)
+                            }
+                        },
+                        onLoginWithFingerprint = { onError ->
+                            // Aquí autentico con huella y si ok, desencripto y hago signIn.
+                            if (!store.hasLinkedFingerprint()) {
+                                onError("No fingerprint-linked account found. Please link it first.")
+                                return@BiometricLoginScreen
+                            }
+                            val cipher = store.getDecryptCipherOrNull()
+                            if (cipher == null) {
+                                onError("Stored credentials are not available. Please link again.")
+                                return@BiometricLoginScreen
+                            }
                             val executor = Executors.newSingleThreadExecutor()
-                            val prompt = androidx.biometric.BiometricPrompt(
-                                this@BiometricLoginActivity, // FragmentActivity
+                            val prompt = BiometricPrompt(
+                                this@BiometricLoginActivity,
                                 executor,
-                                object : androidx.biometric.BiometricPrompt.AuthenticationCallback() {
-
-                                    override fun onAuthenticationError(code: Int, errString: CharSequence) {
+                                object : BiometricPrompt.AuthenticationCallback() {
+                                    override fun onAuthenticationError(
+                                        code: Int,
+                                        errString: CharSequence
+                                    ) {
                                         runOnUiThread { onError(errString.toString()) }
                                     }
 
@@ -96,100 +206,127 @@ class BiometricLoginActivity : FragmentActivity() {
                                         runOnUiThread { onError("Fingerprint not recognized. Try again.") }
                                     }
 
-                                    override fun onAuthenticationSucceeded(result: androidx.biometric.BiometricPrompt.AuthenticationResult) {
-                                        // Aquí guardo credenciales cifradas usando el cipher AUTORIZADO por la huella.
-                                        val authorizedCipher = result.cryptoObject?.cipher
-                                        if (authorizedCipher == null) {
-                                            runOnUiThread { onError("Crypto error. Please try again.") }
+                                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                                        val c = result.cryptoObject?.cipher ?: run {
+                                            runOnUiThread { onError("Crypto error. Please link again.") }
                                             return
                                         }
-                                        try {
-                                            store.saveEncryptedCredentials(authorizedCipher, email, pass)
-                                            runOnUiThread { onSuccess() } // regreso a las dos opciones
+                                        val (email, pass) = try {
+                                            store.decryptEmailAndPassword(c)
                                         } catch (e: Exception) {
-                                            runOnUiThread { onError("Could not link fingerprint. Please try again.") }
+                                            runOnUiThread { onError("Could not decrypt credentials. Please link again.") }
+                                            return
+                                        }
+
+                                        // verificar si hay internet
+                                        val isOnline = networkMonitor.isOnline.value
+
+                                        if (!isOnline) {
+                                            // Modo offline: Validar contra sesión guardada
+                                            val savedSession = sessionManager.getSession()
+                                            if (savedSession == null) {
+                                                // Intento de reconstrucción con identidad offline
+                                                val offline = sessionManager.getOfflineIdentityOrNull()
+                                                if (offline == null) {
+                                                    runOnUiThread {
+                                                        onError("No offline session available. Please login online first.")
+                                                    }
+                                                    return
+                                                }
+                                                // Asegúrate de que coincida el email desencriptado
+                                                if (offline.email != email) {
+                                                    runOnUiThread {
+                                                        onError("Stored credentials don't match. Please login online.")
+                                                    }
+                                                    return
+                                                }
+                                                // Recrea sesión local (sin red)
+                                                sessionManager.saveSession(offline.userId, offline.email, offline.isOwner)
+                                            }
+
+                                            // Login offline exitoso
+                                            runOnUiThread {
+                                                val active = sessionManager.getSession()
+                                                if (active == null) {
+                                                    onError("Could not create offline session. Please try again.")
+                                                    return@runOnUiThread
+                                                }
+
+                                                val target = if (active.isOwner) OwnerMainActivity::class.java else MainActivity::class.java
+
+                                                startActivity(
+                                                    Intent(
+                                                        this@BiometricLoginActivity,
+                                                        target
+                                                    ).apply {
+                                                        putExtra("offline_mode", true)
+                                                        putExtra("login_success", true)
+                                                        flags =
+                                                            Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                                    }
+                                                )
+                                                finish()
+                                            }
+                                            return
+                                        }
+
+                                        // Modo online: Validar contra Firebase
+                                        lifecycleScope.launch {
+                                            val rr = repo.signIn(email, pass)
+                                            if (rr.isFailure) {
+                                                runOnUiThread { onError("Invalid saved credentials. Please link again.") }
+                                                return@launch
+                                            }
+                                            // Aquí decido Owner vs Main igual que tu flujo actual.
+                                            val uid = rr.getOrNull()!!
+                                            val isOwner = repo.isOwner(uid)
+
+                                            // Guardar sesión actualizada
+                                            lifecycleScope.launch {
+                                                withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                                    sessionManager.saveSession(uid, email, isOwner)
+                                                    sessionManager.saveOfflineIdentity(
+                                                        uid,
+                                                        email,
+                                                        isOwner
+                                                    )
+                                                    sessionManager.saveOfflinePassword(pass) // solo en modo online
+
+                                                }
+
+                                                val target =
+                                                    if (isOwner) OwnerMainActivity::class.java else MainActivity::class.java
+                                                startActivity(
+                                                    Intent(
+                                                        this@BiometricLoginActivity,
+                                                        target
+                                                    ).apply {
+                                                        putExtra("login_success", true)
+                                                        flags =
+                                                            Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                                    }
+                                                )
+                                                finish()
+                                            }
                                         }
                                     }
                                 }
                             )
 
-                            val promptInfo = androidx.biometric.BiometricPrompt.PromptInfo.Builder()
-                                .setTitle("Link fingerprint")
-                                .setSubtitle("Authenticate to securely store your credentials")
-                                .setNegativeButtonText("Cancel")
+                            val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                                .setTitle("Login with fingerprint")
+                                .setSubtitle("Authenticate to sign in")
+                                .setNegativeButtonText("Cancel") // 1.1.0 compatible
                                 .build()
 
-                            // Aquí asocio el Cipher ENCRYPT al prompt para que la clave requiera huella.
-                            val crypto = androidx.biometric.BiometricPrompt.CryptoObject(encryptCipher)
+                            // Aquí asocio el Cipher (DECRYPT) con el prompt.
+                            val crypto = BiometricPrompt.CryptoObject(cipher)
                             prompt.authenticate(promptInfo, crypto)
                         }
-                    },
-                    onLoginWithFingerprint = { onError ->
-                        // Aquí autentico con huella y si ok, desencripto y hago signIn.
-                        if (!store.hasLinkedFingerprint()) {
-                            onError("No fingerprint-linked account found. Please link it first.")
-                            return@BiometricLoginScreen
-                        }
-                        val cipher = store.getDecryptCipherOrNull()
-                        if (cipher == null) {
-                            onError("Stored credentials are not available. Please link again.")
-                            return@BiometricLoginScreen
-                        }
-                        val executor = Executors.newSingleThreadExecutor()
-                        val prompt = BiometricPrompt(
-                            this@BiometricLoginActivity,
-                            executor,
-                            object : BiometricPrompt.AuthenticationCallback() {
-                                override fun onAuthenticationError(code: Int, errString: CharSequence) {
-                                    runOnUiThread { onError(errString.toString()) }
-                                }
-                                override fun onAuthenticationFailed() {
-                                    runOnUiThread { onError("Fingerprint not recognized. Try again.") }
-                                }
-                                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                                    val c = result.cryptoObject?.cipher ?: run {
-                                        runOnUiThread { onError("Crypto error. Please link again.") }
-                                        return
-                                    }
-                                    val (email, pass) = try {
-                                        store.decryptEmailAndPassword(c)
-                                    } catch (e: Exception) {
-                                        runOnUiThread { onError("Could not decrypt credentials. Please link again.") }
-                                        return
-                                    }
-                                    lifecycleScope.launch {
-                                        val rr = repo.signIn(email, pass)
-                                        if (rr.isFailure) {
-                                            runOnUiThread { onError("Invalid saved credentials. Please link again.") }
-                                            return@launch
-                                        }
-                                        // Aquí decido Owner vs Main igual que tu flujo actual.
-                                        val uid = rr.getOrNull()!!
-                                        val isOwner = repo.isOwner(uid)
-                                        val target = if (isOwner) OwnerMainActivity::class.java else MainActivity::class.java
-                                        startActivity(Intent(this@BiometricLoginActivity, target).apply {
-                                            putExtra("login_success", true)
-                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                                        })
-                                        finish()
-                                    }
-                                }
-                            }
-                        )
-
-                        val promptInfo = BiometricPrompt.PromptInfo.Builder()
-                            .setTitle("Login with fingerprint")
-                            .setSubtitle("Authenticate to sign in")
-                            .setNegativeButtonText("Cancel") // 1.1.0 compatible
-                            .build()
-
-                        // Aquí asocio el Cipher (DECRYPT) con el prompt.
-                        val crypto = BiometricPrompt.CryptoObject(cipher)
-                        prompt.authenticate(promptInfo, crypto)
-                    }
-                )
+                    )
+                }
+                // }
             }
-            // }
         }
     }
 }
@@ -199,6 +336,7 @@ class BiometricLoginActivity : FragmentActivity() {
 private fun BiometricLoginScreen(
     biometricsAvailable: Boolean,
     hasLinked: Boolean,
+    isOnline: Boolean,
     onOpenSettings: () -> Unit,
     onLink: (email: String, pass: String, onError: (String) -> Unit, onSuccess: () -> Unit) -> Unit,
     onLoginWithFingerprint: (onError: (String) -> Unit) -> Unit
@@ -210,7 +348,12 @@ private fun BiometricLoginScreen(
     val primary = MaterialTheme.colorScheme.primary
 
     fun showError(msg: String) { error = msg }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { innerPadding ->
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -241,7 +384,20 @@ private fun BiometricLoginScreen(
                 Spacer(Modifier.height(12.dp))
 
                 Button(
-                    onClick = { mode = Mode.Link; error = null },
+                    onClick = {
+                        if (!isOnline) {
+                            scope.launch { snackbarHostState.showSnackbar("You're offline. Link fingerprint requires internet.") }
+                            return@Button
+                        }
+                        onLink(email.trim(), pass, { msg ->
+                            scope.launch { snackbarHostState.showSnackbar(msg) }
+                        }) {
+                            // éxito -> feedback + volver a selección
+                            email = ""; pass = ""; error = null
+                            mode = Mode.Selection
+                            scope.launch { snackbarHostState.showSnackbar("Fingerprint linked!") }
+                        }
+                    },
                     enabled = biometricsAvailable,
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = primary)
@@ -368,6 +524,7 @@ private fun BiometricLoginScreen(
                     style = MaterialTheme.typography.bodySmall
                 )
             }
+        }
         }
     }
 }
