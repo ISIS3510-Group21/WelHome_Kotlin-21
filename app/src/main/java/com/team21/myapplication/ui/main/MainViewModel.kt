@@ -11,15 +11,20 @@ import kotlinx.coroutines.launch
 import com.team21.myapplication.analytics.AnalyticsHelper
 import com.team21.myapplication.utils.getNetworkType
 import android.os.Build
+import androidx.lifecycle.ViewModelProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.team21.myapplication.data.model.TagHousingPost
 import com.team21.myapplication.data.repository.AuthRepository
 import com.team21.myapplication.data.repository.HousingPostRepository
 import com.team21.myapplication.data.repository.StudentUserRepository
+import com.team21.myapplication.utils.NetworkMonitor
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 
 
 class MainViewModel(
-    private val applicationContext: Context
+    private val applicationContext: Context,
+    private val networkMonitor: NetworkMonitor
 ): ViewModel() {
     private val repositoryStudentUserProfile = StudentUserProfileRepository()
 
@@ -30,6 +35,13 @@ class MainViewModel(
     private val repositoryStudentUser = StudentUserRepository()
     private val housingPostRepo = HousingPostRepository()
     private val authRepo = AuthRepository()
+
+    val isOnline: StateFlow<Boolean> =
+        networkMonitor.isOnline.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = networkMonitor.isOnline.value
+        )
      fun getHousingPosts() {
          val start = System.currentTimeMillis()
          analyticsHelper.logHomeOpen()
@@ -144,6 +156,16 @@ class MainViewModel(
             finally{//TODO: remove
                 Log.d("MainViewModel", message)
             }
+        }
+    }
+
+    class Factory(
+        private val context: Context,
+        private val networkMonitor: NetworkMonitor
+    ) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return MainViewModel(context, networkMonitor) as T
         }
     }
 }

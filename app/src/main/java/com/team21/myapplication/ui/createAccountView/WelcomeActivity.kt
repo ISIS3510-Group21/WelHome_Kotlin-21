@@ -2,6 +2,7 @@ package com.team21.myapplication.ui.createAccountView
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -35,6 +36,8 @@ class WelcomeActivity : ComponentActivity() {
         // 🔹 Detecta si viene de una notificación (bypass) o si el usuario ya está autenticado
         val bypass = intent?.getBooleanExtra(EXTRA_BYPASS_AUTH_GUARD, false) == true
         val currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+        val networkMonitor = (application as App).networkMonitor
+        val isOnline = networkMonitor.isOnline.value
 
         if (bypass && currentUser != null) {
             // El usuario ya estaba autenticado y venía desde una notificación:
@@ -62,13 +65,34 @@ class WelcomeActivity : ComponentActivity() {
             return
         }
 
+        //Verificar si hay sesión offline válida
+        val sessionManager = (application as App).sessionManager
+        val savedSession = sessionManager.getSession()
+
+        if (savedSession != null && !isOnline) {
+            // Usuario tiene sesión válida y está offline → Auto-login
+            Log.d("WelcomeActivity", "Auto-login offline for: ${savedSession.email}")
+            val target = if (savedSession.isOwner) OwnerMainActivity::class.java else MainActivity::class.java
+            startActivity(
+                Intent(this, target).apply {
+                    putExtra("offline_mode", true)
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                }
+            )
+            finish()
+            return
+        }
+
         // 🔹 Si no está logueado, seguimos con el flujo normal de login
         FirebaseMessaging.getInstance().subscribeToTopic("trending_filters")
         FirebaseMessaging.getInstance().subscribeToTopic("all")
 
-        val networkMonitor = (application as App).networkMonitor
+
         val welcomeViewModel: WelcomeViewModel by viewModels {
-            WelcomeViewModel.WelcomeViewModelFactory((application as App).networkMonitor)
+            WelcomeViewModel.WelcomeViewModelFactory(
+                (application as App).networkMonitor,
+                (application as App).sessionManager
+            )
         }
 
         setContent {

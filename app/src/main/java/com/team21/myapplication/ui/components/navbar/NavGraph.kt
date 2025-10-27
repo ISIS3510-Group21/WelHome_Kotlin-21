@@ -17,6 +17,7 @@ import com.team21.myapplication.ui.filterView.results.FilterResultsRoute
 import android.app.Activity
 import com.team21.myapplication.ui.filterView.FilterActivity
 import androidx.compose.ui.platform.LocalContext
+import com.team21.myapplication.data.local.SecureSessionManager
 import com.team21.myapplication.data.repository.AuthRepository
 import com.team21.myapplication.ui.createAccountView.WelcomeActivity
 import com.team21.myapplication.ui.mapsearch.MapSearchView
@@ -148,9 +149,13 @@ fun AppNavGraph(
         composable(AppDest.Visits.route)  { Text("Visits") }
         composable(AppDest.Profile.route) {
             val ctx = LocalContext.current
+            val session = SecureSessionManager(ctx.applicationContext)
             ProfileRoute(
                 onLogout =
                 {
+                    // 1) Borrar sesión y snapshot de perfil (offline/online)
+                    session.clearSession()
+
                     // cerrar sesion
                     AuthRepository().signOut()
 

@@ -47,16 +47,19 @@ import androidx.compose.material3.Button
 import android.content.Intent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Snackbar
 import androidx.compose.ui.focus.onFocusChanged
 import com.team21.myapplication.ui.createAccountView.state.SignInOperationState
 import androidx.core.view.WindowCompat
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import com.team21.myapplication.ui.components.banners.ConnectivityBanner
 import com.team21.myapplication.ui.components.banners.BannerPosition
 import androidx.compose.ui.graphics.luminance
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 
 @Composable
 fun WelcomeLayout(
@@ -67,6 +70,7 @@ fun WelcomeLayout(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
 
     // Cambia status bar según conectividad: negra (íconos blancos) cuando está offline
@@ -190,9 +194,16 @@ fun WelcomeLayout(
             BlueText(
                 text = "Forgot password?",
                 modifier = Modifier.clickable {
-                    context.startActivity(
-                        Intent(context, com.team21.myapplication.ui.forgot.ForgotPasswordActivity::class.java)
-                    )
+                    if(!isOnline){
+                        scope.launch { snackbarHostState.showSnackbar("You're offline. Password reset requires internet.")}
+                    } else{
+                            context.startActivity(
+                                Intent(
+                                    context,
+                                    com.team21.myapplication.ui.forgot.ForgotPasswordActivity::class.java
+                                )
+                            )
+                        }
                 }
             )
             Spacer(modifier = Modifier.height(32.dp))
@@ -224,11 +235,26 @@ fun WelcomeLayout(
             BlackText(text = "Not a member?")
 
             Spacer(modifier = Modifier.height(8.dp))
-            GrayButton(text = "Register now", onClick = onNavigateToSignUp)
-
+            GrayButton(text = "Register now",
+                onClick = {
+                    if (!isOnline) {
+                        scope.launch { snackbarHostState.showSnackbar("You're offline. Connect to sign up.") }
+                    } else {
+                        onNavigateToSignUp()
+                    }
+                }
+            )
         }
         SnackbarHost(
             hostState = snackbarHostState,
+            snackbar = { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = MaterialTheme.colorScheme.onBackground,
+                    contentColor = MaterialTheme.colorScheme.background,
+                    actionColor = MaterialTheme.colorScheme.background
+                )
+            },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(16.dp)

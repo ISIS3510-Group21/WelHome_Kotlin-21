@@ -10,6 +10,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.team21.myapplication.data.local.SecureSessionManager
 import com.team21.myapplication.data.repository.AuthRepository
 import com.team21.myapplication.ui.createAccountView.WelcomeActivity
 import com.team21.myapplication.ui.ownerMainView.OwnerMainScreen
@@ -34,20 +35,25 @@ fun OwnerNavGraph(
             val ctx = LocalContext.current
             val activity = ctx as Activity
             val auth = remember { AuthRepository() }
+            // instancia app-context del session manager
+            val session = remember { SecureSessionManager(ctx.applicationContext) }
 
             ProfileRoute(
                 onLogout = {
-                    // 1) Cerrar sesión
+                    // 1) Borrar sesión local siempre -incluye snapshot de perfil-
+                    session.clearSession()
+
+                    // 2) Cerrar sesión
                     auth.signOut()
 
-                    // 2) Ir a Welcome limpiando el back stack
+                    // 3) Ir a Welcome limpiando el back stack
                     activity.startActivity(
                         Intent(activity, WelcomeActivity::class.java).apply {
                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                         }
                     )
 
-                    // 3) Cerrar esta Activity por si acaso
+                    // 4) Cerrar esta Activity por si acaso
                     activity.finish()
                 }
             )
