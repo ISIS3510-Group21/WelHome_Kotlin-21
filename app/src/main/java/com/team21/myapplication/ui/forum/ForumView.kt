@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.team21.myapplication.data.model.ForumPost
 import com.team21.myapplication.data.model.ThreadForum
 import com.team21.myapplication.ui.components.cards.CommentCard
@@ -37,11 +38,14 @@ import com.team21.myapplication.ui.theme.AppTheme
 
 @Composable
 fun ForumScreen(
+    navController: NavController,
+    modifier: Modifier = Modifier,
     forumViewModel: ForumViewModel = viewModel()
 ) {
     val state by forumViewModel.state.collectAsState()
 
     ForumContent(
+        modifier = modifier,
         threads = state.threads,
         isLoading = state.isLoading,
         onThreadClick = { thread ->
@@ -55,55 +59,53 @@ fun ForumScreen(
 
 @Composable
 fun ForumContent(
+    modifier: Modifier = Modifier,
     threads: List<ThreadForum>,
     isLoading: Boolean = false,
     selectedThreadId: String? = null,
     onThreadClick: (ThreadForum) -> Unit = {}
 ) {
-    Scaffold { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp)
-        ) {
-            Text(
-                text = "Forum",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 16.dp, bottom = 10.dp)
-            )
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp)
+    ) {
+        Text(
+            text = "Forum",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = 16.dp, bottom = 10.dp)
+        )
 
-            Text(
-                text = "Topics",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF757575)
-            )
+        Text(
+            text = "Topics",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF757575)
+        )
 
-            Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-            if (isLoading && threads.isEmpty()) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
-            } else {
-                LazyColumn(contentPadding = PaddingValues(bottom = 16.dp)) {
-                    items(threads) { thread ->
-                        ExpandableCard(
-                            title = thread.title,
-                            icon = getIconForTopic(thread.title),
-                            initiallyExpanded = thread.id == selectedThreadId,
-                            onExpand = { onThreadClick(thread) }
-                        ) {
-                            Column {
-                                thread.forumPost.forEach { post ->
-                                    CommentCard(
-                                        imageUrl = post.userPhoto.takeIf { it.isNotBlank() },
-                                        name = post.userName,
-                                        country = "Canada",
-                                        comment = post.content,
-                                        rating = 4.95f
-                                    )
-                                }
+        if (isLoading && threads.isEmpty()) {
+            CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+        } else {
+            LazyColumn(contentPadding = PaddingValues(bottom = 16.dp)) {
+                items(threads) { thread ->
+                    ExpandableCard(
+                        title = thread.title,
+                        icon = getIconForTopic(thread.title),
+                        initiallyExpanded = thread.id == selectedThreadId,
+                        onExpand = { onThreadClick(thread) }
+                    ) {
+                        Column {
+                            thread.forumPost.forEach { post ->
+                                CommentCard(
+                                    imageUrl = post.userPhoto.takeIf { it.isNotBlank() },
+                                    name = post.userName,
+                                    country = "Canada",
+                                    comment = post.content,
+                                    rating = 4.95f
+                                )
                             }
                         }
                     }
@@ -114,7 +116,7 @@ fun ForumContent(
 }
 fun getIconForTopic(topicTitle: String): ImageVector {
     return when (topicTitle) {
-        "General Questions" -> Icons.Outlined.HelpOutline
+        "General Questions" -> Icons.AutoMirrored.Outlined.HelpOutline
         "Food" -> Icons.Outlined.Restaurant
         "Mobility" -> Icons.Outlined.DirectionsCar
         else -> Icons.AutoMirrored.Outlined.HelpOutline
