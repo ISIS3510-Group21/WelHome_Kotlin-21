@@ -6,6 +6,7 @@ data class Booking (
     val id: String = "",
     val housing: String = "",
     val housingTitle: String = "",
+    val thumbnail: String = "https://www.nydailynews.com/wp-content/uploads/migration/2012/09/21/4YDFQ5XGGZKTZLJSZHGXLUON2A.jpg",
     val state: String = "",
     val date: Timestamp = Timestamp.now(),
     val slot: String = "",
