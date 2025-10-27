@@ -19,8 +19,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -46,6 +47,16 @@ fun VisitsView(
     modifier: Modifier = Modifier,
     visitsViewModel: VisitsViewModel = viewModel()
 ) {
+    val state by visitsViewModel.state.collectAsState()
+    VisitsScreen(
+        bookings = state.visits,
+        onRateClick = { booking ->
+            // Handle rate click
+        },
+        modifier = modifier
+    )
+
+
 
 }
 
@@ -55,7 +66,7 @@ fun VisitsScreen(
     onRateClick: (Booking) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var selectedTabIndex by remember { mutableStateOf(0) }
+    var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabs = listOf("All", "Scheduled", "Completed")
 
     val filteredBookings = when (tabs[selectedTabIndex]) {
@@ -129,10 +140,11 @@ fun VisitsScreen(
 }
 
 private fun formatTimestamp(timestamp: Timestamp, slot: String): String {
-    val sdf = SimpleDateFormat("MMM dd", Locale.ENGLISH)
+    val sdf = SimpleDateFormat("MMM dd, yyyy • hh:mm a", Locale.getDefault())
     val dateString = sdf.format(timestamp.toDate())
-    return "$dateString • $slot"
+    return "$dateString"
 }
+
 
 @Preview(showBackground = true)
 @Composable
