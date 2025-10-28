@@ -14,7 +14,7 @@ playServicesLocation = "21.3.0"
 runtime = "1.9.2"
 material3 = "1.4.0"
 appcompat = "1.7.1"
-ksp = "2.2.10-2.0.2"
+ksp = "2.0.21-1.0.25"
 room = "2.6.0"
 
 [libraries]
