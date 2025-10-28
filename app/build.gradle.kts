@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.gms.google.services)
+    alias(libs.plugins.google.devtools.ksp)
 }
 
 android {
@@ -100,4 +101,8 @@ dependencies {
     // Jetpack Security
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
+    // Room Database
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
 }
