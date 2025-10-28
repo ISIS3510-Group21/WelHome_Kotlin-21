@@ -1,37 +1,38 @@
 package com.team21.myapplication.ui.main
 
 import android.content.Context
+import android.os.Build
 import android.util.Log
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.team21.myapplication.data.repository.StudentUserProfileRepository
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
-import com.team21.myapplication.analytics.AnalyticsHelper
-import com.team21.myapplication.utils.getNetworkType
-import android.os.Build
 import androidx.lifecycle.ViewModelProvider
-import com.google.firebase.auth.FirebaseAuth
+import androidx.lifecycle.viewModelScope
+import com.team21.myapplication.analytics.AnalyticsHelper
+import com.team21.myapplication.data.local.AppDatabase
 import com.team21.myapplication.data.model.TagHousingPost
 import com.team21.myapplication.data.repository.AuthRepository
 import com.team21.myapplication.data.repository.HousingPostRepository
+import com.team21.myapplication.data.repository.OfflineFirstHousingRepository
+import com.team21.myapplication.data.repository.StudentUserProfileRepository
 import com.team21.myapplication.data.repository.StudentUserRepository
 import com.team21.myapplication.utils.NetworkMonitor
+import com.team21.myapplication.utils.getNetworkType
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 
 class MainViewModel(
     private val applicationContext: Context,
-    private val networkMonitor: NetworkMonitor
-): ViewModel() {
-    private val repositoryStudentUserProfile = StudentUserProfileRepository()
+    networkMonitor: NetworkMonitor,
+    private val housingRepository: OfflineFirstHousingRepository
+) : ViewModel() {
 
     private val _homeState = MutableStateFlow(HomeState())
     val homeState: StateFlow<HomeState> = _homeState
 
-    private val  analyticsHelper: AnalyticsHelper = AnalyticsHelper(applicationContext)
+    private val analyticsHelper: AnalyticsHelper = AnalyticsHelper(applicationContext)
     private val repositoryStudentUser = StudentUserRepository()
     private val housingPostRepo = HousingPostRepository()
     private val authRepo = AuthRepository()
@@ -42,37 +43,38 @@ class MainViewModel(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = networkMonitor.isOnline.value
         )
-     fun getHousingPosts() {
-         val start = System.currentTimeMillis()
-         analyticsHelper.logHomeOpen()
-         viewModelScope.launch {
-             _homeState.value = _homeState.value.copy(isLoading = true)
 
-             val uid = authRepo.getCurrentUserId()
-             if (uid == null) {
-                 // No hay sesión
-                 _homeState.value = _homeState.value.copy(isLoading = false)
-                 return@launch
-             }
-             // Guarda el uid en el estado (útil para otras consultas)
-             _homeState.value = _homeState.value.copy(currentUserId = uid)
+    init {
+        viewModelScope.launch {
+            housingRepository.getRecommendedHousings().collect { housings ->
+                _homeState.value = _homeState.value.copy(recommendedHousings = housings)
+            }
+        }
 
-             val userProfile = repositoryStudentUserProfile.getStudentUserProfile(uid)
+        viewModelScope.launch {
+            housingRepository.getRecentlySeenHousings().collect { housings ->
+                _homeState.value = _homeState.value.copy(recentlySeenHousings = housings)
+            }
+        }
+    }
 
-             Log.d("UserProfile", userProfile.toString())
-             _homeState.value = _homeState.value.copy(
-                 recentlySeenHousings = userProfile?.visitedHousingPosts ?: emptyList(),
-                 recommendedHousings = userProfile?.recommendedHousingPosts ?: emptyList(),
-                 isLoading = false
-             )
-         }
+    fun getHousingPosts() {
+        viewModelScope.launch {
+            val start = System.currentTimeMillis()
+            analyticsHelper.logHomeOpen()
+            _homeState.value = _homeState.value.copy(isLoading = true)
 
-        val networkType = getNetworkType(applicationContext)
-        val end = System.currentTimeMillis()
-        analyticsHelper.logHomeLoadingTime(
-            end - start,
-            Build.MODEL,
-            networkType)
+            housingRepository.refreshHousings()
+
+            _homeState.value = _homeState.value.copy(isLoading = false)
+            val networkType = getNetworkType(applicationContext)
+            val end = System.currentTimeMillis()
+            analyticsHelper.logHomeLoadingTime(
+                end - start,
+                Build.MODEL,
+                networkType
+            )
+        }
     }
 
     fun logHousingPostClick(postId: String?, postTitle: String, price: Double) {
@@ -83,10 +85,6 @@ class MainViewModel(
             }
             var message = "Post $safePostId clickeado con éxito" //TODO: remove
             try {
-                // Obtain current user
-                //val auth = FirebaseAuth.getInstance().currentUser?.uid
-                //val auth = "StudentUser99" //TODO:prueba
-
                 val auth = authRepo.getCurrentUserId() ?: run {
                     Log.w("MainViewModel", "No current user; skip logging")
                     return@launch
@@ -165,7 +163,15 @@ class MainViewModel(
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return MainViewModel(context, networkMonitor) as T
+            val db = AppDatabase.getDatabase(context)
+            val housingDao = db.housingDao()
+            val offlineFirstHousingRepository = OfflineFirstHousingRepository(
+                housingDao = housingDao,
+                studentUserProfileRepository = StudentUserProfileRepository(),
+                authRepository = AuthRepository(),
+                networkMonitor = networkMonitor
+            )
+            return MainViewModel(context, networkMonitor, offlineFirstHousingRepository) as T
         }
     }
 }
