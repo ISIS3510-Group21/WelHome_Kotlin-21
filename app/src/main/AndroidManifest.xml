@@ -168,5 +168,10 @@
 
         </activity>
 
+        <activity
+            android:name=".ui.bookVisit.BookVisitActivity"
+            android:exported="false"
+            android:theme="@style/Theme.WelHome"/>
+
     </application>
 </manifest>
