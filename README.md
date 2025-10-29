@@ -26,52 +26,74 @@ The Book Visit feature enables users to:
 
 **UI Layer:**
 - `BookVisitActivity`: Android Activity that hosts the Book Visit screen
-  - Receives `housingId` as an intent extra to identify the property
-  - Uses Jetpack Compose for UI rendering
+    - Receives `housingId` as an intent extra to identify the property
+    - Uses Jetpack Compose for UI rendering
 
 - `BookVisitView`: Composable UI component that displays:
-  - Back navigation button
-  - Material3 DatePicker for date selection
-  - Grid of available time slots (2 columns)
-  - Confirmation button (enabled only when both date and time are selected)
+    - Back navigation button
+    - Material3 DatePicker for date selection
+    - Grid of available time slots (2 columns)
+    - Confirmation button (enabled only when both date and time are selected)
 
 - `BookVisitViewModel`: Manages UI state and business logic
-  - Loads availability data from repository
-  - Handles date and time selection
-  - Maintains booking state
+    - Loads availability data from repository
+    - Handles date and time selection
+    - Maintains booking state
 
 - `BookVisitUiState`: Data class representing the UI state
-  - `isLoading`: Loading state indicator
-  - `error`: Error message if any
-  - `housingId`: Property identifier
-  - `selectedDateMillis`: Selected date in milliseconds (UTC)
-  - `selectedHour`: Selected time slot as string
-  - `availableHours`: List of available time slots for selected date
-  - `availabilityByDay`: Map of dates to available time slots
+    - `isLoading`: Loading state indicator
+    - `error`: Error message if any
+    - `housingId`: Property identifier
+    - `selectedDateMillis`: Selected date in milliseconds (UTC)
+    - `selectedHour`: Selected time slot as string
+    - `availableHours`: List of available time slots for selected date
+    - `availabilityByDay`: Map of dates to available time slots
 
 **Data Layer:**
 - `BookingScheduleRepository`: Handles fetching availability data
-  - `getAvailabilityByDay()`: Retrieves available dates and time slots from Firebase
-  - Supports multiple housing ID formats (String, DocumentReference, path)
-  - Filters slots based on available capacity
-  - Returns LocalDate to LocalTime mappings
+    - `getAvailabilityByDay()`: Retrieves available dates and time slots from Firebase
+    - Supports multiple housing ID formats (String, DocumentReference, path)
+    - Filters slots based on available capacity
+    - Returns LocalDate to LocalTime mappings
 
 - `BookingRepository`: Manages booking records
-  - `getUserBookings()`: Fetches user's existing bookings
-  - Integrates with Firebase Authentication
+    - `getUserBookings()`: Fetches user's existing bookings
+    - Integrates with Firebase Authentication
 
 **Models:**
 - `Booking`: Represents a confirmed visit booking
-  - Fields: id, housing, housingTitle, thumbnail, state, date, slot, confirmedVisit, user, userComment, ownerComment, rating
+    - `id`: Unique booking identifier
+    - `housing`: Housing property reference
+    - `housingTitle`: Property name
+    - `thumbnail`: Property image URL
+    - `state`: Booking status (Scheduled, Completed, Missed)
+    - `date`: Visit date
+    - `slot`: Time slot
+    - `confirmedVisit`: Confirmation flag
+    - `user`: User ID
+    - `userComment`: User feedback
+    - `ownerComment`: Owner notes
+    - `rating`: User rating
 
 - `BookingSchedule`: Represents property availability schedule
-  - Contains: id, availableDates, updatedAt, housing, bookingDate
+    - `id`: Schedule identifier
+    - `availableDates`: Number of available dates
+    - `updatedAt`: Last update timestamp
+    - `housing`: Housing property reference
+    - `bookingDate`: List of BookingDate objects
 
 - `BookingDate`: Represents availability for a specific date
-  - Contains: id, date, availableSlots, bookingSlot
+    - `id`: Date record identifier
+    - `date`: The date
+    - `availableSlots`: Number of slots available
+    - `bookingSlot`: List of BookingSlot objects
 
 - `BookingSlot`: Represents a specific time slot
-  - Contains: id, time, duration, availableUsers, description
+    - `id`: Slot identifier
+    - `time`: Time of the slot
+    - `duration`: Duration in hours
+    - `availableUsers`: Capacity available
+    - `description`: Optional description
 
 #### Data Flow
 
@@ -92,16 +114,25 @@ The Book Visit feature enables users to:
 - Document per property
 - Field `housing`: Reference to HousingPost
 - Subcollection `BookingDate`: Contains dates with availability
-  - Field `date`: Timestamp for the date
-  - Subcollection `BookingSlot`: Contains time slots
-    - Field `time`: Timestamp for the slot
-    - Field `availableUsers`: Number of available spots
-    - Field `duration`: Duration in hours
-    - Field `description`: Optional description
+    - Field `date`: Timestamp for the date
+    - Subcollection `BookingSlot`: Contains time slots
+        - Field `time`: Timestamp for the slot
+        - Field `availableUsers`: Number of available spots
+        - Field `duration`: Duration in hours
+        - Field `description`: Optional description
 
 **Booking Collection:**
 - Document per confirmed booking
-- Fields: user, housing, housingTitle, date, slot, state, confirmedVisit, rating, comments
+- Fields:
+    - `user`: User ID who made the booking
+    - `housing`: Housing property reference
+    - `housingTitle`: Property name
+    - `date`: Visit date
+    - `slot`: Time slot
+    - `state`: Booking status
+    - `confirmedVisit`: Confirmation flag
+    - `rating`: User rating
+    - `userComment`, `ownerComment`: Feedback comments
 
 ### Key Features
 
