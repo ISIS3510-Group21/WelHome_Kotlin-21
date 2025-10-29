@@ -132,7 +132,8 @@ The Book Visit feature enables users to:
     - `state`: Booking status
     - `confirmedVisit`: Confirmation flag
     - `rating`: User rating
-    - `userComment`, `ownerComment`: Feedback comments
+    - `userComment`: User feedback comment
+    - `ownerComment`: Owner feedback comment
 
 ### Key Features
 
