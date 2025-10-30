@@ -24,6 +24,7 @@ data class PreviewCardUi(
 data class FilterUiState(
     val isLoading: Boolean = true,
     val error: String? = null,
+    val isSearching: Boolean = false,
 
     // Tags principales (botones grandes): House, Apartment, Cabins, Room
     val featuredTags: List<TagChipUi> = emptyList(),

@@ -32,6 +32,11 @@ import androidx.compose.material3.MaterialTheme
 import com.team21.myapplication.ui.filterView.state.FilterUiState
 import com.team21.myapplication.ui.filterView.state.TagChipUi
 
+// NUEVO: imports para overlay del spinner
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.Box
+
 // Activity (solo diseño local; en app real usa FilterRoute())
 class FilterViewActivity : ComponentActivity() {
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -47,6 +52,11 @@ class FilterViewActivity : ComponentActivity() {
  * - SearchBar y botón Search ejecutan onSearch().
  * - Carousel default: items clickeables → onOpenDetail(housingId).
  * - [ANALYTICS] Se loguea en el ViewModel (toggle/search), aquí no hace falta tocar nada.
+ *
+ * Cambios para evitar taps repetidos:
+ * - SearchBar: enabled = state.canSearch && !state.isSearching
+ * - Botón "Search": enabled = state.canSearch && !state.isSearching
+ * - Overlay de CircularProgressIndicator encima del botón cuando isSearching = true
  */
 @Composable
 fun FilterView(
@@ -65,14 +75,15 @@ fun FilterView(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-                // [CAMBIO: SearchBar actúa como botón y dispara onSearch()]
+                // SearchBar actúa como botón y dispara onSearch()
+                // DESHABILITADO mientras isSearching o si no hay selección
                 SearchBar(
                     query = "",
                     onQueryChange = {},
                     placeholder = if (state.selectedCount > 0) "Search (${state.selectedCount})" else "Search",
                     asButton = true,
-                    onClick = onSearch,  // ← dispara búsqueda (el VM hace Analytics)
-                    enabled = true
+                    onClick = onSearch,
+                    enabled = state.canSearch && !state.isSearching // <- cambio clave
                 )
             }
         },
@@ -87,7 +98,6 @@ fun FilterView(
             ),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-
 
             // Título
             item {
@@ -105,13 +115,31 @@ fun FilterView(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    BlueButton(
-                        text = if (state.canSearch) "Search" else "Search",
-                        onClick = onSearch,
+                    // Envolvemos el BlueButton en un Box para sobreponer el spinner
+                    Box(
                         modifier = Modifier
                             .weight(1f)
-                            .heightIn(min = 40.dp) // un poco más pequeño
-                    )
+                            .heightIn(min = 52.dp)
+                    ) {
+                        BlueButton(
+                            text = if (state.isSearching) "Searching..." else "Search",
+                            onClick = onSearch,
+                            enabled = state.canSearch && !state.isSearching, // <- cambio clave
+                            modifier = Modifier
+                                .matchParentSize()
+                        )
+                        if (state.isSearching) {
+                            // Overlay centrado: no modificamos BlueButton
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(strokeWidth = 2.dp)
+                            }
+                        }
+                    }
+
                     BlueButton(
                         text = "Map Search",
                         onClick = onMapSearch,
@@ -121,7 +149,6 @@ fun FilterView(
                     )
                 }
             }
-
 
             // 4 destacados (House, Room, Cabins, Apartment)
             item {
@@ -145,7 +172,7 @@ fun FilterView(
                             text = a?.label ?: "Houses",
                             imageVector = iconFor(a?.label ?: "Houses"),
                             selected = a?.selected == true,
-                            onClick = { a?.let { onToggleTag(it.id) } }, // [CAMBIO: toggle selección]
+                            onClick = { a?.let { onToggleTag(it.id) } },
                             modifier = Modifier.weight(1f)
                         )
                         val b = featured.getOrNull(1)
@@ -153,7 +180,7 @@ fun FilterView(
                             text = b?.label ?: "Rooms",
                             imageVector = iconFor(b?.label ?: "Rooms"),
                             selected = b?.selected == true,
-                            onClick = { b?.let { onToggleTag(it.id) } }, // [CAMBIO: toggle selección]
+                            onClick = { b?.let { onToggleTag(it.id) } },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -166,7 +193,7 @@ fun FilterView(
                             text = c?.label ?: "Cabins",
                             imageVector = iconFor(c?.label ?: "Cabins"),
                             selected = c?.selected == true,
-                            onClick = { c?.let { onToggleTag(it.id) } }, // [CAMBIO: toggle selección]
+                            onClick = { c?.let { onToggleTag(it.id) } },
                             modifier = Modifier.weight(1f)
                         )
                         val d = featured.getOrNull(3)
@@ -174,7 +201,7 @@ fun FilterView(
                             text = d?.label ?: "Apartments",
                             imageVector = iconFor(d?.label ?: "Apartments"),
                             selected = d?.selected == true,
-                            onClick = { d?.let { onToggleTag(it.id) } }, // [CAMBIO: toggle selección]
+                            onClick = { d?.let { onToggleTag(it.id) } },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -192,7 +219,7 @@ fun FilterView(
                     GrayButton(
                         text = chip.label,
                         selected = chip.selected,
-                        onClick = { onToggleTag(chip.id) } // [CAMBIO: toggle selección]
+                        onClick = { onToggleTag(chip.id) }
                     )
                 }
             }
@@ -217,28 +244,10 @@ fun FilterView(
                         pricePerMonthLabel = house.price,
                         imageRes = R.drawable.sample_house,
                         modifier = Modifier.fillMaxWidth(0.8f),
-                        onClick = { onOpenDetail(house.id) }   // [CAMBIO: navega al detail]
+                        onClick = { onOpenDetail(house.id) }
                     )
                 }
             }
-
-            // Botón Search
-            //item {
-            //    BlueButton(
-            //        text = if (state.canSearch) "Search" else "Search (select filters)",
-            //        onClick = onSearch, // [CAMBIO: dispara búsqueda]
-            //        modifier = Modifier.fillMaxWidth()
-            //    )
-            //}
-
-            // Botón Map Search (opcional)
-            //item {
-            //    BlueButton(
-            //        text = "Map Search",
-            //        onClick = onMapSearch,
-            //        modifier = Modifier.fillMaxWidth()
-            //    )
-            //}
         }
     }
 }
@@ -258,6 +267,7 @@ private fun PreviewFilterView() {
         FilterView(
             state = FilterUiState(
                 isLoading = false,
+                isSearching = false,
                 featuredTags = listOf(
                     TagChipUi("1","House", true),
                     TagChipUi("2","Room"),
