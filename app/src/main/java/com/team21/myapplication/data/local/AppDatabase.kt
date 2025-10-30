@@ -8,12 +8,14 @@ import com.team21.myapplication.data.local.dao.HousingDao
 import com.team21.myapplication.data.local.dao.MyPostsDao
 import com.team21.myapplication.data.local.entity.HousingEntity
 import com.team21.myapplication.data.local.entity.MyPostEntity
-
-@Database(entities = [HousingEntity::class, MyPostEntity::class], version = 2, exportSchema = false)
+import com.team21.myapplication.data.local.dao.OwnerOfflinePreviewDao
+import com.team21.myapplication.data.local.entity.OwnerOfflinePreviewEntity
+@Database(entities = [HousingEntity::class, MyPostEntity::class, OwnerOfflinePreviewEntity::class], version = 3, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun housingDao(): HousingDao
     abstract fun myPostsDao(): MyPostsDao
+    abstract fun ownerOfflineDao(): OwnerOfflinePreviewDao
 
     companion object {
         @Volatile
