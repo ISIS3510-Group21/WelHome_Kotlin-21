@@ -1,24 +1,22 @@
 package com.team21.myapplication.ui.filterView
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.Firebase
+import com.google.firebase.analytics.analytics
+import com.google.firebase.analytics.logEvent
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
 import com.team21.myapplication.data.repository.FilterMode
 import com.team21.myapplication.data.repository.HousingTagRepository
+import com.team21.myapplication.data.repository.offline.FilterOfflineRepository
 import com.team21.myapplication.domain.mapper.FilterUiMapper
 import com.team21.myapplication.domain.usecase.GetAllTagsUseCase
 import com.team21.myapplication.domain.usecase.SearchPreviewsByTagsUseCase
 import com.team21.myapplication.ui.filterView.state.FilterUiState
 import com.team21.myapplication.ui.filterView.state.PreviewCardUi
-
-// Firebase Analytics (KTX moderno)
-import com.google.firebase.Firebase
-import com.google.firebase.analytics.analytics
-import com.google.firebase.analytics.logEvent
-
-// Firestore (SDK base para evitar dependencias KTX extra)
-import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.FirebaseFirestore
-
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -27,36 +25,52 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 /**
- * MVVM (ViewModel):
- * - Orquesta carga de tags y búsqueda con los filtros seleccionados.
- * - Telemetría: Analytics + Firestore (para pipeline de “trending”).
+ * FilterViewModel (factory-friendly)
+ *
+ * IMPORTANT: Only `Application` is in the primary constructor so the default
+ * AndroidViewModelFactory can instantiate this ViewModel without a custom factory.
+ *
+ * Patterns (tagged inline):
+ * - [EVENTUAL CONNECTIVITY] [CACHE-FIRST] load() hydrates from local cache first, then refreshes from network.
+ * - [LOCAL STORAGE] SharedPreferences via FilterOfflineRepository (last selection + cached tags snapshot).
+ * - [MULTITHREADING] viewModelScope + Dispatchers.IO for any I/O (prefs, firestore).
  */
-class FilterViewModel(
-    private val getAllTags: GetAllTagsUseCase =
-        GetAllTagsUseCase(HousingTagRepository()),
-    private val searchPreviews: SearchPreviewsByTagsUseCase =
-        SearchPreviewsByTagsUseCase(HousingTagRepository())
-) : ViewModel() {
+class FilterViewModel(app: Application) : AndroidViewModel(app) {
 
+    // --- Build dependencies inside (no custom factory / no DI required) ---
+    private val appCtx = app.applicationContext
+    private val tagRepo = HousingTagRepository()
+    private val getAllTags = GetAllTagsUseCase(tagRepo)
+    private val searchPreviews = SearchPreviewsByTagsUseCase(tagRepo)
+    private val offlineRepo = FilterOfflineRepository(appCtx) // [LOCAL STORAGE]
+
+    // --- State / Effects ---
     private val _state = MutableStateFlow(FilterUiState())
     val state: StateFlow<FilterUiState> = _state
 
-    // Efectos one-shot (navegación, snackbars, etc.)
     private val _effects = MutableSharedFlow<FilterEffect>()
     val effects: SharedFlow<FilterEffect> = _effects
 
-    // Mantiene el orden de selección
+    // Maintains selection order
     private val selected = linkedSetOf<String>()
 
-    // ----------- Public API -----------
-
-    /** Carga inicial de tags. */
+    /** Initial load: cache-first from preferences, then try refreshing from network. */
     fun load() {
         _state.value = _state.value.copy(isLoading = true, error = null)
+
         viewModelScope.launch {
-            try {
-                val tags = getAllTags()
-                val (featured, others) = FilterUiMapper.toFeaturedAndOthers(tags, selected)
+            // [EVENTUAL CONNECTIVITY] [CACHE-FIRST]
+            // 1) Offline-first hydrate from local cache (prefs) — runs on IO internally.
+            val cachedChips = offlineRepo.readCachedTagsAsUi() // [MULTITHREADING] (IO)
+            val lastSel = offlineRepo.readLastSelection()       // [MULTITHREADING] (IO)
+
+            if (cachedChips.isNotEmpty()) {
+                selected.clear()
+                selected.addAll(lastSel)
+
+                val featured = cachedChips.take(4).map { it.copy(selected = it.id in selected) }
+                val others = cachedChips.drop(4).map { it.copy(selected = it.id in selected) }
+
                 _state.value = _state.value.copy(
                     isLoading = false,
                     featuredTags = featured,
@@ -64,117 +78,128 @@ class FilterViewModel(
                     selectedCount = selected.size,
                     canSearch = selected.isNotEmpty()
                 )
-            } catch (e: Exception) {
+            }
+
+            // 2) Network refresh (if available). If it fails, keep cached UI.
+            runCatching {
+                val tags = getAllTags() // network call via use case
+                val (featured, others) = FilterUiMapper.toFeaturedAndOthers(tags, selected)
+
                 _state.value = _state.value.copy(
                     isLoading = false,
-                    error = "Error al cargar filtros: ${e.message ?: "desconocido"}"
+                    featuredTags = featured,
+                    otherTags = others,
+                    selectedCount = selected.size,
+                    canSearch = selected.isNotEmpty()
                 )
+
+                // [LOCAL STORAGE] Persist fresh tags snapshot for next offline launch.
+                viewModelScope.launch(Dispatchers.IO) { // [MULTITHREADING]
+                    offlineRepo.saveCachedTagsFromUi(featured + others)
+                }
+            }.onFailure { e ->
+                if (_state.value.featuredTags.isEmpty() && _state.value.otherTags.isEmpty()) {
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        error = "Failed to load filters: ${e.message ?: "unknown"}"
+                    )
+                }
             }
         }
     }
 
-    /** Toggle de un tag con Analytics. */
+    /** Toggle tag selection and persist it asynchronously in preferences. */
     fun toggleTag(tagId: String) {
         val willSelect = !selected.contains(tagId)
         if (willSelect) selected.add(tagId) else selected.remove(tagId)
 
-        // Analytics: toggle
-        Firebase.analytics.logEvent("filter_toggle_tag") {
-            param("tag_id", tagId)
-            param("selected", if (willSelect) 1L else 0L)
-        }
-
+        // Update UI immediately
         val cur = _state.value
         val newFeatured = cur.featuredTags.map { it.copy(selected = it.id in selected) }
         val newOthers = cur.otherTags.map { it.copy(selected = it.id in selected) }
-
         _state.value = cur.copy(
             featuredTags = newFeatured,
             otherTags = newOthers,
             selectedCount = selected.size,
             canSearch = selected.isNotEmpty()
         )
+
+        // [LOCAL STORAGE] Persist selection to prefs
+        viewModelScope.launch(Dispatchers.IO) { // [MULTITHREADING]
+            offlineRepo.saveLastSelection(selected.toList())
+        }
     }
 
     /**
-     * Ejecuta la búsqueda con los tags seleccionados.
-     * - Analytics + Firestore logging para pipeline de notificaciones.
+     * Execute search with the selected tags.
+     * - Sends analytics (optional)
+     * - Logs to Firestore (optional)
      */
     fun search(mode: FilterMode = FilterMode.AND) {
         if (selected.isEmpty()) return
         _state.value = _state.value.copy(isLoading = true, error = null)
 
-        // Mapa id -> label (de tu propio UI state)
+        // Collect labels for analytics
         val labelMap = (_state.value.featuredTags + _state.value.otherTags)
             .associate { it.id to it.label }
 
-        // --- Analytics agregado (agregado + por tag con nombre)
+        // Firebase Analytics (optional)
         Firebase.analytics.logEvent("filter_search") {
             param("selected_count", selected.size.toLong())
             param("selected_ids_csv", selected.joinToString(","))
             param("mode", mode.name)
         }
-
-        // Evento NUEVO por tag con NOMBRE
         selected.forEach { tagId ->
             val tagName = labelMap[tagId] ?: tagId
             Firebase.analytics.logEvent("filterNotificationTag") {
                 param("tag_name", tagName)
             }
         }
-        // --- Analytics agregado (agregado + por tag)
-        val csv = selected.joinToString(",")
-        Firebase.analytics.logEvent("filter_search") {
-            param("selected_count", selected.size.toLong())
-            param("selected_ids_csv", csv)
-            param("mode", mode.name)
-        }
-        selected.forEach { tagId ->
-            Firebase.analytics.logEvent("filter_search_tag") {
-                param("tag_id", tagId)
-            }
-        }
 
         viewModelScope.launch {
             try {
-                // Además del Analytics, escribimos eventos livianos en Firestore
-                logSearchToFirestore(selected)
+                // Persist current selection for resilience
+                viewModelScope.launch(Dispatchers.IO) { // [LOCAL STORAGE] [MULTITHREADING]
+                    offlineRepo.saveLastSelection(selected.toList())
+                }
+
+                // Optional: log search to Firestore in background
+                viewModelScope.launch(Dispatchers.IO) { // [MULTITHREADING]
+                    logSearchToFirestore(selected)
+                }
 
                 val previews = searchPreviews(selected.toList(), mode)
                 val ui = FilterUiMapper.toPreviewUi(previews)
 
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    lastResults = ui
-                )
+                _state.value = _state.value.copy(isLoading = false, lastResults = ui)
                 _effects.emit(FilterEffect.ShowResults(ui))
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
                     isLoading = false,
-                    error = "Error al buscar: ${e.message ?: "desconocido"}"
+                    error = "Search error: ${e.message ?: "unknown"}"
                 )
             }
         }
     }
 
-    // ----------- Internals -----------
+    // ---------------- Internals ----------------
 
     /**
-     * Guarda en Firestore un documento por cada tag buscado:
+     * Write one document per tag searched:
      *   filterSearchEvents/{autoId} = { tagId, tagName, ts }
-     * Esto permite que una Cloud Function programe el “top en 10 min” y envíe FCM.
+     * And a parallel collection "filterNotificationTag" with tagName & ts.
+     * [MULTITHREADING] Called from IO.
      */
     private suspend fun logSearchToFirestore(selectedIds: Set<String>) {
         if (selectedIds.isEmpty()) return
 
-        // Mapa id -> label (para enviar el nombre legible)
         val labelMap = (_state.value.featuredTags + _state.value.otherTags)
             .associate { it.id to it.label }
 
         val db = FirebaseFirestore.getInstance()
-        val col = db.collection("filterSearchEvents")
         val batch = db.batch()
 
+        val col = db.collection("filterSearchEvents")
         selectedIds.forEach { id ->
             val doc = col.document()
             batch.set(
@@ -190,17 +215,20 @@ class FilterViewModel(
         val colNotif = db.collection("filterNotificationTag")
         selectedIds.forEach { id ->
             val tagName = labelMap[id] ?: id
-            batch.set(colNotif.document(), mapOf(
-                "tagName" to tagName,
-                "ts" to FieldValue.serverTimestamp()
-            ))
+            batch.set(
+                colNotif.document(),
+                mapOf(
+                    "tagName" to tagName,
+                    "ts" to FieldValue.serverTimestamp()
+                )
+            )
         }
 
         batch.commit().await()
     }
 }
 
-/** Efectos one-shot para Route/View (navegación, snackbars, etc.) */
+/** One-shot effects for navigation/snackbars. */
 sealed class FilterEffect {
     data class ShowResults(val items: List<PreviewCardUi>) : FilterEffect()
 }

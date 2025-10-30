@@ -1,19 +1,20 @@
 package com.team21.myapplication.ui.filterView
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.team21.myapplication.data.repository.FilterMode
 import com.team21.myapplication.ui.filterView.state.PreviewCardUi
 import kotlinx.coroutines.flow.collectLatest
 
-/**
- * ROUTE:
- * - Crea/obtiene el ViewModel.
- * - OBSERVER: observa state y effects (one-shot).
- * - Entrega state + callbacks a la View.
- */
+// NEW
+import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.Modifier
+import com.team21.myapplication.ui.components.banners.ConnectivityBanner
+import com.team21.myapplication.ui.components.banners.BannerPosition
+import com.team21.myapplication.utils.NetworkMonitor
+import androidx.compose.ui.platform.LocalContext
+
 @Composable
 fun FilterRoute(
     onNavigateToResults: (items: List<PreviewCardUi>) -> Unit,
@@ -23,10 +24,14 @@ fun FilterRoute(
     val vm: FilterViewModel = viewModel()
     val state = vm.state.collectAsStateWithLifecycle().value
 
-    // Carga inicial
+    // [EVENTUAL CONNECTIVITY] Observe connectivity changes
+    val ctx = LocalContext.current
+    val isOnline = remember { NetworkMonitor.get(ctx).isOnline }.collectAsStateWithLifecycle().value
+
+    // Initial load
     LaunchedEffect(Unit) { vm.load() }
 
-    // Efectos: navegación a resultados
+    // Effects: navigate to results
     LaunchedEffect(Unit) {
         vm.effects.collectLatest { effect ->
             when (effect) {
@@ -35,12 +40,19 @@ fun FilterRoute(
         }
     }
 
-    // Llama a la VIEW (debe existir en el MISMO paquete y con esta firma)
-    FilterView(
-        state = state,
-        onToggleTag = vm::toggleTag,
-        onSearch = { vm.search(FilterMode.AND) }, // AND por defecto (intersección)
-        onOpenDetail = onOpenDetail,
-        onMapSearch = onMapSearch,
-    )
+    // VIEW + Banner
+    Column {
+        // [EVENTUAL CONNECTIVITY] Banner visible when offline
+        ConnectivityBanner(
+            visible = !isOnline,
+            position = BannerPosition.Top
+        )
+        FilterView(
+            state = state,
+            onToggleTag = vm::toggleTag,
+            onSearch = { vm.search(FilterMode.AND) },
+            onOpenDetail = onOpenDetail,
+            onMapSearch = onMapSearch
+        )
+    }
 }
