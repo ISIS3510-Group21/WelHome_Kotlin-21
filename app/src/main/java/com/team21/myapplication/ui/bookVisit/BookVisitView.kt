@@ -179,11 +179,6 @@ fun BookVisitView(
                             )
                         }
                     }
-
-                    if (state.selectedDateMillis != null && state.availableHours.isEmpty()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        BlackText(text = "No availability for this date")
-                    }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
