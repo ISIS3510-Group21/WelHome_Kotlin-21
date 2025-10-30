@@ -1,68 +1,60 @@
 package com.team21.myapplication.ui.mapsearch
 
 import android.app.Activity
+import android.app.Application
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapEffect
 import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.rememberCameraPositionState
+import com.team21.myapplication.analytics.AnalyticsHelper
 import com.team21.myapplication.ui.components.cards.HousingCardListItem
 import com.team21.myapplication.ui.components.inputs.SearchBar
 import com.team21.myapplication.ui.components.navbar.AppNavBar
+import com.team21.myapplication.ui.detailView.DetailHousingActivity
 import com.team21.myapplication.ui.theme.AppTheme
 import com.team21.myapplication.ui.theme.LocalDSTypography
-import com.google.maps.android.compose.rememberCameraPositionState
-import com.team21.myapplication.ui.detailView.DetailHousingActivity
-import kotlinx.coroutines.launch
-import android.os.SystemClock
-import android.os.Build
-import android.content.Context
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.withFrameNanos
-import com.team21.myapplication.analytics.AnalyticsHelper
+import com.team21.myapplication.utils.NetworkMonitor
 import com.team21.myapplication.utils.getNetworkType
-
+import kotlinx.coroutines.launch
+import java.io.File
 
 class MapSearchActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -73,7 +65,7 @@ class MapSearchActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 Scaffold(
                     bottomBar = { AppNavBar(navController) }
-                ){ innerPadding ->
+                ) { innerPadding ->
                     MapSearchView(
                         navController,
                         modifier = Modifier.padding(innerPadding),
@@ -92,7 +84,6 @@ class MapSearchActivity : ComponentActivity() {
 
 private fun resolveHousingId(p: MapLocation): String? {
     return when (val h = p.id) {
-        //is com.google.firebase.firestore.DocumentReference -> h.id
         else -> if (h.contains("/")) h.substringAfterLast("/") else h
     }
 }
@@ -101,20 +92,24 @@ private fun resolveHousingId(p: MapLocation): String? {
 fun MapSearchView(
     navController: NavController,
     modifier: Modifier = Modifier,
-    mapViewModel: MapSearchViewModel = viewModel(),
+    mapViewModel: MapSearchViewModel = viewModel(factory = MapSearchViewModelFactory(LocalContext.current.applicationContext as Application)),
     onNavigateToDetail: (String) -> Unit
 ) {
-    val state by mapViewModel.state.collectAsState()
+    val state = mapViewModel.state.collectAsState().value
+    val context = LocalContext.current
+    val networkMonitor = remember { NetworkMonitor.get(context) }
+    val isOnline by networkMonitor.isOnline.collectAsState()
+
+    LaunchedEffect(isOnline) {
+        mapViewModel.loadLocations(isOnline)
+    }
 
     // ----- Analytics + timing -----
-    val context = LocalContext.current
     val analytics = remember { AnalyticsHelper(context) }
 
-    // Guardar el momento de inicio y si ya se registro el evento (para no duplicar)
     var loadStartMs by rememberSaveable { mutableStateOf<Long?>(null) }
     var hasLoggedLoadingTime by rememberSaveable { mutableStateOf(false) }
 
-    // Señales de render de UI
     var mapLoaded by rememberSaveable { mutableStateOf(false) }      // tiles iniciales listos
     var markersDrawn by rememberSaveable { mutableStateOf(false) }   // marcadores ya dibujados en un frame
 
@@ -130,7 +125,6 @@ fun MapSearchView(
         mutableStateOf<LatLng?>(null)
     }
 
-    // Request location permission and get the user's current location
     LaunchedEffect(Unit) {
         if (ContextCompat.checkSelfPermission(
                 context,
@@ -151,13 +145,10 @@ fun MapSearchView(
         }
     }
 
-    // Set the initial camera position to the user's location or a default location
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(state.userLocation, 12f)
     }
 
-    // If userLocation changes, animate the camera to the new location
-    // and notify the ViewModel
     LaunchedEffect(userLocation) {
         userLocation?.let {
 
@@ -177,7 +168,6 @@ fun MapSearchView(
     LaunchedEffect(mapLoaded, markersDrawn) {
         val start = loadStartMs
         if (start != null && mapLoaded && markersDrawn && !hasLoggedLoadingTime) {
-            // un frame extra para terminar pequeños layouts del resto de la pantalla
             withFrameNanos { /* frame extra */ }
 
             val elapsed = SystemClock.elapsedRealtime() - start
@@ -210,9 +200,7 @@ fun MapSearchView(
                     query = searchQuery,
                     onQueryChange = { searchQuery = it },
                     placeholder = "Search",
-                    onSearch = {
-                        // Search logic
-                    }
+                    onSearch = { /* Search logic */ }
                 )
             }
         },
@@ -232,57 +220,73 @@ fun MapSearchView(
                     .weight(1f)
                     .padding(horizontal = 16.dp)
             ) {
-
-                GoogleMap (
-                    modifier = Modifier.fillMaxSize(),
-                    cameraPositionState = cameraPositionState,
-                    onMapLoaded = {
-                        mapLoaded = true
+                if (state.isOffline) {
+                    state.mapSnapshotPath?.let {
+                        val imageFile = File(it)
+                        if (imageFile.exists()) {
+                            val bitmap = android.graphics.BitmapFactory.decodeFile(imageFile.absolutePath)
+                            Image(bitmap = bitmap.asImageBitmap(), contentDescription = "Offline map snapshot")
+                        }
                     }
-               ) {
-                    userLocation?.let {
-                        com.google.maps.android.compose.Marker(
-                            state = MarkerState(it),
-                            title = "Your Location",
-                            snippet = "Your current location",
-                            icon = BitmapDescriptorFactory
-                                .defaultMarker(BitmapDescriptorFactory.HUE_AZURE)
-                        )
+                } else {
+                    var map: GoogleMap? by remember { mutableStateOf(null) }
+                    GoogleMap(
+                        modifier = Modifier.fillMaxSize(),
+                        cameraPositionState = cameraPositionState,
+                        onMapLoaded = {
+                            mapLoaded = true
+                        }
+                    ) {
+                        MapEffect(key1 = map) { googleMap ->
+                            map = googleMap
+                        }
+                        userLocation?.let {
+                            com.google.maps.android.compose.Marker(
+                                state = MarkerState(it),
+                                title = "Your Location",
+                                snippet = "Your current location",
+                                icon = BitmapDescriptorFactory
+                                    .defaultMarker(BitmapDescriptorFactory.HUE_AZURE)
+                            )
+                        }
+                        state.locations.forEachIndexed { index, location ->
+                            com.google.maps.android.compose.Marker(
+                                state = MarkerState(location.position),
+                                title = location.title,
+                                snippet = "💲 ${location.price} " +
+                                        "⭐ ${location.rating} ",
+                                onClick = {
+                                    selectedLocationId = location.id
+
+                                    coroutineScope.launch {
+                                        listState.animateScrollToItem(index)
+                                    }
+                                    coroutineScope.launch {
+                                        cameraPositionState.animate(
+                                            CameraUpdateFactory.newLatLngZoom(location.position, 20f),
+                                            800
+                                        )
+                                    }
+                                    true
+                                }
+
+                            )
+                        }
                     }
-                   state.locations.forEachIndexed { index, location ->
-                       com.google.maps.android.compose.Marker(
-                           state = MarkerState(location.position),
-                           title = location.title,
-                           snippet = "💲 ${location.price} " +
-                                   "⭐ ${location.rating} ",
-                           onClick = {
-                               selectedLocationId = location.id
-
-                               coroutineScope.launch {
-                                   listState.animateScrollToItem(index)
-                               }
-                               coroutineScope.launch {
-                                   cameraPositionState.animate(
-                                       CameraUpdateFactory.newLatLngZoom(location.position, 20f),
-                                       800
-                                   )
-                               }
-                            true
-                           }
-
-                       )
-                   }
-               }
-                LaunchedEffect(state.locations) {
-                    if (state.locations.isNotEmpty()) {
-                        markersDrawn = false               // reinicia la marca
-                        withFrameNanos { /* espera 1 frame */ }
-                        //  espera un frame extra para layouts/animaciones
-                        withFrameNanos { /* segundo frame */ }
-                        markersDrawn = true
+                    LaunchedEffect(mapLoaded, state.locations) {
+                        if (mapLoaded && state.locations.isNotEmpty()) {
+                            map?.snapshot {
+                                if (it != null && userLocation != null) {
+                                    mapViewModel.saveMapToCache(it, userLocation!!)
+                                }
+                            }
+                            markersDrawn = false               // reinicia la marca
+                            withFrameNanos { /* espera 1 frame */ }
+                            withFrameNanos { /* segundo frame */ }
+                            markersDrawn = true
+                        }
                     }
                 }
-
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -330,5 +334,15 @@ fun MapSearchViewPreview() {
     AppTheme {
         val navController = rememberNavController()
         MapSearchView(navController = navController, onNavigateToDetail = {})
+    }
+}
+
+class MapSearchViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
+    override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(MapSearchViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return MapSearchViewModel(application) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
