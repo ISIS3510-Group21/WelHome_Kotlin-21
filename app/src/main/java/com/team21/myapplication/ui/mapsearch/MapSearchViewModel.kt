@@ -1,26 +1,38 @@
 package com.team21.myapplication.ui.mapsearch
 
+import android.app.Application
+import android.content.Context
+import android.graphics.Bitmap
 import android.location.Location
-import android.util.Log
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.maps.model.LatLng
+import com.team21.myapplication.data.local.AppDatabase
+import com.team21.myapplication.data.model.MapCacheEntry
 import com.team21.myapplication.data.repository.HousingPostRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileOutputStream
 
-class MapSearchViewModel: ViewModel() {
+class MapSearchViewModel(application: Application): AndroidViewModel(application) {
     private val repository: HousingPostRepository = HousingPostRepository()
+    private val mapCacheDao = AppDatabase.getDatabase(application).mapCacheDao()
+
     private val _state = MutableStateFlow(MapState())
     val state: StateFlow<MapState> = _state
 
-    init {
-        loadLocations()
+    fun loadLocations(isOnline: Boolean) {
+        if (isOnline) {
+            fetchFromNetwork()
+        } else {
+            loadFromCache()
+        }
     }
 
-    private fun loadLocations() {
+    private fun fetchFromNetwork() {
         viewModelScope.launch {
             val posts = repository.getHousingPosts()
 
@@ -38,8 +50,52 @@ class MapSearchViewModel: ViewModel() {
                     )
                 }
             }
-            _state.value = _state.value.copy(locations = locations, isLoading = false)
+            _state.value = _state.value.copy(locations = locations, isLoading = false, isOffline = false)
             reorderPostsByDistance(_state.value.userLocation)
+        }
+    }
+
+    private fun loadFromCache() {
+        viewModelScope.launch {
+            val cachedData = mapCacheDao.getCache()
+            if (cachedData != null) {
+                _state.value = _state.value.copy(
+                    userLocation = LatLng(cachedData.userLatitude, cachedData.userLongitude),
+                    locations = cachedData.locations,
+                    mapSnapshotPath = cachedData.mapSnapshotPath,
+                    isLoading = false,
+                    isOffline = true
+                )
+            }
+        }
+    }
+
+    fun saveMapToCache(snapshot: Bitmap, userLocation: LatLng) {
+        viewModelScope.launch {
+            val snapshotPath = saveSnapshotToFile(snapshot)
+            if (snapshotPath != null) {
+                val cacheEntry = MapCacheEntry(
+                    userLatitude = userLocation.latitude,
+                    userLongitude = userLocation.longitude,
+                    mapSnapshotPath = snapshotPath,
+                    locations = state.value.locations.take(20)
+                )
+                mapCacheDao.save(cacheEntry)
+            }
+        }
+    }
+
+    private fun saveSnapshotToFile(bitmap: Bitmap): String? {
+        val context = getApplication<Application>().applicationContext
+        val file = File(context.cacheDir, "map_snapshot.png")
+        return try {
+            val fos = FileOutputStream(file)
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos)
+            fos.flush()
+            fos.close()
+            file.absolutePath
+        } catch (e: Exception) {
+            null
         }
     }
 
