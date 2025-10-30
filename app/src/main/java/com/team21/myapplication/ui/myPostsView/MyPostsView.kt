@@ -36,14 +36,44 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import com.team21.myapplication.data.local.AppDatabase
+import com.team21.myapplication.data.local.SecureSessionManager
+import com.team21.myapplication.data.repository.AuthRepository
+import com.team21.myapplication.data.repository.OwnerUserRepository
+import com.team21.myapplication.ui.components.banners.BannerPosition
+import com.team21.myapplication.ui.components.banners.ConnectivityBanner
 import com.team21.myapplication.ui.createPostView.CreatePostActivity
+import com.team21.myapplication.utils.NetworkMonitor
 
 @Composable
 fun MyPostsScreen() {
-    val vm: MyPostsViewModel = viewModel()
-    val state = vm.state.collectAsStateWithLifecycle().value
+
     val ctx = LocalContext.current
+    val db = AppDatabase.getDatabase(ctx) // Room
+    val session = SecureSessionManager(ctx.applicationContext)
+    val net = NetworkMonitor.get(ctx.applicationContext)
+
+
+    val vm: MyPostsViewModel = viewModel(
+        factory = MyPostsViewModelFactory(
+            ownerRepo = OwnerUserRepository(),
+            authRepo = AuthRepository(),
+            session = session,
+            dao = db.myPostsDao(),
+            net = net
+        )
+    )
+
+    val state by vm.state.collectAsStateWithLifecycle()
+    // Banner de conectividad (top)
+    val isOnline by net.isOnline.collectAsStateWithLifecycle()
+
+    ConnectivityBanner(
+        visible = !isOnline,
+        position = BannerPosition.Top
+    )
 
     LaunchedEffect(Unit) { vm.loadMyPosts() }
 
@@ -100,7 +130,7 @@ fun MyPostsScreenLayout(
             .verticalScroll(rememberScrollState()) // allows scrolling
             .padding(16.dp)
     ) {
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         BlackText(
             text = "My posts",
@@ -142,7 +172,9 @@ fun MyPostsScreenLayout(
                     pricePerMonthLabel = "$${post.price}/month",
                     imageUrl = post.photoPath.takeIf { it.isNotBlank() },
                     imageRes = if (post.photoPath.isNotBlank()) null else R.drawable.sample_house,
-                    modifier = Modifier.widthIn(max = 560.dp).fillMaxWidth()
+                    modifier = Modifier
+                        .widthIn(max = 560.dp)
+                        .fillMaxWidth()
                 )
             }
             Spacer(modifier = Modifier.height(16.dp))
