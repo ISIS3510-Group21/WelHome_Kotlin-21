@@ -37,17 +37,13 @@ class BookingScheduleRepository {
             .collection("BookingDate")
             .get().await()
 
-        val zone = ZoneId.systemDefault()
         val result = mutableMapOf<LocalDate, MutableList<LocalTime>>()
 
-        // UTC para agrupar por día (coherente con DatePicker)
-        val dayZone = ZoneOffset.UTC
-        // Zona local para mostrar la hora al usuario
-        val timeZone = ZoneId.systemDefault()
+        val zone = ZoneId.of("America/Bogota")
 
         for (dateDoc in datesSnap.documents) {
             val dateTs = dateDoc.get("date") as? Timestamp ?: continue
-            val localDate = dateTs.toDate().toInstant().atZone(dayZone).toLocalDate()
+            val localDate = dateTs.toDate().toInstant().atZone(zone).toLocalDate()
 
             val slotsSnap = dateDoc.reference.collection("BookingSlot").get().await()
             for (slotDoc in slotsSnap.documents) {
@@ -56,7 +52,7 @@ class BookingScheduleRepository {
                 if (availableUsers <= 0) continue
 
                 val timeTs = slotDoc.get("time") as? Timestamp ?: continue
-                val localTime = timeTs.toDate().toInstant().atZone(timeZone).toLocalTime()
+                val localTime = timeTs.toDate().toInstant().atZone(zone).toLocalTime()
                 result.getOrPut(localDate) { mutableListOf() }.add(localTime)
             }
         }
