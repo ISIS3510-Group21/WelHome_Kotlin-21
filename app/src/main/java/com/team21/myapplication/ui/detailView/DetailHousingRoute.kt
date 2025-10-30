@@ -17,6 +17,8 @@ import com.team21.myapplication.analytics.AnalyticsHelper
 import com.team21.myapplication.data.repository.AuthRepository
 import com.team21.myapplication.data.repository.HousingPostRepository
 import com.team21.myapplication.data.repository.StudentUserRepository
+import android.content.Intent
+import com.team21.myapplication.ui.bookVisit.BookVisitActivity
 
 /**
  * MVVM (Route):
@@ -81,7 +83,11 @@ fun DetailHousingRoute(
             DetailHousingView(
                 uiState = uiState,
                 onBack = onBack,
-                onBookVisit = { /* TODO: hook */ },
+                onBookVisit = {
+                    val intent = Intent(context, BookVisitActivity::class.java)
+                    .putExtra(BookVisitActivity.EXTRA_HOUSING_ID, housingId)
+                    context.startActivity(intent)
+                              },
                 onViewAllAmenities = { /* TODO */ },
                 onToggleFavorite = { /* TODO */ },
                 onCallHost = { /* TODO */ },
