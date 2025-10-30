@@ -405,4 +405,40 @@ class HousingPostRepository {
     suspend fun getTagsForPostId(postId: String): List<TagHousingPost> {
         return getHousingPostById(postId)?.tag ?: emptyList()
     }
+
+    // obtiene los primeros N como HousingPreview (para "default list")
+    suspend fun getFirstNPreviews(limit: Int = 20): List<HousingPreview> {
+        val snapshot = col.limit(limit.toLong()).get().await()
+        return snapshot.documents.mapNotNull { d ->
+            val p = mapHousingPostBase(d)
+            if (p == null) null else HousingPreview(
+                id = p.id,
+                price = p.price,
+                rating = p.rating.toFloat(),
+                reviewsCount = 0f,
+                title = p.title.ifBlank { "Untitled" },
+                photoPath = p.thumbnail,
+                housing = p.address
+            )
+        }
+    }
+
+    // obtiene todos como HousingPreview (modo online)
+    suspend fun getAllPreviews(): List<HousingPreview> {
+        val snapshot = col.get().await()
+        return snapshot.documents.mapNotNull { d ->
+            val p = mapHousingPostBase(d)
+            if (p == null) null else HousingPreview(
+                id = p.id,
+                price = p.price,
+                rating = p.rating.toFloat(),
+                reviewsCount = 0f,
+                title = p.title.ifBlank { "Untitled" },
+                photoPath = p.thumbnail,
+                housing = p.address
+            )
+        }
+    }
+
+
 }
