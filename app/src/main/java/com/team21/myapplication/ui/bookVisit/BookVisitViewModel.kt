@@ -29,46 +29,52 @@ class BookVisitViewModel : ViewModel() {
         _state.value = _state.value.copy(isLoading = true, error = null, housingId = housingId)
 
         viewModelScope.launch {
+            // 1) Best-effort: título y thumbnail (no abortar si falla)
+            var title: String
+            var thumb: String
             try {
-                val availability = repo.getAvailabilityByDay(housingId)
-
-                // cargar título y thumbnail
                 val housing = housingRepo.getHousingPostById(housingId)
-                val title = housing?.post?.title.orEmpty()
-                val thumb = housing?.post?.thumbnail.orEmpty()
-
-                // Si no hay fecha seleccionada aún se selecciona 'hoy'
-                val initialSelectedMillis = _state.value.selectedDateMillis
-                    ?: LocalDate.now(appZone)
-                        .atStartOfDay(ZoneOffset.UTC)
-                        .toInstant()
-                        .toEpochMilli()
-
-                val newHours = buildHoursForSelectedDate(
-                    availabilityByDay = availability,
-                    selectedDateMillis = initialSelectedMillis
-                )
-
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    availabilityByDay = availability,
-                    selectedDateMillis = initialSelectedMillis,
-                    availableHours = newHours,
-                    housingTitle = title,
-                    housingThumbnail = thumb,
-                    error = null
-                )
+                title = housing?.post?.title.orEmpty()
+                thumb = housing?.post?.thumbnail.orEmpty()
             } catch (e: Exception) {
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    error = e.message ?: "Error loading availability"
-                )
+                // Offline o error: seguimos con strings vacíos
+                title = ""
+                thumb = ""
             }
+
+            // 2) Seleccionar fecha inicial
+            val initialSelectedMillis = _state.value.selectedDateMillis
+                ?: LocalDate.now(appZone)
+                    .atStartOfDay(ZoneOffset.UTC)
+                    .toInstant()
+                    .toEpochMilli()
+
+            // 3) Colocar estado base y mostrar spinner de horas
+            _state.value = _state.value.copy(
+                housingTitle = title,
+                housingThumbnail = thumb,
+                selectedDateMillis = initialSelectedMillis,
+                isLoading = false,
+                isLoadingHours = true,
+                error = null
+            )
+
+            // 4) siempre intentar disponibilidad cache
+            //    (online -> red + refresca cache; offline -> solo cache compartida)
+            reloadAvailability(forceHoursSpinner = true)
         }
+
     }
 
 
     fun onDateSelected(millis: Long?) {
+        val s = _state.value
+        _state.value = s.copy(
+            selectedDateMillis = millis,
+            selectedHour = null,
+            isLoadingHours = true
+        )
+
         val hours = buildHoursForSelectedDate(
             availabilityByDay = _state.value.availabilityByDay,
             selectedDateMillis = millis
@@ -76,7 +82,8 @@ class BookVisitViewModel : ViewModel() {
         _state.value = _state.value.copy(
             selectedDateMillis = millis,
             selectedHour = null,
-            availableHours = hours
+            availableHours = hours,
+            isLoadingHours = false
         )
     }
 
@@ -86,6 +93,10 @@ class BookVisitViewModel : ViewModel() {
     }
 
     fun onConfirm() {
+        if (!_state.value.isOnline) {
+            _state.value = _state.value.copy(error = "You are offline. Please reconnect to confirm.")
+            return
+        }
         val s = _state.value
         val millis = s.selectedDateMillis ?: return
         val hour = s.selectedHour ?: return
@@ -147,6 +158,49 @@ class BookVisitViewModel : ViewModel() {
         val selectedDate = Instant.ofEpochMilli(selectedDateMillis).atZone(ZoneOffset.UTC).toLocalDate()
         val times = availabilityByDay[selectedDate].orEmpty()
         return times.map { t -> repo.formatHour(t) }
+    }
+
+    fun onConnectivityChanged(online: Boolean) {
+        val prev = _state.value
+        _state.value = prev.copy(isOnline = online)
+        // Si se vuelve online -> rescatar desde red (y mostrar spinner de horas si ya hay fecha seleccionada)
+        if (online && prev.housingId.isNotBlank()) {
+            reloadAvailability(forceHoursSpinner = true)
+        }
+    }
+
+    private fun reloadAvailability(forceHoursSpinner: Boolean = false) {
+        val s = _state.value
+        val housingId = s.housingId
+        if (housingId.isBlank()) return
+
+        _state.value = s.copy(
+            isLoading = if (!forceHoursSpinner) true else s.isLoading,
+            isLoadingHours = forceHoursSpinner || s.isLoadingHours,
+            error = null
+        )
+
+        viewModelScope.launch {
+            try {
+                val (map, stamp) = repo.getAvailabilitySmart(housingId, _state.value.isOnline)
+                val millisSel = _state.value.selectedDateMillis
+                val hours = buildHoursForSelectedDate(map, millisSel)
+
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    isLoadingHours = false,
+                    availabilityByDay = map,
+                    availableHours = hours,
+                    lastOnlineAtMillis = stamp?.toEpochMilli()
+                )
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    isLoadingHours = false,
+                    error = e.message ?: "Error loading availability"
+                )
+            }
+        }
     }
 
 }

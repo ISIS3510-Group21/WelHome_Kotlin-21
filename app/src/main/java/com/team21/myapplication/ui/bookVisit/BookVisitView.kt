@@ -38,6 +38,10 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.platform.LocalContext
+import com.team21.myapplication.utils.App
+import com.team21.myapplication.ui.components.banners.ConnectivityBanner
+import com.team21.myapplication.ui.components.banners.BannerPosition
 
 
 
@@ -68,13 +72,30 @@ fun BookVisitView(
         Box(
             modifier = Modifier.fillMaxSize()
         ) {
-
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp),
             ) {
+                if (!state.isOnline) {
+                    ConnectivityBanner(
+                        visible = true,
+                        position = BannerPosition.Top,
+                        message = run {
+                            val ts = state.lastOnlineAtMillis
+                            if (ts != null) {
+                                // Formatea en Bogotá
+                                val zoned = java.time.Instant.ofEpochMilli(ts).atZone(java.time.ZoneId.of("America/Bogota"))
+                                val pretty = zoned.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+                                "You’re offline. You are seeing the schedules of $pretty"
+                            } else {
+                                "You’re offline. Showing last known schedules."
+                            }
+                        }
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Row(
@@ -130,22 +151,33 @@ fun BookVisitView(
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    state = rememberLazyGridState(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(180.dp)
-                ) {
-                    items(state.availableHours) { h ->
-                        BlueButton(
-                            text = if (h == state.selectedHour) "✓ $h" else h,
-                            onClick = { onSelectHour(h) },
-                            enabled = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                if (state.isLoadingHours) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        androidx.compose.material3.CircularProgressIndicator()
+                    }
+                } else {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        state = rememberLazyGridState(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp)
+                    ) {
+                        items(state.availableHours) { h ->
+                            BlueButton(
+                                text = if (h == state.selectedHour) "✓ $h" else h,
+                                onClick = { onSelectHour(h) },
+                                enabled = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
                 }
 
@@ -153,7 +185,10 @@ fun BookVisitView(
 
                 BlueButton(
                     text = "Confirm date",
-                    enabled = state.selectedDateMillis != null && state.selectedHour != null && !state.isConfirming,
+                    enabled = state.selectedDateMillis != null &&
+                            state.selectedHour != null &&
+                            !state.isConfirming &&
+                            state.isOnline,
                     onClick = onConfirm
                 )
 
@@ -217,6 +252,13 @@ fun BookVisitRoute(
 ) {
     val vm: BookVisitViewModel = viewModel()
     val uiState by vm.state.collectAsState()
+    val context = LocalContext.current
+    val app = context.applicationContext as App
+    val isOnline by app.networkMonitor.isOnline.collectAsState()
+
+    LaunchedEffect(isOnline) {
+        vm.onConnectivityChanged(isOnline)
+    }
 
     LaunchedEffect(housingId) { vm.load(housingId) }
 
