@@ -250,10 +250,10 @@ fun CreatePostScreenLayout(
 
             // Define the tag IDs according to Firebase
             val housingTags = listOf(
-                "HousingTag1" to "House" to AppIcons.Home,
-                "HousingTag2" to "Apartment" to AppIcons.Apartments,
-                "HousingTag3" to "Cabin" to AppIcons.Cabins,
-                "HousingTag11" to "Residence" to AppIcons.Houses
+                "House" to "House" to AppIcons.Home,
+                "Apartment" to "Apartment" to AppIcons.Apartments,
+                "Cabin" to "Cabin" to AppIcons.Cabins,
+                "Residence" to "Residence" to AppIcons.Houses
             )
 
             Row(
