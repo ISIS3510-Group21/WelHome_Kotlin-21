@@ -1,74 +1,157 @@
 package com.team21.myapplication.ui.detailView
 
-import android.util.Log
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.messaging.FirebaseMessaging
 import com.team21.myapplication.analytics.AnalyticsHelper
+import com.team21.myapplication.cache.LruCacheProvider
+import com.team21.myapplication.cache.RecentDetailCache
+import com.team21.myapplication.data.local.DetailLocalDataSource
+import com.team21.myapplication.data.local.RoomDetailLocalDataSource
 import com.team21.myapplication.data.repository.AuthRepository
 import com.team21.myapplication.data.repository.HousingPostRepository
 import com.team21.myapplication.data.repository.StudentUserRepository
+import com.team21.myapplication.domain.mapper.DetailHousingUiMapper
 import com.team21.myapplication.domain.usecase.GetHousingPostByIdUseCase
+import com.team21.myapplication.ui.detailView.state.DetailHousingUiState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import com.team21.myapplication.domain.mapper.DetailHousingUiMapper
-import com.team21.myapplication.ui.detailView.state.DetailHousingUiState
 import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.Dispatchers
 
 /**
- * MVVM (ViewModel):
- * - Orquesta caso de uso + mapeo a UiState.
- * - Expone STATE inmutable vía StateFlow (la View OBSERVA este flujo).
+ * DetailHousingViewModel
+ *
+ * Primary constructor ONLY receives Application so the default AndroidViewModelFactory can instantiate it.
+ *
+ * Patterns used and tagged inline:
+ * - [EVENTUAL CONNECTIVITY] [CACHE-FIRST]  memory (MRU/LRU) -> Room snapshot -> network
+ * - [LOCAL STORAGE]  DetailLocalDataSource (Room) persists/reads the UI snapshot
+ * - [CACHING]  LruCacheProvider (1/8 memory) + non-singleton MRU (passed from Route)
+ * - [MULTITHREADING]  IO for DB/network; Main for UI updates (viewModelScope)
  */
-class DetailHousingViewModel(
-    // Default para evitar factory por ahora (puedes cambiar a Hilt/factory luego)
-    private val getHousingPostById: GetHousingPostByIdUseCase =
-        GetHousingPostByIdUseCase(HousingPostRepository())
-) : ViewModel() {
+class DetailHousingViewModel(app: Application) : AndroidViewModel(app) {
 
+    // --- Repos & Use cases (build inside for factory-friendliness) ---
+    private val appCtx = app.applicationContext
+    private val housingRepo = HousingPostRepository()
+    private val getHousingPostById = GetHousingPostByIdUseCase(housingRepo)
+
+    // [LOCAL STORAGE] Room-backed local data source
+    private val local: DetailLocalDataSource = RoomDetailLocalDataSource(appCtx)
+
+    // [CACHING] Per-VM LRU (1/8 of process memory by default)
+    private val lru = LruCacheProvider<String, DetailHousingUiState>()
+
+    // --- UI state ---
     private val _state = MutableStateFlow(DetailHousingUiState())
     val state: StateFlow<DetailHousingUiState> = _state
 
     private var currentHousingId: String? = null
     private var cachedTags: List<String> = emptyList()
-    val housingRepo = HousingPostRepository()
 
-    fun load(housingId: String) {
+    /**
+     * Load the detail using cache-first → network strategy.
+     *
+     * @param housingId      the post to load
+     * @param isOnline       current connectivity flag
+     * @param recentCache    [CACHING] non-singleton MRU cache owned by the Route
+     */
+    fun load(housingId: String, isOnline: Boolean, recentCache: RecentDetailCache) {
         currentHousingId = housingId
         _state.value = _state.value.copy(isLoading = true, error = null)
 
         viewModelScope.launch {
-            try {
-                val full = getHousingPostById(housingId)
-                if (full == null) {
-                    _state.value = _state.value.copy(
-                        isLoading = false,
-                        error = "Housing no encontrado"
-                    )
-                } else {
-                    _state.value = DetailHousingUiMapper.toUiState(full)
+            // ----------------- MEMORY: MRU (fast path) -----------------
+            // [EVENTUAL CONNECTIVITY] [CACHE-FIRST] [CACHING]
+            recentCache.get(housingId)?.let { mruUi ->
+                _state.value = mruUi.copy(isLoading = false)
+            } ?: run {
+                // ----------------- MEMORY: LRU (fall back) -----------------
+                // [EVENTUAL CONNECTIVITY] [CACHE-FIRST] [CACHING]
+                lru.get("detail:$housingId")?.let { lruUi ->
+                    _state.value = lruUi.copy(isLoading = false)
+                    // keep MRU in sync
+                    recentCache.put(housingId, _state.value)
+                }
+            }
+
+            // ----------------- ROOM snapshot -----------------
+            // [EVENTUAL CONNECTIVITY] [CACHE-FIRST] [LOCAL STORAGE] [MULTITHREADING]
+            if (_state.value.title.isBlank()) {
+                val snapshot = withContext(Dispatchers.IO) { local.getSnapshot(housingId) }
+                if (snapshot != null) {
+                    _state.value = snapshot.copy(isLoading = false)
+                    // update caches
+                    recentCache.put(housingId, _state.value)
+                    lru.put("detail:$housingId", _state.value)
+                }
+            }
+
+            // ----------------- NETWORK fetch (if online) -----------------
+            if (isOnline) {
+                // [MULTITHREADING] Network/DB on IO; UI on Main.
+                runCatching {
+                    val domain = withContext(Dispatchers.IO) { getHousingPostById(housingId) }
+                    if (domain == null) error("Housing not found")
+
+                    val ui = DetailHousingUiMapper.toUiState(domain)
+                    _state.value = ui.copy(isLoading = false)
+
+                    // For analytics later
                     cachedTags = try {
-                        housingRepo.getTagsForPostId(housingId).map { it.name }
-                    } catch (e: Exception) {
-                        emptyList()
+                        withContext(Dispatchers.IO) { housingRepo.getTagsForPostId(housingId) }.map { it.name }
+                    } catch (_: Exception) { emptyList() }
+
+                    // Update caches
+                    // [CACHING]
+                    recentCache.put(housingId, _state.value)
+                    lru.put("detail:$housingId", _state.value)
+
+                    // Persist snapshot for offline reuse
+                    // [LOCAL STORAGE] [MULTITHREADING]
+                    withContext(Dispatchers.IO) { local.saveSnapshot(housingId, _state.value) }
+                }.onFailure { e ->
+                    // If nothing has been shown yet, surface an error or placeholder when offline
+                    if (_state.value.title.isBlank()) {
+                        _state.value = _state.value.copy(isLoading = false, error = "Error loading: ${e.message ?: "unknown"}")
                     }
                 }
-            } catch (e: Exception) {
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    error = "Error al cargar: ${e.message ?: "desconocido"}"
-                )
+            } else {
+                // ----------------- OFFLINE fallback: placeholder -----------------
+                // If caches/Room had nothing, render a generic placeholder (non-blocking)
+                if (_state.value.title.isBlank()) {
+                    // Your View already handles blanks; make it explicit
+                    _state.value = DetailHousingUiState(
+                        isLoading = false,
+                        error = null,
+                        title = "",
+                        rating = 0.0,
+                        pricePerMonthLabel = "",
+                        address = "",
+                        ownerName = "",
+                        imagesFromServer = emptyList(),
+                        amenityLabels = emptyList(),
+                        roommateNames = emptyList(),
+                        roommateCount = 0,
+                        reviewsCount = 0,
+                        latitude = null,
+                        longitude = null,
+                        status = "offline"
+                    )
+                }
             }
         }
     }
 
+    // ---------------- Analytics (unchanged, runs on IO) ----------------
     fun onDetailVisibleFor(
         durationMs: Long,
         analytics: AnalyticsHelper,
@@ -82,57 +165,28 @@ class DetailHousingViewModel(
         val title = state.value.title.ifBlank { "Unknown" }
 
         viewModelScope.launch {
-            //val uid = authRepo.getCurrentUserId()
             val uid = authRepo.getCurrentUserId() ?: return@launch
 
-            val student = studentRepo.getStudentUser(uid)
-
             val nationality = try {
-                if (uid != null) studentRepo.getStudentUser(uid)?.nationality ?: "Unknown" else "Unknown"
-            } catch (e: Exception) {
-                Log.w("DetailHousing", "No se pudo leer student/nationality: ${e.message}")
-                "Unknown"
-            }
+                studentRepo.getStudentUser(uid)?.nationality ?: "Unknown"
+            } catch (_: Exception) { "Unknown" }
 
-            val tags = cachedTags
+            val tags = cachedTags.ifEmpty { listOf("Unknown") }
 
-            // 1) Analytics: evento por tag
             analytics.logHousingDetailViewTime(
                 postId = housingId,
                 postTitle = title,
-                tags = if (tags.isEmpty()) listOf("Unknown") else tags,
+                tags = tags,
                 durationMs = durationMs,
                 userNationality = nationality
             )
 
-            // Ejecuta ambas cosas en un bloque no cancelable y en IO
             withContext(NonCancellable + Dispatchers.IO) {
-
-                try {
-                    // 1) Acumular duración por tag en Firestore
-                    incrementUserTagCounters(
-                        firestore = firestore,
-                        uid = uid,
-                        tags = if (tags.isEmpty()) listOf("Unknown") else tags,
-                        durationMs = durationMs
-                    )
-                } catch (e: Exception) {
-                    Log.e("PrefTopic", "Error incrementando contadores: ${e.message}")
-                }
-
-                try {
-                    // 2) Calcular top y suscribirse al topic además escribe _top y _topic
-                    updateUserPreferredTopic(
-                        firestore = firestore,
-                        messaging = messaging,
-                        uid = uid,
-                        analytics = analytics
-                    )
-                } catch (e: Exception) {
-                    Log.e("PrefTopic", "Error en updateUserPreferredTopic: ${e.message}")
+                runCatching {
+                    incrementUserTagCounters(firestore, uid, tags, durationMs)
+                    updateUserPreferredTopic(firestore, messaging, uid, analytics)
                 }
             }
-
         }
     }
 
@@ -153,36 +207,18 @@ class DetailHousingViewModel(
         uid: String,
         analytics: AnalyticsHelper
     ) {
-
         val snap = firestore.collection("UserTagStats").document(uid).get().await()
-        if (!snap.exists()){
-            return
-        }
-        val data = snap.data ?:  run {
-            Log.w("PrefTopic", "Doc vacío en UserTagStats/$uid")
-            return
-        }
-
+        val data = snap.data ?: return
         val top = data.entries
             .filter { it.key !in setOf("_topic","_top") && it.value is Number }
             .maxByOrNull { (it.value as Number).toDouble() }
-            ?.key
-
-        if (top == null) {
-            Log.w("PrefTopic", "No hay campos numéricos para calcular top en $uid")
-            return
-        }
+            ?.key ?: return
 
         firestore.collection("UserTagStats").document(uid)
             .set(mapOf("_top" to top), SetOptions.merge()).await()
 
         val topic = "pref_tag_" + top.lowercase().replace(" ", "_").replace(Regex("[^a-z0-9_]+"), "")
-
-        messaging.subscribeToTopic(topic).addOnCompleteListener {
-            if (!it.isSuccessful) {
-                Log.w("PrefTopic", "Fallo al suscribir a $topic: ${it.exception?.message}")
-            }
-        }
+        messaging.subscribeToTopic(topic)
 
         firestore.collection("UserTagStats").document(uid)
             .set(mapOf("_topic" to topic), SetOptions.merge()).await()
