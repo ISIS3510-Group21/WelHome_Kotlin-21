@@ -20,4 +20,9 @@ data class BookVisitUiState(
     val isConfirming: Boolean = false,
     val successMessage: String? = null,
 
+    // conectividad y UX
+    val isOnline: Boolean = true,
+    val lastOnlineAtMillis: Long? = null,   // para "You’re offline"
+    val isLoadingHours: Boolean = false     // spinner en rejilla de horas
+
     )

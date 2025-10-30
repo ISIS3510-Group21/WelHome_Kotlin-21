@@ -5,11 +5,17 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import java.time.*
 import java.time.format.DateTimeFormatter
+import android.util.ArrayMap
+import java.time.Instant
 
 class BookingScheduleRepository {
 
     private val db = FirebaseFirestore.getInstance()
     private val scheduleCol = db.collection("BookingSchedule")
+    companion object {
+        // cache en memoria por housingId — compartida entre instancias
+        private val availabilityCache = ArrayMap<String, Pair<Map<LocalDate, List<LocalTime>>, Instant>>()
+    }
 
     /** Busca el schedule de un housingId. Tolera housing como String, DocumentReference o path String. */
     private suspend fun findScheduleDocId(housingId: String): String? {
@@ -61,4 +67,31 @@ class BookingScheduleRepository {
 
     /** Formatea hora a "H:mm" (7:00, 8:00, …). */
     fun formatHour(t: LocalTime): String = t.format(DateTimeFormatter.ofPattern("H:mm"))
+
+    /**
+     * Devuelve disponibilidad usando cache si se esta offline.
+     *
+     * @param housingId id de la vivienda
+     * @param isOnline  si hay internet ahora
+     * @return Pair(map, updatedAt) donde updatedAt es el Instant de última actualización OK
+     */
+    suspend fun getAvailabilitySmart(housingId: String, isOnline: Boolean): Pair<Map<LocalDate, List<LocalTime>>, Instant?> {
+        val zone = ZoneId.of("America/Bogota")
+
+        if (!isOnline) {
+            // OFFLINE -> devolvemos cache si hay
+            val cached = availabilityCache[housingId]
+            return if (cached != null) cached else (emptyMap<LocalDate, List<LocalTime>>() to null)
+        }
+
+        // Online -> perdir a Firestore y actualizar cache
+        val fresh = getAvailabilityByDay(housingId)
+        val now = Instant.now()
+        availabilityCache[housingId] = fresh to now
+        return fresh to now
+    }
+
+    /** Para leer la fecha/hora de cache sin pedir a red. */
+    fun getCachedStamp(housingId: String): Instant? = availabilityCache[housingId]?.second
+
 }
