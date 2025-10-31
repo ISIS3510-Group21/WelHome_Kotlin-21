@@ -14,8 +14,21 @@ import com.team21.myapplication.data.local.entity.MyPostEntity
 import com.team21.myapplication.data.model.MapCacheEntry
 import com.team21.myapplication.data.local.dao.OwnerOfflinePreviewDao
 import com.team21.myapplication.data.local.entity.OwnerOfflinePreviewEntity
+import com.team21.myapplication.data.local.dao.DraftPostDao
+import com.team21.myapplication.data.local.entity.DraftPostEntity
+import com.team21.myapplication.data.local.entity.DraftImageEntity
+import com.team21.myapplication.data.local.entity.AmenityEntity
+import com.team21.myapplication.data.local.dao.AmenityDao
 
-@Database(entities = [HousingEntity::class, MyPostEntity::class, OwnerOfflinePreviewEntity::class, MapCacheEntry::class], version = 3, exportSchema = false)
+
+@Database(entities = [HousingEntity::class,
+    MyPostEntity::class,
+    OwnerOfflinePreviewEntity::class,
+    MapCacheEntry::class,
+    DraftPostEntity::class,
+    DraftImageEntity::class,
+    AmenityEntity::class],
+    version = 3, exportSchema = false)
 @TypeConverters(MapLocationConverter::class)
 abstract class AppDatabase : RoomDatabase() {
 
@@ -23,6 +36,10 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun myPostsDao(): MyPostsDao
     abstract fun mapCacheDao(): MapCacheDao
     abstract fun ownerOfflineDao(): OwnerOfflinePreviewDao
+
+    abstract fun draftPostDao(): DraftPostDao
+
+    abstract fun amenityDao(): AmenityDao
 
     companion object {
         @Volatile

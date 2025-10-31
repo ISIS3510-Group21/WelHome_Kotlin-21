@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import android.content.Context
 
 class AmenitiesViewModel : ViewModel() {
     private val repository = AmenityRepository()
@@ -25,7 +26,7 @@ class AmenitiesViewModel : ViewModel() {
     val isLoading = _uiState.map { it.isLoading }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     init {
-        loadAmenities()
+        //loadAmenities()
     }
 
     private fun loadAmenities() {
@@ -63,4 +64,34 @@ class AmenitiesViewModel : ViewModel() {
         val state = _uiState.value
         return state.amenitiesList.filter { state.selectedAmenitiesIds.contains(it.id) }
     }
+
+    fun refreshAmenities(context: Context, isOnline: Boolean) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            try {
+                val list = if (isOnline) {
+                    // 1) remoto
+                    val remote = repository.getAmenities()
+                    // 2) cachear en Room
+                    repository.cacheAmenities(context, remote)
+                    remote
+                } else {
+                    // offline → Room
+                    repository.getAmenitiesLocal(context)
+                }
+                _uiState.value = _uiState.value.copy(
+                    amenitiesList = list,
+                    isLoading = false
+                )
+            } catch (e: Exception) {
+                // fallback: si falló remoto y hay algo cacheado, úsalo; si no, lista vacía
+                val cached = repository.getAmenitiesLocal(context)
+                _uiState.value = _uiState.value.copy(
+                    amenitiesList = cached,
+                    isLoading = false
+                )
+            }
+        }
+    }
+
 }

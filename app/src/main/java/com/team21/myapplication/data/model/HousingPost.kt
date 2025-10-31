@@ -77,5 +77,6 @@ data class BasicHousingPost(
     val title: String = "",
     val photoPath: String = "",
     val price: Double = 0.0,
-    val housing: String = ""
+    val housing: String = "",
+    val isDraft: Boolean = false
 )

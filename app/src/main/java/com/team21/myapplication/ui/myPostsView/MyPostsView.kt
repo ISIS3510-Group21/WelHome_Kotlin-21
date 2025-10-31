@@ -46,6 +46,16 @@ import com.team21.myapplication.ui.components.banners.BannerPosition
 import com.team21.myapplication.ui.components.banners.ConnectivityBanner
 import com.team21.myapplication.ui.createPostView.CreatePostActivity
 import com.team21.myapplication.utils.NetworkMonitor
+import androidx.compose.foundation.background
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
+
 
 @Composable
 fun MyPostsScreen() {
@@ -57,12 +67,13 @@ fun MyPostsScreen() {
 
 
     val vm: MyPostsViewModel = viewModel(
-        factory = MyPostsViewModelFactory(
+        factory = MyPostsViewModel.MyPostsViewModelFactory(
             ownerRepo = OwnerUserRepository(),
             authRepo = AuthRepository(),
             session = session,
             dao = db.myPostsDao(),
-            net = net
+            net = net,
+            draftDao = db.draftPostDao()
         )
     )
 
@@ -166,17 +177,72 @@ fun MyPostsScreenLayout(
         Spacer(modifier = Modifier.height(24.dp))
 
         posts.forEachIndexed { idx, post ->
-            Box(contentAlignment = Alignment.Center) {
+            // 1) Normalizar la ruta de imagen (si es local, usa "file://")
+            val imgUrl = when {
+                post.photoPath.isBlank() -> null
+                post.photoPath.startsWith("/") -> "file://${post.photoPath}"
+                else -> post.photoPath
+            }
+
+            Box(
+                modifier = Modifier.widthIn(max = 560.dp).fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                // 2) Card base (igual que antes)
                 BasicHousingInfoCard(
                     title = post.title,
-                    pricePerMonthLabel = "$${post.price}/month",
-                    imageUrl = post.photoPath.takeIf { it.isNotBlank() },
-                    imageRes = if (post.photoPath.isNotBlank()) null else R.drawable.sample_house,
-                    modifier = Modifier
-                        .widthIn(max = 560.dp)
-                        .fillMaxWidth()
+                    pricePerMonthLabel = if (post.isDraft) "Pending upload" else "$${post.price}/month",
+                    imageUrl = imgUrl,
+                    imageRes = if (imgUrl != null) null else R.drawable.sample_house,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { if (post.isDraft) null else { /* navegar al detail */ } }
                 )
+
+                // 3) Si es borrador: overlay semitransparente + “pill” con ícono de reloj
+                if (post.isDraft) {
+                    // scrim que "apaga" la card
+                    Box(
+                        Modifier
+                            .matchParentSize()
+                            .background(Color.Black.copy(alpha = 0.25f))
+                    )
+
+                    // “Pill” superior derecha con reloj + texto
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(10.dp)
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        androidx.compose.material3.Icon(
+                            imageVector = Icons.Filled.Schedule,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(end = 6.dp)
+                        )
+                        Text(
+                            text = "Pending upload",
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    // 4) Borde sutil alrededor para diferenciar aún más
+                    Box(
+                        Modifier
+                            .matchParentSize()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color.Transparent)
+                            .padding(1.dp)
+                            .background(Color(0xFF9AA0A6).copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                    )
+                }
             }
+
             Spacer(modifier = Modifier.height(16.dp))
         }
 

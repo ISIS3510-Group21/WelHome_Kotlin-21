@@ -23,6 +23,13 @@ import com.team21.myapplication.data.repository.HousingTagRepository
 import kotlinx.coroutines.launch
 import com.team21.myapplication.ui.createPostView.state.CreatePostOperationState
 import com.team21.myapplication.ui.createPostView.state.CreatePostUiState
+import android.content.Context
+import com.team21.myapplication.data.local.AppDatabase
+import com.team21.myapplication.data.local.entity.DraftPostEntity
+import com.team21.myapplication.data.local.entity.DraftImageEntity
+import com.team21.myapplication.data.local.files.DraftFileStore
+import java.util.UUID
+
 
 /**
  * ViewModel to manage the logic of creating posts
@@ -415,4 +422,121 @@ class CreatePostViewModel : ViewModel() {
             descError = null
         )
     }
+
+    //Guardar borrador desde el UiState
+    suspend fun saveDraftFromUiState(context: Context, ownerId: String): String {
+        val s = _uiState.value
+        val draftId = UUID.randomUUID().toString()
+
+        // 1) Copiar imágenes a almacenamiento interno app
+        val allUris = buildList {
+            s.mainPhoto?.let { add(it) }
+            addAll(s.additionalPhotos)
+        }
+        val imageEntities = allUris.mapIndexed { idx, uri ->
+            val path = DraftFileStore.copyIntoDraft(context, draftId, uri, idx)
+            DraftImageEntity(
+                draftId = draftId,
+                isMain = (idx == 0),
+                localPath = path
+            )
+        }
+
+        // 2) Persistir borrador + imágenes en Room
+        val db = AppDatabase.getDatabase(context)
+        val draftDao = db.draftPostDao()
+        val amenitiesIds = s.selectedAmenities.joinToString(",") { it.id }
+
+        val draft = DraftPostEntity(
+            id = draftId,
+            title = s.title.trim(),
+            description = s.description.trim(),
+            price = s.price.toDoubleOrNull() ?: 0.0,
+            address = s.address.trim(),
+            selectedTagId = s.selectedTagId,
+            amenitiesIdsCsv = amenitiesIds,
+            createdAtMillis = System.currentTimeMillis(),
+            ownerId = ownerId
+        )
+        draftDao.upsertWithImages(draft, imageEntities)
+        return draftId
+    }
+
+    // Decidir create vs draft
+    fun createOrDraft(
+        isOnline: Boolean,
+        context: Context,
+        onDone: (Boolean, String?) -> Unit = { _, _ -> }
+    ) {
+        val state = _uiState.value
+        val validationError = validatePostState(state)
+        if (validationError != null) {
+            _uiState.value = state.copy(
+                operationState = CreatePostOperationState.Error(validationError)
+            )
+            return
+        }
+
+        viewModelScope.launch {
+            val ownerId = authRepo.getCurrentUserId()
+            if (ownerId == null) {
+                _uiState.value = _uiState.value.copy(
+                    operationState = CreatePostOperationState.Error("Error obtaining user")
+                )
+                return@launch
+            }
+
+            if (!isOnline) {
+                // Guardar borrador y encolar Worker
+                val draftId = saveDraftFromUiState(context, ownerId)
+                com.team21.myapplication.workers.enqueueUploadDraft(context, draftId)
+                _uiState.value = _uiState.value.copy(
+                    // usa tu Success actual; si es data class con postId, pon "DRAFT_SAVED"
+                    operationState = CreatePostOperationState.Success("DRAFT_SAVED")
+                )
+                onDone(true, "draft")
+            } else {
+                // Flujo online tal como ya lo tienes
+                createPost(onDone)
+            }
+        }
+    }
+
+    // === OFFLINE FALLBACKS ===
+
+    /** Precio fijo offline: 950,000 (promedio global). Actualiza UI. */
+    fun setOfflineSuggestedPrice() {
+        val s = _uiState.value
+        _uiState.value = s.copy(
+            isSuggestingPrice = false,
+            suggestedPrice = SuggestedPrice(
+                value = 950000.0,
+                low = 950000.0,
+                high = 950000.0,
+                compsCount = 0,
+                note = "Offline default average."
+            ),
+            price = "950000"
+        )
+    }
+
+    /** Descripción offline: usa plantillas de AiPrompts con amenities del usuario. */
+    fun generateOfflineDescription() {
+        val s = _uiState.value
+        val amenitiesNames = s.selectedAmenities.map { it.name } // usa tus entidades actuales
+        val offlineDesc = com.team21.myapplication.data.repository.AiPrompts
+            .makeOfflineTemplate(amenitiesNames)
+
+        _uiState.value = s.copy(
+            isDescGenerating = false,
+            previousDescription = s.description,
+            description = offlineDesc,
+            showDescReviewControls = true,
+            descError = null
+        )
+    }
+
+
+
+
 }
