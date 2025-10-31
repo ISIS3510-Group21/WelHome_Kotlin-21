@@ -1,6 +1,7 @@
 package com.team21.myapplication.ui.forum
 
 import android.util.Log
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -12,11 +13,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.DirectionsCar
-import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -32,6 +31,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.team21.myapplication.data.model.ForumPost
 import com.team21.myapplication.data.model.ThreadForum
+import com.team21.myapplication.ui.components.banners.BannerPosition
+import com.team21.myapplication.ui.components.banners.ConnectivityBanner
 import com.team21.myapplication.ui.components.cards.CommentCard
 import com.team21.myapplication.ui.components.cards.ExpandableCard
 import com.team21.myapplication.ui.theme.AppTheme
@@ -43,14 +44,16 @@ fun ForumScreen(
     forumViewModel: ForumViewModel = viewModel()
 ) {
     val state by forumViewModel.state.collectAsState()
+    val isOnline by forumViewModel.isOnline.collectAsState()
 
     ForumContent(
         modifier = modifier,
         threads = state.threads,
         isLoading = state.isLoading,
-        onThreadClick = { thread ->
-            Log.d("ForumScreen", "Thread clicked: $thread")
-            forumViewModel.selectThread(thread)
+        isOnline = isOnline,
+        onThreadClick = {
+            Log.d("ForumScreen", "Thread clicked: $it")
+            forumViewModel.selectThread(it)
         },
         selectedThreadId = state.selectedThread?.id
     )
@@ -62,56 +65,69 @@ fun ForumContent(
     modifier: Modifier = Modifier,
     threads: List<ThreadForum>,
     isLoading: Boolean = false,
+    isOnline: Boolean = true,
     selectedThreadId: String? = null,
     onThreadClick: (ThreadForum) -> Unit = {}
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp)
-    ) {
-        Text(
-            text = "Forum",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(top = 16.dp, bottom = 10.dp)
-        )
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
+        ) {
+            Text(
+                text = "Forum",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 16.dp, bottom = 10.dp)
+            )
 
-        Text(
-            text = "Topics",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF757575)
-        )
+            Text(
+                text = "Topics",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF757575)
+            )
 
-        Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-        if (isLoading && threads.isEmpty()) {
-            CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
-        } else {
-            LazyColumn(contentPadding = PaddingValues(bottom = 16.dp)) {
-                items(threads) { thread ->
-                    ExpandableCard(
-                        title = thread.title,
-                        icon = getIconForTopic(thread.title),
-                        initiallyExpanded = thread.id == selectedThreadId,
-                        onExpand = { onThreadClick(thread) }
-                    ) {
-                        Column {
-                            thread.forumPost.forEach { post ->
-                                CommentCard(
-                                    imageUrl = post.userPhoto.takeIf { it.isNotBlank() },
-                                    name = post.userName,
-                                    country = "Canada",
-                                    comment = post.content,
-                                    rating = 4.95f
-                                )
+            if (isLoading && threads.isEmpty()) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+            } else {
+                LazyColumn(contentPadding = PaddingValues(bottom = 16.dp)) {
+                    items(threads) { thread ->
+                        ExpandableCard(
+                            title = thread.title,
+                            icon = getIconForTopic(thread.title),
+                            initiallyExpanded = thread.id == selectedThreadId,
+                            onExpand = { onThreadClick(thread) }
+                        ) {
+                            Column {
+                                if (thread.forumPost.isEmpty() && thread.id == selectedThreadId) {
+                                    CircularProgressIndicator(modifier = Modifier.padding(16.dp).align(Alignment.CenterHorizontally))
+                                } else {
+                                    thread.forumPost.forEach { post ->
+                                        CommentCard(
+                                            imageUrl = post.userPhoto.takeIf { it.isNotBlank() },
+                                            name = post.userName,
+                                            country = "Canada",
+                                            comment = post.content,
+                                            rating = 4.95f
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
         }
+
+        ConnectivityBanner(
+            visible = !isOnline,
+            position = BannerPosition.Top,
+            modifier = Modifier.align(Alignment.TopCenter)
+        )
     }
 }
 fun getIconForTopic(topicTitle: String): ImageVector {
