@@ -10,10 +10,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.lifecycleScope
 import com.team21.myapplication.ui.theme.AppTheme
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import kotlinx.coroutines.launch
 
 /**
  * Activity for creating a new housing post
@@ -33,7 +35,7 @@ class CreatePostActivity : ComponentActivity() {
 
         // Configure content with Compose
         setContent {
-            // Apply your application's theme
+            // Apply application's theme
             AppTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -82,5 +84,14 @@ class CreatePostActivity : ComponentActivity() {
                 }
             }
         }
+
+        lifecycleScope.launch {
+            val db = com.team21.myapplication.data.local.AppDatabase.getDatabase(this@CreatePostActivity)
+            val pending = db.draftPostDao().getAllDraftsOnce()
+            pending.forEach { draft ->
+                com.team21.myapplication.workers.enqueueUploadDraft(this@CreatePostActivity, draft.id)
+            }
+        }
+
     }
 }

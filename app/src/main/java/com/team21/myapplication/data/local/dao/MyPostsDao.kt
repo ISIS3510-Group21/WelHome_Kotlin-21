@@ -18,4 +18,7 @@ interface MyPostsDao {
 
     @Query("DELETE FROM my_posts WHERE ownerId = :ownerId")
     suspend fun deleteByOwner(ownerId: String)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(entity: MyPostEntity)
 }

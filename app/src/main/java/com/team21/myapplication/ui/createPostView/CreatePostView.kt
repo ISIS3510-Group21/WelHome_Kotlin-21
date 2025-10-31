@@ -40,26 +40,20 @@ import com.team21.myapplication.ui.components.inputs.PlaceholderTextField
 import com.team21.myapplication.ui.components.text.BlackText
 import com.team21.myapplication.ui.theme.*
 import kotlinx.coroutines.launch
-import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
-import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.runtime.*
-import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
+import com.team21.myapplication.utils.NetworkMonitor
 
 
 import java.io.File
 import androidx.compose.ui.window.Dialog
+import com.team21.myapplication.ui.components.banners.BannerPosition
+import com.team21.myapplication.ui.components.banners.ConnectivityBanner
 import com.team21.myapplication.ui.createPostView.state.CreatePostOperationState
 
 /**
@@ -83,6 +77,10 @@ fun CreatePostScreenLayout(
     // --- VIEWMODEL STATES ---
     // Observar un solo estado unificado
     val uiState by viewModel.uiState.collectAsState()
+
+    // observar red
+    val networkMonitor = remember { NetworkMonitor.get(context) }
+    val isOnline by networkMonitor.isOnline.collectAsState()
 
     // --- LOCAL STATES ---
     val snackbarHostState = remember { SnackbarHostState() }
@@ -168,13 +166,22 @@ fun CreatePostScreenLayout(
     LaunchedEffect(uiState.operationState) {
         when (val state = uiState.operationState) {
             is CreatePostOperationState.Success -> {
-                // Show success message
-                snackbarHostState.showSnackbar("Post created successfully!")
-                // Clear form
-                viewModel.clearForm()
-                // Execute navigation callback
-                onPostCreated()
+                when (state.postId) {
+                    "DRAFT_SAVED" -> {
+                        snackbarHostState.showSnackbar(
+                            "Offline: saved as a draft. It will be uploaded automatically."
+                        )
+                        viewModel.clearForm()
+                        onNavigateBack()
+                    }
+                    else -> {
+                        snackbarHostState.showSnackbar("Post created successfully!")
+                        viewModel.clearForm()
+                        onPostCreated()
+                    }
+                }
             }
+
             is CreatePostOperationState.Error -> {
                 // Show error message
                 snackbarHostState.showSnackbar(state.message)
@@ -193,6 +200,11 @@ fun CreatePostScreenLayout(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
+            ConnectivityBanner(
+                visible = !isOnline,
+                message = "No internet connection. Your post will be saved as a draft",
+                position = BannerPosition.Top
+            )
             // --- HEADER ---
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -572,7 +584,20 @@ fun CreatePostScreenLayout(
                             .combinedClickable(
                                 enabled = !disabled,
                                 interactionSource = interaction,
-                                onClick = { viewModel.suggestPrice() },          // tap normal => sugerir precio
+                                onClick = {
+                                    if (!isOnline) {
+                                        scope.launch {
+                                            viewModel.setOfflineSuggestedPrice()
+                                            snackbarHostState.showSnackbar(
+                                                message = "This is the normally suggested price. For more details, connect to the Internet.",
+                                                actionLabel = "OK",
+                                                withDismissAction = true
+                                            )
+                                        }
+                                    } else {
+                                        viewModel.suggestPrice()
+                                    }
+                                },          // tap normal => sugerir precio
                                 onLongClick = { showPriceTip = true }            // long-press => mostrar tooltip
                             )
                             .padding(8.dp) // similar al padding interno del IconButton
@@ -684,7 +709,22 @@ fun CreatePostScreenLayout(
 
                     // Botón "copilot" (Lightbulb)
                     IconButton(
-                        onClick = { viewModel.generateOrRewriteDescription(/* city, neighborhood si los tienes */) },
+                        onClick = {
+                            if (uiState.isDescGenerating) return@IconButton
+                            if (!isOnline) {
+                                scope.launch {
+                                    viewModel.generateOfflineDescription()
+                                    snackbarHostState.showSnackbar(
+                                        message = "For higher accuracy, connect to the Internet.",
+                                        actionLabel = "OK",
+                                        withDismissAction = true
+                                    )
+                                }
+                            } else {
+                                viewModel.generateOrRewriteDescription(/* tus args si aplica */)
+                            }
+                        }
+                        ,
                         enabled = !uiState.isDescGenerating
                     ) {
                         if (uiState.isDescGenerating) {
@@ -738,7 +778,12 @@ fun CreatePostScreenLayout(
                 text = if (uiState.operationState is CreatePostOperationState.Loading) "Creating..." else "Create",
                 onClick = {
                     // Call the ViewModel function to create the post
-                    viewModel.createPost { ok, infoOrErr -> }
+                    viewModel.createOrDraft(
+                        isOnline = isOnline,
+                        context = context
+                    ) { ok, kind ->
+                        // opcional: manejar callback
+                    }
                 },
                 enabled = uiState.operationState  !is CreatePostOperationState.Loading // Disable if loading
             )

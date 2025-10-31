@@ -16,12 +16,26 @@ import com.team21.myapplication.data.local.dao.ThreadForumDao
 import com.team21.myapplication.data.local.entity.ForumPostEntity
 import com.team21.myapplication.data.local.entity.HousingEntity
 import com.team21.myapplication.data.local.entity.MyPostEntity
-import com.team21.myapplication.data.local.entity.OwnerOfflinePreviewEntity
-import com.team21.myapplication.data.local.entity.ThreadForumEntity
 import com.team21.myapplication.data.model.MapCacheEntry
+import com.team21.myapplication.data.local.entity.OwnerOfflinePreviewEntity
+import com.team21.myapplication.data.local.dao.DraftPostDao
+import com.team21.myapplication.data.local.entity.DraftPostEntity
+import com.team21.myapplication.data.local.entity.DraftImageEntity
+import com.team21.myapplication.data.local.entity.AmenityEntity
+import com.team21.myapplication.data.local.dao.AmenityDao
+import com.team21.myapplication.data.local.entity.ThreadForumEntity
 
 @Database(
-    entities = [HousingEntity::class, MyPostEntity::class, OwnerOfflinePreviewEntity::class, MapCacheEntry::class, ThreadForumEntity::class, ForumPostEntity::class],
+    entities = [
+        HousingEntity::class,
+        MyPostEntity::class,
+        OwnerOfflinePreviewEntity::class,
+        MapCacheEntry::class,
+        ThreadForumEntity::class,
+        ForumPostEntity::class,
+        DraftPostEntity::class,
+        DraftImageEntity::class,
+        AmenityEntity::class],
     version = 4, // Incremented version
     exportSchema = false
 )
@@ -34,6 +48,10 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun ownerOfflineDao(): OwnerOfflinePreviewDao
     abstract fun threadForumDao(): ThreadForumDao // Added Dao
     abstract fun forumPostDao(): ForumPostDao     // Added Dao
+
+    abstract fun draftPostDao(): DraftPostDao
+
+    abstract fun amenityDao(): AmenityDao
 
     companion object {
         @Volatile

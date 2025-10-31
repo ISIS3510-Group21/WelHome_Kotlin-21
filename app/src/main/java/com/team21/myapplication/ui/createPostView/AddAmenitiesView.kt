@@ -11,6 +11,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -22,6 +23,9 @@ import com.team21.myapplication.ui.components.buttons.CustomRadioButton
 import com.team21.myapplication.ui.components.text.BlackText
 import com.team21.myapplication.ui.components.icons.AppIcons
 import com.team21.myapplication.ui.theme.BlueCallToAction
+import androidx.compose.ui.platform.LocalContext
+import com.team21.myapplication.utils.NetworkMonitor
+
 
 @Composable
 fun AddAmenitiesLayout(
@@ -31,6 +35,11 @@ fun AddAmenitiesLayout(
     onBack: () -> Unit = {}
 ) {
 
+    val context = LocalContext.current
+    val networkMonitor = remember { NetworkMonitor.get(context) }
+    val isOnline by networkMonitor.isOnline.collectAsState()
+
+
     // Establish initial section
     // solo  una vez con las amenities que vienen del post
     LaunchedEffect(Unit) {
@@ -39,12 +48,11 @@ fun AddAmenitiesLayout(
         }
     }
 
-    // Establish initial section
-//    LaunchedEffect(initialAmenities) {
-//        if (initialAmenities.isNotEmpty()) {
-//            viewModel.setInitialSelection(initialAmenities)
-//        }
-//    }
+    LaunchedEffect(isOnline) {
+        // Carga siempre que entra a la pantalla; si vuelve la red, refresca remoto y cachea.
+        viewModel.refreshAmenities(context, isOnline)
+    }
+
 
     val amenitiesList by viewModel.amenitiesList.collectAsState()
     val selectedIds by viewModel.selectedAmenitiesIds.collectAsState()
@@ -82,6 +90,10 @@ fun AddAmenitiesLayout(
         if (isLoading) {
             CircularProgressIndicator()
         } else {
+            if (amenitiesList.isEmpty()) {
+                BlackText(text = if (isOnline) "No amenities found." else "No cached amenities available offline.")
+            }
+
             Column(
                 modifier = Modifier
                     .weight(1f)
