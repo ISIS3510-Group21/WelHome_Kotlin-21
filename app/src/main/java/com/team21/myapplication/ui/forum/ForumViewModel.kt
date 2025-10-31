@@ -1,16 +1,17 @@
 package com.team21.myapplication.ui.forum
 
+import android.app.Application
 import android.util.Log
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.team21.myapplication.data.model.ThreadForum
-import com.team21.myapplication.data.repository.ThreadForumRepository
+import com.team21.myapplication.data.repository.ForumRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class ForumViewModel : ViewModel() {
-    private val repository: ThreadForumRepository = ThreadForumRepository()
+class ForumViewModel(application: Application) : AndroidViewModel(application) {
+    private val repository: ForumRepository = ForumRepository(application)
     private val _state = MutableStateFlow(ForumState())
     val state: StateFlow<ForumState> = _state
 
