@@ -1,5 +1,6 @@
 package com.team21.myapplication.ui.visits
 
+import android.app.Application
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,9 +25,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -34,6 +37,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.google.firebase.Timestamp
 import com.team21.myapplication.data.model.Booking
+import com.team21.myapplication.ui.components.banners.BannerPosition
+import com.team21.myapplication.ui.components.banners.ConnectivityBanner
 import com.team21.myapplication.ui.components.cards.VisitInfoCard
 import com.team21.myapplication.ui.theme.AppTheme
 import java.text.SimpleDateFormat
@@ -44,17 +49,29 @@ import java.util.Locale
 @Composable
 fun VisitsView(
     navController: NavController,
-    modifier: Modifier = Modifier,
-    visitsViewModel: VisitsViewModel = viewModel()
+    modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val application = context.applicationContext as Application
+    val factory = VisitsViewModelFactory(application)
+    val visitsViewModel: VisitsViewModel = viewModel(factory = factory)
+
     val state by visitsViewModel.state.collectAsState()
-    VisitsScreen(
-        bookings = state.visits,
-        onRateClick = { booking ->
-            // Handle rate click
-        },
-        modifier = modifier
-    )
+    val isOnline by visitsViewModel.isOnline.collectAsState()
+
+    Box(modifier = modifier.fillMaxSize()) {
+        VisitsScreen(
+            bookings = state.visits,
+            onRateClick = { booking ->
+                // Handle rate click
+            }
+        )
+        ConnectivityBanner(
+            visible = !isOnline,
+            position = BannerPosition.Top,
+            modifier = Modifier.align(Alignment.TopCenter)
+        )
+    }
 }
 
 @Composable
