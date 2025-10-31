@@ -16,7 +16,7 @@ import com.team21.myapplication.data.local.dao.ThreadForumDao
 import com.team21.myapplication.data.local.entity.ForumPostEntity
 import com.team21.myapplication.data.local.entity.HousingEntity
 import com.team21.myapplication.data.local.entity.MyPostEntity
-import com.team21.myapplication.data.model.MapCacheEntry
+import com.team21.myapplication.data.local.entity.MapCacheEntry
 import com.team21.myapplication.data.local.entity.OwnerOfflinePreviewEntity
 import com.team21.myapplication.data.local.dao.DraftPostDao
 import com.team21.myapplication.data.local.entity.DraftPostEntity

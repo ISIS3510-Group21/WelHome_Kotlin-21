@@ -45,6 +45,8 @@ import com.google.maps.android.compose.MapEffect
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.team21.myapplication.analytics.AnalyticsHelper
+import com.team21.myapplication.ui.components.banners.BannerPosition
+import com.team21.myapplication.ui.components.banners.ConnectivityBanner
 import com.team21.myapplication.ui.components.cards.HousingCardListItem
 import com.team21.myapplication.ui.components.inputs.SearchBar
 import com.team21.myapplication.ui.components.navbar.AppNavBar
@@ -206,124 +208,131 @@ fun MapSearchView(
         },
         modifier = modifier.fillMaxSize()
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-        ) {
-            val coroutineScope = rememberCoroutineScope()
-            val listState = rememberLazyListState()
-            var selectedLocationId by remember { mutableStateOf<String?>(null) }
-            Box(
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .padding(horizontal = 16.dp)
+                    .padding(innerPadding)
+                    .fillMaxSize()
             ) {
-                if (state.isOffline) {
-                    state.mapSnapshotPath?.let {
-                        val imageFile = File(it)
-                        if (imageFile.exists()) {
-                            val bitmap = android.graphics.BitmapFactory.decodeFile(imageFile.absolutePath)
-                            Image(bitmap = bitmap.asImageBitmap(), contentDescription = "Offline map snapshot")
-                        }
-                    }
-                } else {
-                    var map: GoogleMap? by remember { mutableStateOf(null) }
-                    GoogleMap(
-                        modifier = Modifier.fillMaxSize(),
-                        cameraPositionState = cameraPositionState,
-                        onMapLoaded = {
-                            mapLoaded = true
-                        }
-                    ) {
-                        MapEffect(key1 = map) { googleMap ->
-                            map = googleMap
-                        }
-                        userLocation?.let {
-                            com.google.maps.android.compose.Marker(
-                                state = MarkerState(it),
-                                title = "Your Location",
-                                snippet = "Your current location",
-                                icon = BitmapDescriptorFactory
-                                    .defaultMarker(BitmapDescriptorFactory.HUE_AZURE)
-                            )
-                        }
-                        state.locations.forEachIndexed { index, location ->
-                            com.google.maps.android.compose.Marker(
-                                state = MarkerState(location.position),
-                                title = location.title,
-                                snippet = "💲 ${location.price} " +
-                                        "⭐ ${location.rating} ",
-                                onClick = {
-                                    selectedLocationId = location.id
-
-                                    coroutineScope.launch {
-                                        listState.animateScrollToItem(index)
-                                    }
-                                    coroutineScope.launch {
-                                        cameraPositionState.animate(
-                                            CameraUpdateFactory.newLatLngZoom(location.position, 20f),
-                                            800
-                                        )
-                                    }
-                                    true
-                                }
-
-                            )
-                        }
-                    }
-                    LaunchedEffect(mapLoaded, state.locations) {
-                        if (mapLoaded && state.locations.isNotEmpty()) {
-                            map?.snapshot {
-                                if (it != null && userLocation != null) {
-                                    mapViewModel.saveMapToCache(it, userLocation!!)
-                                }
+                val coroutineScope = rememberCoroutineScope()
+                val listState = rememberLazyListState()
+                var selectedLocationId by remember { mutableStateOf<String?>(null) }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(horizontal = 16.dp)
+                ) {
+                    if (state.isOffline) {
+                        state.mapSnapshotPath?.let {
+                            val imageFile = File(it)
+                            if (imageFile.exists()) {
+                                val bitmap = android.graphics.BitmapFactory.decodeFile(imageFile.absolutePath)
+                                Image(bitmap = bitmap.asImageBitmap(), contentDescription = "Offline map snapshot")
                             }
-                            markersDrawn = false               // reinicia la marca
-                            withFrameNanos { /* espera 1 frame */ }
-                            withFrameNanos { /* segundo frame */ }
-                            markersDrawn = true
+                        }
+                    } else {
+                        var map: GoogleMap? by remember { mutableStateOf(null) }
+                        GoogleMap(
+                            modifier = Modifier.fillMaxSize(),
+                            cameraPositionState = cameraPositionState,
+                            onMapLoaded = {
+                                mapLoaded = true
+                            }
+                        ) {
+                            MapEffect(key1 = map) { googleMap ->
+                                map = googleMap
+                            }
+                            userLocation?.let {
+                                com.google.maps.android.compose.Marker(
+                                    state = MarkerState(it),
+                                    title = "Your Location",
+                                    snippet = "Your current location",
+                                    icon = BitmapDescriptorFactory
+                                        .defaultMarker(BitmapDescriptorFactory.HUE_AZURE)
+                                )
+                            }
+                            state.locations.forEachIndexed { index, location ->
+                                com.google.maps.android.compose.Marker(
+                                    state = MarkerState(location.position),
+                                    title = location.title,
+                                    snippet = "💲 ${'$'}{location.price} " +
+                                            "⭐ ${'$'}{location.rating} ",
+                                    onClick = {
+                                        selectedLocationId = location.id
+
+                                        coroutineScope.launch {
+                                            listState.animateScrollToItem(index)
+                                        }
+                                        coroutineScope.launch {
+                                            cameraPositionState.animate(
+                                                CameraUpdateFactory.newLatLngZoom(location.position, 20f),
+                                                800
+                                            )
+                                        }
+                                        true
+                                    }
+
+                                )
+                            }
+                        }
+                        LaunchedEffect(mapLoaded, state.locations) {
+                            if (mapLoaded && state.locations.isNotEmpty()) {
+                                map?.snapshot {
+                                    if (it != null && userLocation != null) {
+                                        mapViewModel.saveMapToCache(it, userLocation!!)
+                                    }
+                                }
+                                markersDrawn = false               // reinicia la marca
+                                withFrameNanos { /* espera 1 frame */ }
+                                withFrameNanos { /* segundo frame */ }
+                                markersDrawn = true
+                            }
                         }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
 
-            LazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-            ) {
-                items(state.locations) { housingItem ->
-                    val isSelected = housingItem.id == selectedLocationId
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                ) {
+                    items(state.locations) { housingItem ->
+                        val isSelected = housingItem.id == selectedLocationId
 
-                    HousingCardListItem(
-                        imageUrl = housingItem.imageUrl,
-                        title = housingItem.title,
-                        rating = housingItem.rating,
-                        price = housingItem.price,
-                        modifier = Modifier
-                            .padding(horizontal = 2.dp)
-                            .then(
-                                if (isSelected) Modifier.border(
-                                    width = 2.dp,
-                                    color = Color(0xFF2196F3),
-                                    shape = RoundedCornerShape(12.dp)
-                                ) else Modifier
-                            ),
-                        onClick = {
-                            resolveHousingId(housingItem)?.let { id ->
-                                onNavigateToDetail(id)
+                        HousingCardListItem(
+                            imageUrl = housingItem.imageUrl,
+                            title = housingItem.title,
+                            rating = housingItem.rating,
+                            price = housingItem.price,
+                            modifier = Modifier
+                                .padding(horizontal = 2.dp)
+                                .then(
+                                    if (isSelected) Modifier.border(
+                                        width = 2.dp,
+                                        color = Color(0xFF2196F3),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) else Modifier
+                                ),
+                            onClick = {
+                                resolveHousingId(housingItem)?.let { id ->
+                                    onNavigateToDetail(id)
+                                }
                             }
-                        }
 
-                    )
+                        )
+                    }
                 }
             }
+            ConnectivityBanner(
+                visible = !isOnline,
+                position = BannerPosition.Top,
+                modifier = Modifier.align(Alignment.TopCenter)
+            )
         }
     }
 }

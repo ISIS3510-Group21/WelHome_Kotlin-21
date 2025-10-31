@@ -8,7 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.maps.model.LatLng
 import com.team21.myapplication.data.local.AppDatabase
-import com.team21.myapplication.data.model.MapCacheEntry
+import com.team21.myapplication.data.local.entity.MapCacheEntry
 import com.team21.myapplication.data.repository.HousingPostRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

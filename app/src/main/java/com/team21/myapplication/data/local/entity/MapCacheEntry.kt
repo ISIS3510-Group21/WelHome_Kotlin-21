@@ -1,8 +1,7 @@
-package com.team21.myapplication.data.model
+package com.team21.myapplication.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.google.android.gms.maps.model.LatLng
 import com.team21.myapplication.ui.mapsearch.MapLocation
 
 @Entity(tableName = "map_cache")
