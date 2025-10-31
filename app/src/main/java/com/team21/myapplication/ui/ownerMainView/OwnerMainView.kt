@@ -26,7 +26,13 @@ import com.team21.myapplication.ui.main.LoadingScreen
 import android.content.Intent
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 import com.team21.myapplication.ui.detailView.DetailHousingActivity
 
 
@@ -117,12 +123,32 @@ fun OwnerMainScreen() {
 
     LaunchedEffect(Unit) { viewModel.loadOwnerHome() }
 
+    val view = LocalView.current
+
+    val statusBarColor = if (!state.isOnline) {
+        androidx.compose.ui.graphics.Color.Black
+    } else {
+        MaterialTheme.colorScheme.background
+    }
+
     Scaffold(
         topBar = {
+            SideEffect {
+                val window = (view.context as android.app.Activity).window
+                // Variable de fondo
+                window.statusBarColor = statusBarColor.toArgb()
+
+                // La lógica para decidir el color de los íconos
+                WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars =
+                    if (!state.isOnline) {
+                        false // Íconos blancos para fondo negro
+                    } else {
+                        statusBarColor.luminance() > 0.5f // Decide según la luminancia del fondo
+                    }
+            }
             ConnectivityBanner(
                 visible = !state.isOnline,
-                message = "No internet connection",
-                position = BannerPosition.Top
+                position = BannerPosition.Top,
             )
         }
 

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.WelHome" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+<!--    <style name="Theme.WelHome" parent="Theme.MaterialComponents.DayNight.NoActionBar">-->
+    <style name="Theme.WelHome" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="android:windowBackground">@color/app_window_bg</item>
         <item name="android:statusBarColor">@color/app_window_bg</item>
         <item name="android:navigationBarColor">@color/app_window_bg</item>

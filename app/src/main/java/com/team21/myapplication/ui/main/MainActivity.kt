@@ -42,6 +42,11 @@ import android.Manifest
 import android.app.Activity
 import android.os.Build
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 import com.team21.myapplication.ui.components.banners.BannerPosition
 import com.team21.myapplication.ui.components.banners.ConnectivityBanner
 import com.team21.myapplication.utils.App
@@ -129,12 +134,35 @@ fun MainScreen(
     val state by viewModel.homeState.collectAsStateWithLifecycle()
     val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
 
+    val view = LocalView.current
+
+    val statusBarColor = if (!isOnline) {
+        androidx.compose.ui.graphics.Color.Black
+    } else {
+        MaterialTheme.colorScheme.background
+    }
+
     LaunchedEffect(Unit) {
         viewModel.getHousingPosts()
     }
 
     Scaffold { innerPadding ->
         Box(modifier = Modifier.fillMaxSize()) {
+
+            SideEffect {
+                val window = (view.context as android.app.Activity).window
+                // Variable de fondo
+                window.statusBarColor = statusBarColor.toArgb()
+
+                // La lógica para decidir el color de los íconos
+                WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars =
+                    if (!isOnline) {
+                        false // Íconos blancos para fondo negro
+                    } else {
+                        statusBarColor.luminance() > 0.5f // Decide según la luminancia del fondo
+                    }
+            }
+
             ConnectivityBanner(
                 visible = !isOnline,
                 position = BannerPosition.Top,
