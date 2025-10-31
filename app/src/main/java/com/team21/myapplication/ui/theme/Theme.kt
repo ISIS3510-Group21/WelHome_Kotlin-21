@@ -43,8 +43,9 @@ private val LightColors = lightColorScheme(
 @Composable
 fun AppTheme(
     dsTypography: DSTypography = DefaultDSTypography, content: @Composable () -> Unit) {
-    val isDark = isSystemInDarkTheme() //saber si está encendido el dark mode
-    val colorScheme = if (isDark) DarkColors else LightColors // esquema de colores
+    //val isDark = isSystemInDarkTheme() //saber si está encendido el dark mode
+    //val colorScheme = if (isDark) DarkColors else LightColors // esquema de colores
+    val colorScheme = LightColors
     CompositionLocalProvider(LocalDSTypography provides dsTypography) { // Our Topography
         MaterialTheme(
             colorScheme = colorScheme,
