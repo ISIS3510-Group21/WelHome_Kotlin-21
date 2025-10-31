@@ -4,7 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import com.team21.myapplication.data.model.MapCacheEntry
+import com.team21.myapplication.data.local.entity.MapCacheEntry
 
 @Dao
 interface MapCacheDao {
