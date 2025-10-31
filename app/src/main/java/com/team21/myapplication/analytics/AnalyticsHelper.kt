@@ -98,5 +98,11 @@ class AnalyticsHelper(context: Context) {
         }
     }
 
-
+    fun logForumThreadClick(threadId: String, threadTitle: String) {
+        Log.d("AnalyticsHelper", "Logging forum thread click: $threadTitle")
+        firebaseAnalytics.logEvent("forum_thread_click") {
+            param("thread_id", threadId)
+            param("thread_title", threadTitle)
+        }
+    }
 }

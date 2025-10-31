@@ -53,7 +53,7 @@ fun ForumScreen(
         isOnline = isOnline,
         onThreadClick = {
             Log.d("ForumScreen", "Thread clicked: $it")
-            forumViewModel.selectThread(it)
+            forumViewModel.onThreadClicked(it)
         },
         selectedThreadId = state.selectedThread?.id
     )

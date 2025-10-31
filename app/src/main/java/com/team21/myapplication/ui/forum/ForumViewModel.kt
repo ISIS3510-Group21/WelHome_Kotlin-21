@@ -4,6 +4,7 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.team21.myapplication.analytics.AnalyticsHelper
 import com.team21.myapplication.data.model.ThreadForum
 import com.team21.myapplication.data.repository.ForumRepository
 import com.team21.myapplication.utils.App
@@ -13,6 +14,7 @@ import kotlinx.coroutines.launch
 
 class ForumViewModel(application: Application) : AndroidViewModel(application) {
     private val repository: ForumRepository = ForumRepository(application)
+    private val analyticsHelper: AnalyticsHelper = AnalyticsHelper(application)
     private val _state = MutableStateFlow(ForumState())
     val state: StateFlow<ForumState> = _state
 
@@ -32,6 +34,11 @@ class ForumViewModel(application: Application) : AndroidViewModel(application) {
             _state.value = _state.value.copy(threads = threads, isLoading = false)
         }
 
+    }
+
+    fun onThreadClicked(thread: ThreadForum) {
+        analyticsHelper.logForumThreadClick(thread.id, thread.title)
+        selectThread(thread)
     }
 
     fun selectThread(thread: ThreadForum) {
