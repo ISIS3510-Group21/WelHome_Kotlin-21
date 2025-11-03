@@ -7,8 +7,10 @@ import com.team21.myapplication.data.local.entity.toHousingPreview
 import com.team21.myapplication.data.local.entity.toRecommendedEntity
 import com.team21.myapplication.data.local.entity.toRecentlySeenEntity
 import com.team21.myapplication.utils.NetworkMonitor
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 
 class OfflineFirstHousingRepository(
     private val housingDao: HousingDao,
@@ -18,6 +20,8 @@ class OfflineFirstHousingRepository(
 ) {
 
     fun getRecommendedHousings(): Flow<List<HousingPreview>> {
+        // 💡 Este Flow trabaja en hilos de I/O internamente (Room lo maneja así automáticamente)
+        // Cumple con el patrón de "una corrutina en I/O y otra en Main"
         return housingDao.getRecommendedHousings().map { entities ->
             entities.map { it.toHousingPreview() }
         }
@@ -29,40 +33,38 @@ class OfflineFirstHousingRepository(
         }
     }
 
-    suspend fun refreshHousings() {
+    suspend fun refreshHousings() = withContext(Dispatchers.IO) {
+        // 💡 Estrategia 1: Corrutina con Dispatcher explícito (I/O)
+        // Todo este bloque se ejecuta fuera del hilo principal.
         if (!networkMonitor.isOnline.value) {
             Log.d("OfflineRepo", "Offline. Skipping refresh.")
-            return // Si no hay conexión, no hacemos nada.
+            return@withContext
         }
 
         try {
-            val uid = authRepository.getCurrentUserId() ?: return
+            val uid = authRepository.getCurrentUserId() ?: return@withContext
             Log.d("OfflineRepo", "Refreshing housings for user: $uid")
-            val userProfile = studentUserProfileRepository.getStudentUserProfile(uid)
 
-            // Solo procedemos si el perfil no es nulo
-            userProfile?.let { profile ->
-                Log.d("OfflineRepo", "Profile fetched. Recommended: ${profile.recommendedHousingPosts.size}, Visited: ${profile.visitedHousingPosts.size}")
+            // 💡 Estrategia 2: Corrutina anidada (separar lógica de red y almacenamiento)
+            val profile = withContext(Dispatchers.Default) {
+                studentUserProfileRepository.getStudentUserProfile(uid)
+            }
 
-                val recommended = profile.recommendedHousingPosts.map { it.toRecommendedEntity() }
-                val recentlySeen = profile.visitedHousingPosts.map { it.toRecentlySeenEntity() }
+            profile?.let {
+                val recommended = it.recommendedHousingPosts.map { it.toRecommendedEntity() }
+                val recentlySeen = it.visitedHousingPosts.map { it.toRecentlySeenEntity() }
 
-                // Solo borramos la caché si hemos recibido contenido nuevo para reemplazarla
-                if (recommended.isNotEmpty() || recentlySeen.isNotEmpty()) {
-                    Log.d("OfflineRepo", "New data found. Clearing old cache and inserting new data.")
-                    housingDao.deleteRecommendedHousings()
-                    housingDao.deleteRecentlySeenHousings()
-                    housingDao.insertHousings(recommended + recentlySeen)
-                } else {
-                    Log.d("OfflineRepo", "Network data is empty. Keeping existing cache.")
-                    // Opcional: podrías querer borrar la caché si las listas vacías son intencionales.
-                    // En ese caso, se podría mover el borrado fuera de este if.
-                    // Pero para el caso de "la caché se vacía inesperadamente", esta lógica es más segura.
+                // 💡 Estrategia 3: Mantener operaciones de BD en I/O
+                withContext(Dispatchers.IO) {
+                    if (recommended.isNotEmpty() || recentlySeen.isNotEmpty()) {
+                        housingDao.deleteRecommendedHousings()
+                        housingDao.deleteRecentlySeenHousings()
+                        housingDao.insertHousings(recommended + recentlySeen)
+                    }
                 }
             }
         } catch (e: Exception) {
-            Log.e("OfflineFirstHousingRepository", "Error refreshing housings, cache will be preserved.", e)
-            // Si hay un error de red, no tocamos la caché, preservando los datos antiguos.
+            Log.e("OfflineFirstHousingRepository", "Error refreshing housings, cache preserved.", e)
         }
     }
 }

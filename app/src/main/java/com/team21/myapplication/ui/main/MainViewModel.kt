@@ -8,7 +8,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.team21.myapplication.analytics.AnalyticsHelper
 import com.team21.myapplication.data.local.AppDatabase
-import com.team21.myapplication.data.model.TagHousingPost
 import com.team21.myapplication.data.repository.AuthRepository
 import com.team21.myapplication.data.repository.HousingPostRepository
 import com.team21.myapplication.data.repository.OfflineFirstHousingRepository
@@ -16,12 +15,13 @@ import com.team21.myapplication.data.repository.StudentUserProfileRepository
 import com.team21.myapplication.data.repository.StudentUserRepository
 import com.team21.myapplication.utils.NetworkMonitor
 import com.team21.myapplication.utils.getNetworkType
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-
+import kotlinx.coroutines.withContext
 
 class MainViewModel(
     private val applicationContext: Context,
@@ -45,6 +45,8 @@ class MainViewModel(
         )
 
     init {
+        // 💡 Estrategia 3: Corrutina en Main que consume datos de un flujo (que trabaja en I/O)
+        // Aquí se combinan dos hilos: Main (UI) y I/O (Room)
         viewModelScope.launch {
             housingRepository.getRecommendedHousings().collect { housings ->
                 _homeState.value = _homeState.value.copy(recommendedHousings = housings)
@@ -59,99 +61,108 @@ class MainViewModel(
     }
 
     fun getHousingPosts() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
+
+            // 🔹 Marca el inicio para medir tiempo de carga (como ya hacías)
             val start = System.currentTimeMillis()
             analyticsHelper.logHomeOpen()
-            _homeState.value = _homeState.value.copy(isLoading = true)
 
+            // Verifica si ya hay datos locales para decidir si mostrar "loading"
+            val hasLocalData =
+                _homeState.value.recommendedHousings.isNotEmpty() ||
+                        _homeState.value.recentlySeenHousings.isNotEmpty()
+
+            // Solo muestra la pantalla de carga si no hay datos locales
+            if (!hasLocalData) {
+                withContext(Dispatchers.Main) {
+                    _homeState.value = _homeState.value.copy(isLoading = true)
+                }
+            }
+
+            // Refresca desde red (si hay conexión) — se ejecuta en hilo IO
             housingRepository.refreshHousings()
 
-            _homeState.value = _homeState.value.copy(isLoading = false)
-            val networkType = getNetworkType(applicationContext)
+            // Marca el final y registra evento de analítica
             val end = System.currentTimeMillis()
-            analyticsHelper.logHomeLoadingTime(
-                end - start,
-                Build.MODEL,
-                networkType
-            )
+            val networkType = getNetworkType(applicationContext)
+
+            withContext(Dispatchers.Main) {
+                // Oculta el loading solo al final
+                _homeState.value = _homeState.value.copy(isLoading = false)
+
+                // Envía el tiempo de carga a Analytics
+                analyticsHelper.logHomeLoadingTime(
+                    end - start,
+                    Build.MODEL,
+                    networkType
+                )
+            }
         }
     }
 
     fun logHousingPostClick(postId: String?, postTitle: String, price: Double) {
+        // 💡 Estrategia 2: Múltiples corrutinas anidadas (una dentro de otra)
+        // Se usa para separar trabajo de red, BD y registro analítico sin bloquear el hilo principal.
         viewModelScope.launch {
             val safePostId = postId ?: run {
                 Log.w("MainViewModel", "postId es null, no se registra el click")
                 return@launch
             }
-            var message = "Post $safePostId clickeado con éxito" //TODO: remove
+
+            var message = "Post $safePostId clickeado con éxito"
+
             try {
-                val auth = authRepo.getCurrentUserId() ?: run {
-                    Log.w("MainViewModel", "No current user; skip logging")
-                    return@launch
-                }
+                val auth = authRepo.getCurrentUserId() ?: return@launch
 
-                Log.d("MainViewModel", "Buscando usuario con ID: $auth")
-                val studentUser = repositoryStudentUser.getStudentUser(auth)
-
-                if (studentUser == null) {
-                    message += " (ADVERTENCIA: Usuario no encontrado en DB)" //TODO: remove
+                // 🔹 Corrutina interna en I/O: acceder a BD/local
+                val studentUser = withContext(Dispatchers.IO) {
+                    repositoryStudentUser.getStudentUser(auth)
                 }
 
                 val userNationality = studentUser?.nationality ?: "Unknown"
 
-                // set user properties for analytics
-                studentUser?.let {
-                    analyticsHelper.setUserNationality(it.nationality)
-                    analyticsHelper.setUserType(true) // true for student
-                    analyticsHelper.setUserLanguage(it.language)
+                // 🔹 Corrutina interna en Default (cálculo/lógica intermedia)
+                withContext(Dispatchers.Default) {
+                    studentUser?.let {
+                        analyticsHelper.setUserNationality(it.nationality)
+                        analyticsHelper.setUserType(true)
+                        analyticsHelper.setUserLanguage(it.language)
+                    }
                 }
 
-                // Obtain post for the tag
-                val post = housingPostRepo.getHousingPosts()
-                    .firstOrNull { it.id == safePostId }
-                Log.e("post", post.toString())
-
-                if (post == null) {
-                    message += " (ADVERTENCIA: Post no encontrado localmente)"//TODO: remove
+                // 🔹 Corrutina en I/O: buscar post y tags en BD local
+                val tags = withContext(Dispatchers.IO) {
+                    val post = housingPostRepo.getHousingPosts().firstOrNull { it.id == safePostId }
+                    housingPostRepo.getTagsForPostId(safePostId)
                 }
 
-                //obtain tags
-                val tags: List<TagHousingPost> = housingPostRepo.getTagsForPostId(safePostId)
-
-                // Registers an event for each track found
-                tags.forEach { tag ->
-                    val housingCategory = tag.name
-                    Log.d("MainViewModel", "Registrando click para categoría: $housingCategory")
-
-                    analyticsHelper.logHousingPostClick(
-                        postId = safePostId,
-                        postTitle = postTitle,
-                        housingCategory = housingCategory,
-                        price = price,
-                        userNationality = userNationality
-                    )
-                }
-
-                // Si no hay tags, registra como "Unknown"
-                if (tags.isEmpty()) {
-                    analyticsHelper.logHousingPostClick(
-                        postId = safePostId,
-                        postTitle = postTitle,
-                        housingCategory = "Unknown",
-                        price = price,
-                        userNationality = userNationality
-                    )
-                }
-
-                if (studentUser == null || post == null) {
-                    message += " (ADVERTENCIA: Datos incompletos)"
+                // 🔹 Corrutina en Main: registrar eventos analíticos (ligeros, pueden ir en Main)
+                withContext(Dispatchers.Main) {
+                    if (tags.isEmpty()) {
+                        analyticsHelper.logHousingPostClick(
+                            postId = safePostId,
+                            postTitle = postTitle,
+                            housingCategory = "Unknown",
+                            price = price,
+                            userNationality = userNationality
+                        )
+                    } else {
+                        tags.forEach { tag ->
+                            analyticsHelper.logHousingPostClick(
+                                postId = safePostId,
+                                postTitle = postTitle,
+                                housingCategory = tag.name,
+                                price = price,
+                                userNationality = userNationality
+                            )
+                        }
+                    }
                 }
 
             } catch (e: Exception) {
                 Log.e("MainViewModel", "Error logging post click: ${e.message}")
-                message = "ERROR al registrar click $postId: ${e.message}" //TODO: remove
-            }
-            finally{//TODO: remove
+                message = "ERROR al registrar click $postId: ${e.message}"
+            } finally {
                 Log.d("MainViewModel", message)
             }
         }
