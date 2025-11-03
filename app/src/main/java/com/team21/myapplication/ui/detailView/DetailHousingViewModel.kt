@@ -14,6 +14,7 @@ import com.team21.myapplication.data.local.DetailLocalDataSource
 import com.team21.myapplication.data.local.RoomDetailLocalDataSource
 import com.team21.myapplication.data.repository.AuthRepository
 import com.team21.myapplication.data.repository.HousingPostRepository
+import com.team21.myapplication.data.repository.StudentUserProfileRepository
 import com.team21.myapplication.data.repository.StudentUserRepository
 import com.team21.myapplication.domain.mapper.DetailHousingUiMapper
 import com.team21.myapplication.domain.usecase.GetHousingPostByIdUseCase
@@ -43,6 +44,8 @@ class DetailHousingViewModel(app: Application) : AndroidViewModel(app) {
     private val appCtx = app.applicationContext
     private val housingRepo = HousingPostRepository()
     private val getHousingPostById = GetHousingPostByIdUseCase(housingRepo)
+    private val studentUserProfileRepository = StudentUserProfileRepository()
+    private val authRepository = AuthRepository()
 
     // [LOCAL STORAGE] Room-backed local data source
     private val local: DetailLocalDataSource = RoomDetailLocalDataSource(appCtx)
@@ -67,6 +70,7 @@ class DetailHousingViewModel(app: Application) : AndroidViewModel(app) {
     fun load(housingId: String, isOnline: Boolean, recentCache: RecentDetailCache) {
         currentHousingId = housingId
         _state.value = _state.value.copy(isLoading = true, error = null)
+        addRecentlyViewed(housingId)
 
         viewModelScope.launch {
             // ----------------- MEMORY: MRU (fast path) -----------------
@@ -147,6 +151,15 @@ class DetailHousingViewModel(app: Application) : AndroidViewModel(app) {
                         status = "offline"
                     )
                 }
+            }
+        }
+    }
+
+    fun addRecentlyViewed(housingId: String) {
+        viewModelScope.launch {
+            val userId = authRepository.getCurrentUserId()
+            if (userId != null) {
+                studentUserProfileRepository.addRecentlyViewed(userId, housingId)
             }
         }
     }
