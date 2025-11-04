@@ -57,6 +57,9 @@ import com.team21.myapplication.utils.NetworkMonitor
 import com.team21.myapplication.utils.getNetworkType
 import kotlinx.coroutines.launch
 import java.io.File
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 
 class MapSearchActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -101,6 +104,9 @@ fun MapSearchView(
     val context = LocalContext.current
     val networkMonitor = remember { NetworkMonitor.get(context) }
     val isOnline by networkMonitor.isOnline.collectAsState()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var sessionId by remember { mutableStateOf(0) }
+    var lastStartLoggedAtMs by remember { mutableStateOf(0L) }
 
     LaunchedEffect(isOnline) {
         mapViewModel.loadLocations(isOnline)
@@ -109,22 +115,33 @@ fun MapSearchView(
     // ----- Analytics + timing -----
     val analytics = remember { AnalyticsHelper(context) }
 
-    var loadStartMs by rememberSaveable { mutableStateOf<Long?>(null) }
-    var hasLoggedLoadingTime by rememberSaveable { mutableStateOf(false) }
+    var loadStartMs by remember { mutableStateOf<Long?>(null) }
+    var hasLoggedLoadingTime by remember { mutableStateOf(false) }
 
-    var mapLoaded by rememberSaveable { mutableStateOf(false) }      // tiles iniciales listos
-    var markersDrawn by rememberSaveable { mutableStateOf(false) }   // marcadores ya dibujados en un frame
-
-
-    LaunchedEffect(Unit) {
-        analytics.logMapSearchOpen()  // Evento: map_search_open
-    }
+    var mapLoaded by remember { mutableStateOf(false) }    // tiles iniciales listos
+    var markersDrawn by remember { mutableStateOf(false) }   // marcadores ya dibujados en un frame
 
     val fusedLocationClient = remember {
         LocationServices.getFusedLocationProviderClient(context)
     }
     var userLocation by remember {
         mutableStateOf<LatLng?>(null)
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_START) {
+                val now = android.os.SystemClock.elapsedRealtime()
+                // Anti-doble-start
+                if (now - lastStartLoggedAtMs > 400) {
+                    sessionId++
+                    analytics.logMapSearchOpen()   // log aquí
+                    lastStartLoggedAtMs = now
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     LaunchedEffect(Unit) {
@@ -151,14 +168,17 @@ fun MapSearchView(
         position = CameraPosition.fromLatLngZoom(state.userLocation, 12f)
     }
 
-    LaunchedEffect(userLocation) {
+    // Se ejecuta en cada “visita” a la pantalla (ON_START)
+    LaunchedEffect(sessionId) {
+        hasLoggedLoadingTime = false
+        mapLoaded = false
+        markersDrawn = false
+        loadStartMs = SystemClock.elapsedRealtime() // arranca cronómetro de la sesión
+    }
+
+    // El movimiento de cámara solo requiere que ya tengas la ubicación
+    LaunchedEffect(sessionId, userLocation) {
         userLocation?.let {
-
-            hasLoggedLoadingTime = false // resetea el flag
-            mapLoaded = false
-            markersDrawn = false
-            loadStartMs = SystemClock.elapsedRealtime() // arranca cronómetro
-
             cameraPositionState.animate(
                 update = CameraUpdateFactory.newLatLngZoom(it, 12f),
                 durationMs = 1000
@@ -166,6 +186,7 @@ fun MapSearchView(
             mapViewModel.onUserLocationReceived(it)
         }
     }
+
 
     LaunchedEffect(mapLoaded, markersDrawn) {
         val start = loadStartMs
