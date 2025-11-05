@@ -17,7 +17,7 @@ import com.team21.myapplication.local.db.entity.DetailSnapshotEntity
     entities = [
         DetailSnapshotEntity::class
     ],
-    version = 1, // bump if you add more entities or change schema
+    version = 2, // bump if you add more entities or change schema
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

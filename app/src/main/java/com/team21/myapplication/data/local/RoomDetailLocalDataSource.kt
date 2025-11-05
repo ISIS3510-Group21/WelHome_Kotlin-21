@@ -68,6 +68,7 @@ class RoomDetailLocalDataSource(
             latitude = latitude,
             longitude = longitude,
             status = status,
+            isSaved = isSaved,
             updatedAtMs = System.currentTimeMillis()
         )
     }

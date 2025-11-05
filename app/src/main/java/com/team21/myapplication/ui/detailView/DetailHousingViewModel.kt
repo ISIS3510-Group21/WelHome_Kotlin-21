@@ -26,6 +26,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import android.util.Log
+import com.team21.myapplication.data.repository.SavedPostsRepository
+import com.team21.myapplication.sync.FavoriteSyncQueue
+
+
 
 /**
  * DetailHousingViewModel
@@ -46,6 +51,9 @@ class DetailHousingViewModel(app: Application) : AndroidViewModel(app) {
     private val getHousingPostById = GetHousingPostByIdUseCase(housingRepo)
     private val studentUserProfileRepository = StudentUserProfileRepository()
     private val authRepository = AuthRepository()
+    private val studentRepo = StudentUserRepository()
+    private val savedRepo = SavedPostsRepository()
+    private val favQueue = FavoriteSyncQueue(appCtx)
 
     // [LOCAL STORAGE] Room-backed local data source
     private val local: DetailLocalDataSource = RoomDetailLocalDataSource(appCtx)
@@ -59,6 +67,8 @@ class DetailHousingViewModel(app: Application) : AndroidViewModel(app) {
 
     private var currentHousingId: String? = null
     private var cachedTags: List<String> = emptyList()
+
+    private suspend fun currentUserId(): String? = studentRepo.findStudentIdByEmail(authRepository.getCurrentUserEmail())
 
     /**
      * Load the detail using cache-first → network strategy.
@@ -106,8 +116,19 @@ class DetailHousingViewModel(app: Application) : AndroidViewModel(app) {
                     val domain = withContext(Dispatchers.IO) { getHousingPostById(housingId) }
                     if (domain == null) error("Housing not found")
 
+                    val uid = withContext(Dispatchers.IO) { currentUserId() }
+                    if (uid != null) {
+                        val saved = isPostSavedBy(uid, housingId)
+                        _state.value = _state.value.copy(isSaved = saved)
+                    }
+
                     val ui = DetailHousingUiMapper.toUiState(domain)
-                    _state.value = ui.copy(isLoading = false)
+
+                    val keepSaved = _state.value.isSaved
+                    _state.value = ui.copy(
+                        isLoading = false,
+                        isSaved = keepSaved
+                    )
 
                     // For analytics later
                     cachedTags = try {
@@ -163,6 +184,83 @@ class DetailHousingViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
     }
+    // --------------- Saving Houses -------------------------
+
+    fun onToggleFavorite(isOnline: Boolean) {
+        val id = currentHousingId ?: return
+        val cur = _state.value
+        if (cur.isFavoriteInFlight) return
+
+        _state.value = cur.copy(isFavoriteInFlight = true)
+
+        viewModelScope.launch {
+            val uid = withContext(Dispatchers.IO) { currentUserId() }
+
+            if (!isOnline || uid == null) {
+                // OFFLINE: encola y aplica optimista
+                favQueue.enqueue(uid ?: "unknown", id,
+                    if (!cur.isSaved) FavoriteSyncQueue.Action.ADD else FavoriteSyncQueue.Action.REMOVE
+                )
+                _state.value = cur.copy(isSaved = !cur.isSaved, isFavoriteInFlight = false)
+
+                // guarda snapshot con nuevo flag para rehidratación
+                withContext(Dispatchers.IO) { local.saveSnapshot(id, _state.value) }
+                return@launch
+            }
+
+            // ONLINE: escribe y luego confirma
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    if (!cur.isSaved) savedRepo.addSaved(uid, id)
+                    else savedRepo.removeSaved(uid, id)
+                }
+                // éxito → actualiza estado y snapshot
+                _state.value = _state.value.copy(isSaved = !cur.isSaved, isFavoriteInFlight = false)
+                withContext(Dispatchers.IO) { local.saveSnapshot(id, _state.value) }
+            }.onFailure { e ->
+                Log.e("DetailVM", "toggleFavorite failed: ${e.message}", e)
+                _state.value = _state.value.copy(isFavoriteInFlight = false)
+            }
+        }
+    }
+
+    private suspend fun isPostSavedBy(userId: String, housingId: String): Boolean =
+        withContext(Dispatchers.IO) {
+            FirebaseFirestore.getInstance()
+                .collection("StudentUser").document(userId)
+                .collection("SavedHousing").document(housingId)
+                .get().await()
+                .exists()
+        }
+
+    fun syncPendingFavorites(isOnline: Boolean) {
+        if (!isOnline) return
+        val id = currentHousingId ?: return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val ops = favQueue.drain()
+            if (ops.isNotEmpty()) {
+                ops.forEach { item ->
+                    runCatching {
+                        if (item.action == FavoriteSyncQueue.Action.ADD)
+                            savedRepo.addSaved(item.userId, item.housingId)
+                        else
+                            savedRepo.removeSaved(item.userId, item.housingId)
+                    }
+                }
+            }
+            // Tras aplicar cola, vuelve a consultar el estado saved real y refresca snapshot
+            val uid = currentUserId()
+            if (uid != null) {
+                val saved = isPostSavedBy(uid, id)
+                withContext(Dispatchers.Main) {
+                    _state.value = _state.value.copy(isSaved = saved)
+                }
+                local.saveSnapshot(id, _state.value)
+            }
+        }
+    }
+
 
     // ---------------- Analytics (unchanged, runs on IO) ----------------
     fun onDetailVisibleFor(

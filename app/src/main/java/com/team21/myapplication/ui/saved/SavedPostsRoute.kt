@@ -16,6 +16,10 @@ import com.team21.myapplication.ui.components.inputs.SearchBar
 import com.team21.myapplication.ui.saved.state.SavedPostsUiState
 import com.team21.myapplication.ui.theme.AppTextStyles
 import com.team21.myapplication.utils.NetworkMonitor
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+
 
 /**
  * SavedPostsRoute
@@ -40,10 +44,25 @@ fun SavedPostsRoute(
         initialValue = SavedPostsUiState()
     )
 
-    // Carga cache-first -> network al cambiar conectividad
-    LaunchedEffect(isOnline) {
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Refresco inicial (online-first si hay red)
+    LaunchedEffect(Unit) {
         vm.load(isOnline = isOnline)
     }
+
+    // Refresco en onResume (por si hiciste save/unsave en Detail)
+    DisposableEffect(lifecycleOwner, isOnline) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                vm.load(isOnline = isOnline)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
 
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { inner ->
         Column(

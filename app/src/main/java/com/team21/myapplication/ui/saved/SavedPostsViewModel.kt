@@ -42,38 +42,30 @@ class SavedPostsViewModel(app: Application) : AndroidViewModel(app) {
         _state.value = _state.value.copy(isLoading = true, error = null)
 
         viewModelScope.launch {
-            // 1) [CACHE-FIRST] ArrayMap / Hive
-            val cached = offline.load()
-            if (!cached.isNullOrEmpty()) {
-                _state.value = _state.value.copy(isLoading = false, items = cached)
-            }
-
-            // 2) Online refresh si es posible
             if (isOnline) {
                 runCatching {
                     val userId = currentUserId() ?: error("No user session")
-                    Log.d(TAG, "getSavedPreviewsVIEWMODEL(userId=$userId)") // [DEBUG]
-                    val fresh = withContext(Dispatchers.IO) {
-                        online.getSavedPreviews(userId)
-                    }
+                    val fresh = withContext(Dispatchers.IO) { online.getSavedPreviews(userId) }
                     _state.value = _state.value.copy(isLoading = false, items = fresh)
-
-                    // Persistir en disco
-                    viewModelScope.launch(Dispatchers.IO) {
-                        offline.saveAll(fresh)
-                    }
+                    // persist en background
+                    viewModelScope.launch(Dispatchers.IO) { offline.saveAll(fresh) }
                 }.onFailure { e ->
-                    if (_state.value.items.isEmpty()) {
-                        _state.value = _state.value.copy(isLoading = false, error = e.message ?: "Error")
-                    }
+                    // fallback a cache si falla el online
+                    val cached = offline.load().orEmpty()
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        items = cached,
+                        error = e.message
+                    )
                 }
             } else {
-                if (_state.value.items.isEmpty()) {
-                    _state.value = _state.value.copy(isLoading = false, items = emptyList())
-                }
+                // sin conectividad: solo cache
+                val cached = offline.load().orEmpty()
+                _state.value = _state.value.copy(isLoading = false, items = cached)
             }
         }
     }
+
 
     fun addSaved(housingId: String, isOnline: Boolean) {
         viewModelScope.launch {
@@ -98,16 +90,13 @@ class SavedPostsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun removeSaved(housingId: String, isOnline: Boolean) {
         viewModelScope.launch {
-            // Optimistic remove
             _state.value = _state.value.copy(items = _state.value.items.filterNot { it.housingId == housingId })
             if (isOnline) {
                 runCatching {
                     val userId = currentUserId() ?: error("No user")
-                    withContext(Dispatchers.IO) { online.removeSaved(userId, housingId) } // I/O
-                    // Persist nuevo estado
-                    viewModelScope.launch(Dispatchers.IO) {
-                        offline.saveAll(_state.value.items)
-                    }
+                    withContext(Dispatchers.IO) { online.removeSaved(userId, housingId) }
+                    // re-sync online-first para reflejar cambios del servidor
+                    load(isOnline = true)
                 }.onFailure {
                     _state.value = _state.value.copy(error = "Could not remove post")
                 }
