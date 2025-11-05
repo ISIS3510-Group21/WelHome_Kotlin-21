@@ -39,7 +39,7 @@ fun ProfileView(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start
         ) {
-
+            Spacer(modifier = Modifier.height(100.dp))
             Spacer(modifier = Modifier.width(16.dp))
             BlackText(
                 text = "Your profile",

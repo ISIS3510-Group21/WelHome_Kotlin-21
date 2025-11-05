@@ -15,6 +15,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -102,11 +105,15 @@ class MainActivity : ComponentActivity() {
                 }
 
                 Scaffold(
-                    bottomBar = { AppNavBar(navController) }
+                    bottomBar = { AppNavBar(navController) },
+                    // ⬇️ Evita que este Scaffold meta insets automáticos
+                    contentWindowInsets = WindowInsets(0, 0, 0, 0)
                 ) { inner ->
                     AppNavGraph(
                         navController = navController,
-                        modifier = Modifier.padding(inner)
+                        modifier = Modifier
+                            .padding(inner)              // aplica el padding UNA sola vez
+                            .consumeWindowInsets(inner)
                     )
                 }
             }

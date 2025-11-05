@@ -15,6 +15,10 @@ import com.team21.myapplication.ui.components.navbar.OwnerNavBar
 import com.team21.myapplication.ui.components.navbar.OwnerNavGraph
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.padding
+
 
 class OwnerMainActivity : ComponentActivity() {
 
@@ -38,11 +42,14 @@ class OwnerMainActivity : ComponentActivity() {
             AppTheme {
                 val navController = rememberNavController()
                 Scaffold(
-                    bottomBar = { OwnerNavBar(navController) }
+                    bottomBar = { OwnerNavBar(navController) },
+                    contentWindowInsets = WindowInsets(0, 0, 0, 0)
                 ) { inner ->
                     OwnerNavGraph(
                         navController = navController,
-                        modifier = Modifier.padding(inner)
+                        modifier = Modifier
+                            .padding(inner)              // aplica el padding una sola vez
+                            .consumeWindowInsets(inner)
                     )
                 }
             }
