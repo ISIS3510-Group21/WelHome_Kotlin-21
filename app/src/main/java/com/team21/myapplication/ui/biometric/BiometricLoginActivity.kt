@@ -34,6 +34,8 @@ import com.team21.myapplication.ui.components.banners.ConnectivityBanner
 import com.team21.myapplication.utils.App
 import com.team21.myapplication.utils.NetworkMonitor
 import kotlinx.coroutines.withContext
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.remember
 
 class BiometricLoginActivity : FragmentActivity() {
 
@@ -75,10 +77,16 @@ class BiometricLoginActivity : FragmentActivity() {
                         position = BannerPosition.Top,
                         modifier = Modifier.align(Alignment.TopCenter)
                     )
+                    val context = LocalContext.current
+                    val store = remember(context) { BiometricCredentialStore(context) }
+
+                    var hasLinked by remember {
+                        mutableStateOf(runCatching { store.hasLinkedFingerprint() }.getOrElse { false })
+                    }
 
                     BiometricLoginScreen(
-                        biometricsAvailable = store.isBiometricAvailable(),
-                        hasLinked = store.hasLinkedFingerprint(),
+                        biometricsAvailable = runCatching { store.isBiometricAvailable() }.getOrElse { false },
+                        hasLinked = hasLinked,
                         isOnline = isOnline,
                         onOpenSettings = {
                             // Aquí abro Settings para enrolar huella si el dispositivo no tiene.
@@ -123,7 +131,8 @@ class BiometricLoginActivity : FragmentActivity() {
                                     return@launch
                                 }
 
-                                val executor = Executors.newSingleThreadExecutor()
+                                val executor = androidx.core.content.ContextCompat.getMainExecutor(this@BiometricLoginActivity)
+
                                 val prompt = androidx.biometric.BiometricPrompt(
                                     this@BiometricLoginActivity, // FragmentActivity
                                     executor,
@@ -158,7 +167,10 @@ class BiometricLoginActivity : FragmentActivity() {
                                                 sessionManager.saveSession(userId, email, isOwner)
                                                 sessionManager.saveOfflineIdentity(userId, email, isOwner)
 
-                                                runOnUiThread { onSuccess() } // regreso a las dos opciones
+                                                runOnUiThread {
+                                                    hasLinked = true    // <-- habilita de inmediato “Login with fingerprint”
+                                                    onSuccess()
+                                                }
                                             } catch (e: Exception) {
                                                 runOnUiThread { onError("Could not link fingerprint. Please try again.") }
                                             }
@@ -190,7 +202,8 @@ class BiometricLoginActivity : FragmentActivity() {
                                 onError("Stored credentials are not available. Please link again.")
                                 return@BiometricLoginScreen
                             }
-                            val executor = Executors.newSingleThreadExecutor()
+                            val executor = androidx.core.content.ContextCompat.getMainExecutor(this@BiometricLoginActivity)
+
                             val prompt = BiometricPrompt(
                                 this@BiometricLoginActivity,
                                 executor,
@@ -389,14 +402,8 @@ private fun BiometricLoginScreen(
                             scope.launch { snackbarHostState.showSnackbar("You're offline. Link fingerprint requires internet.") }
                             return@Button
                         }
-                        onLink(email.trim(), pass, { msg ->
-                            scope.launch { snackbarHostState.showSnackbar(msg) }
-                        }) {
-                            // éxito -> feedback + volver a selección
-                            email = ""; pass = ""; error = null
-                            mode = Mode.Selection
-                            scope.launch { snackbarHostState.showSnackbar("Fingerprint linked!") }
-                        }
+                        error = null
+                        mode = Mode.Link
                     },
                     enabled = biometricsAvailable,
                     modifier = Modifier.fillMaxWidth(),
@@ -404,6 +411,7 @@ private fun BiometricLoginScreen(
                 ) {
                     Text("Link fingerprint to account")
                 }
+
 
                 if (!biometricsAvailable) {
                     Spacer(Modifier.height(16.dp))
