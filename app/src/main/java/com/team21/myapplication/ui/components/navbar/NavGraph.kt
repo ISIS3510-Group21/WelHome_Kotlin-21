@@ -24,6 +24,7 @@ import com.team21.myapplication.data.repository.AuthRepository
 import com.team21.myapplication.ui.createAccountView.WelcomeActivity
 import com.team21.myapplication.ui.mapsearch.MapSearchView
 import com.team21.myapplication.ui.profileView.ProfileRoute
+import com.team21.myapplication.ui.saved.SavedPostsRoute
 import com.team21.myapplication.ui.visits.VisitsView
 
 object DetailRoutes {
@@ -145,8 +146,18 @@ fun AppNavGraph(
             )
         }
 
-        // OTROS (placeholders)
-        composable(AppDest.Saved.route)   { Text("Saved") }
+        //Saved Posts
+        composable(AppDest.Saved.route) {
+            SavedPostsRoute(
+                onOpenDetail = { id ->
+                    navController.navigate(DetailRoutes.detail(id))
+                },
+                onOpenFilters = {
+                    context.startActivity(Intent(context, FilterActivity::class.java))
+                }
+            )
+        }
+
         composable(AppDest.Profile.route) {
             val ctx = LocalContext.current
             val session = SecureSessionManager(ctx.applicationContext)

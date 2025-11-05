@@ -157,6 +157,6 @@ class AuthRepository {
         }
     }
 
-
+    fun getCurrentUserEmail(): String? = auth.currentUser?.email
 
 }
