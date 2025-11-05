@@ -9,6 +9,9 @@ import androidx.navigation.compose.rememberNavController
 import com.team21.myapplication.ui.components.navbar.AppNavBar
 import com.team21.myapplication.ui.detailView.DetailHousingActivity
 import com.team21.myapplication.ui.theme.AppTheme
+import com.team21.myapplication.ui.components.navbar.AppNavBar
+import com.team21.myapplication.ui.components.navbar.AppDest
+import com.team21.myapplication.ui.main.MainActivity
 
 class FilterResultsActivity : ComponentActivity() {
     companion object {
@@ -21,27 +24,38 @@ class FilterResultsActivity : ComponentActivity() {
 
         setContent {
             AppTheme {
-                val navController = rememberNavController()
-                Scaffold(bottomBar = { AppNavBar(navController) }) { inner ->
+                Scaffold(
+                    bottomBar = {
+                        AppNavBar(
+                            currentRoute = AppDest.Home.route, // o null
+                            onNavigate = { route ->
+                                startActivity(
+                                    Intent(this, MainActivity::class.java)
+                                        .putExtra(MainActivity.EXTRA_START_DEST, route)
+                                )
+                                finish()
+                            }
+                        )
+                    }
+                ) { innerPadding ->
                     if (!tagsCsv.isNullOrBlank()) {
                         FilterResultsFromTagNamesRoute(
                             tagNamesCsv = tagsCsv,
-                            onOpenDetail = { housingId ->
+                            onOpenDetail = { id ->
                                 startActivity(
                                     Intent(this, DetailHousingActivity::class.java)
-                                        .putExtra(DetailHousingActivity.EXTRA_HOUSING_ID, housingId)
+                                        .putExtra(DetailHousingActivity.EXTRA_HOUSING_ID, id)
                                 )
                             }
                         )
                     } else {
                         FilterResultsRoute(
-                            onOpenDetail = { housingId ->
+                            onOpenDetail = { id ->
                                 startActivity(
                                     Intent(this, DetailHousingActivity::class.java)
-                                        .putExtra(DetailHousingActivity.EXTRA_HOUSING_ID, housingId)
+                                        .putExtra(DetailHousingActivity.EXTRA_HOUSING_ID, id)
                                 )
-                            },
-                            onNavigateBottomBar = { /* ... */ }
+                            }
                         )
                     }
                 }

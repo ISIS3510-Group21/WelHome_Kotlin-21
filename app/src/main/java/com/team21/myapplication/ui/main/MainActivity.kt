@@ -53,6 +53,9 @@ import com.team21.myapplication.utils.App
 
 class MainActivity : ComponentActivity() {
 
+    companion object {
+        const val EXTRA_START_DEST = "EXTRA_START_DEST" // ← NEW
+    }
     // Launcher para pedir POST_NOTIFICATIONS en Android 13+
     private val requestNotifPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -75,6 +78,19 @@ class MainActivity : ComponentActivity() {
         setContent {
             AppTheme {
                 val navController = rememberNavController()
+
+                LaunchedEffect(Unit) {
+                    val route = intent?.getStringExtra(EXTRA_START_DEST)
+                    if (!route.isNullOrBlank()) {
+                        navController.navigate(route) {
+                            launchSingleTop = true
+                            restoreState = true
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                        }
+                        // evita que re-dispare si se recrea
+                        intent?.removeExtra(EXTRA_START_DEST)
+                    }
+                }
 
                 // Manejar deep link del intent que abrió la Activity
                 val ctx = LocalContext.current

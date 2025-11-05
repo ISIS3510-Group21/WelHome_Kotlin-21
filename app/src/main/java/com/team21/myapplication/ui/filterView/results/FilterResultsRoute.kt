@@ -22,7 +22,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun FilterResultsRoute(
     onOpenDetail: (String) -> Unit,
-    onNavigateBottomBar: (String) -> Unit
+    onNavigateBottomBar: (String) -> Unit ={}
 ) {
     val ctx = LocalContext.current
     val isOnline by remember { NetworkMonitor.get(ctx).isOnline }.collectAsStateWithLifecycle()

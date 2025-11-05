@@ -14,34 +14,48 @@ import com.team21.myapplication.ui.filterView.state.PreviewCardUi
 import com.team21.myapplication.ui.detailView.DetailHousingActivity
 import com.team21.myapplication.ui.mapsearch.MapSearchActivity
 import com.team21.myapplication.ui.theme.AppTheme
-
+import com.team21.myapplication.ui.components.navbar.AppNavBar
+import com.team21.myapplication.ui.components.navbar.AppDest
+import com.team21.myapplication.ui.main.MainActivity
 class FilterActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
             AppTheme {
-                // Nota: usamos AppNavBar para mantener estética (como MainActivity).
-                val navController = rememberNavController()
-
                 Scaffold(
-                    bottomBar = { AppNavBar(navController) } // misma navbar visual
+                    bottomBar = {
+                        AppNavBar(
+                            currentRoute = AppDest.Home.route, // o null si no quieres resaltar
+                            onNavigate = { route ->
+                                startActivity(
+                                    Intent(this, MainActivity::class.java)
+                                        .putExtra(MainActivity.EXTRA_START_DEST, route)
+                                )
+                                // opcional: evita apilar esta Activity
+                                finish()
+                            }
+                        )
+                    }
                 ) { innerPadding ->
-                    // Aquí monto la Route del feature
                     FilterRoute(
-                        onNavigateToResults = { items: List<PreviewCardUi> ->
-                            // Aquí paso resultados vía cache simple y abro la Activity de resultados
+                        onNavigateToResults = { items ->
                             FilterResultsCache.items = items
                             startActivity(Intent(this, FilterResultsActivity::class.java))
                         },
-                        onOpenDetail = { housingId ->
+                        onOpenDetail = { id ->
                             startActivity(
                                 Intent(this, DetailHousingActivity::class.java)
-                                    .putExtra(DetailHousingActivity.EXTRA_HOUSING_ID, housingId)
+                                    .putExtra(DetailHousingActivity.EXTRA_HOUSING_ID, id)
                             )
                         },
                         onMapSearch = {
-                            startActivity(Intent(this, MapSearchActivity::class.java))
+                            // si tienes Map como tab en Main, puedes mandar a Main también
+                            startActivity(
+                                Intent(this, MainActivity::class.java)
+                                    .putExtra(MainActivity.EXTRA_START_DEST, "mapSearch")
+                            )
+                            finish()
                         }
                     )
                 }
