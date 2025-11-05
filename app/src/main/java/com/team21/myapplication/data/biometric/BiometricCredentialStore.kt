@@ -1,6 +1,7 @@
 package com.team21.myapplication.data.biometric
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.os.Build
 import androidx.biometric.BiometricManager
 import androidx.security.crypto.EncryptedSharedPreferences
@@ -10,11 +11,19 @@ import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.IvParameterSpec
+import android.util.Log
+import java.security.GeneralSecurityException
+import javax.crypto.AEADBadTagException
+import android.security.KeyStoreException
+
+
 
 /**
  * Aquí creo y uso una clave AES en AndroidKeyStore que exige biometría para (de)crifrar.
  * Guardo email/password cifrados en EncryptedSharedPreferences.
  */
+private const val TAG = "BioStore"
+private const val KEYSET_PREFS = "androidx.security.crypto.master_key_keyset" // keyset interno de Security-crypto
 class BiometricCredentialStore(private val context: Context) {
 
     private val prefsName = "bio_login_prefs"
@@ -23,6 +32,7 @@ class BiometricCredentialStore(private val context: Context) {
     private val keyIv    = "enc_iv"
     private val keyAlias = "bio_login_aes_key" // alias en Keystore
     private val keyBlob = "enc_blob"
+
 
     fun isBiometricAvailable(): Boolean {
         val bm = BiometricManager.from(context)
@@ -78,21 +88,74 @@ class BiometricCredentialStore(private val context: Context) {
             init(Cipher.DECRYPT_MODE, getOrCreateSecretKey(), IvParameterSpec(iv))
         }
 
-    private fun prefs() = EncryptedSharedPreferences.create(
-        context,
-        prefsName,
-        MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
+    private fun prefs(): SharedPreferences {
+        val master = MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+
+        return try {
+            EncryptedSharedPreferences.create(
+                context,
+                prefsName, // p.ej. "bio_login_prefs"
+                master,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        } catch (e: Exception) {
+            // Self-heal si el keyset quedó inválido (AEADBadTag / VERIFICATION_FAILED)
+            val cause = e.cause ?: e
+            val msg = (cause.message ?: "").lowercase()
+            val suspect =
+                cause is AEADBadTagException ||
+                        cause is GeneralSecurityException ||
+                        msg.contains("verification_failed") ||
+                        msg.contains("aeadbadtag") ||
+                        msg.contains("keystore") ||
+                        msg.contains("decrypt") ||
+                        msg.contains("finish failed")
+            Log.e(TAG, "prefs() failed, will reset secure store. ${cause::class.java.simpleName}: ${cause.message}")
+
+            if (suspect) {
+                try {
+                    context.deleteSharedPreferences(KEYSET_PREFS) // borra keyset interno
+                    context.deleteSharedPreferences(prefsName)    // borra tus prefs cifradas
+                } catch (_: Throwable) { /* ignore */ }
+
+                val newMaster = MasterKey.Builder(context)
+                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                    .build()
+
+                EncryptedSharedPreferences.create(
+                    context,
+                    prefsName,
+                    newMaster,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                )
+            } else {
+                throw e
+            }
+        }
+    }
+
 
     fun clear() {
         prefs().edit().remove(keyEmail).remove(keyPass).remove(keyIv).apply()
     }
 
-    fun hasLinkedFingerprint(): Boolean {
+    fun hasLinkedFingerprint(): Boolean = try {
         val p = prefs()
-        return p.contains(keyBlob) && p.contains(keyIv)
+        p.contains(keyBlob) && p.contains(keyIv)
+    } catch (e: Exception) {
+        Log.e(TAG, "hasLinkedFingerprint(): ${e.message}")
+        false
+    }
+
+    fun clearAllAndReset() {
+        try {
+            context.deleteSharedPreferences(KEYSET_PREFS)
+            context.deleteSharedPreferences(prefsName)
+        } catch (_: Throwable) {}
     }
 
     /** Aquí cifro y persisto email/password con la huella (clave Keystore). */
