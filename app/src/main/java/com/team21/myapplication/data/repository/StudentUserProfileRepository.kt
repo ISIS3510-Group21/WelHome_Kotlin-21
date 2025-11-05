@@ -52,7 +52,7 @@ class StudentUserProfileRepository {
                 price = housingPost.post.price,
                 rating = housingPost.post.rating.toFloat(),
                 photoPath = housingPost.post.thumbnail,
-                housing = housingPost.post.address
+                housing = housingPost.post.id
             )
 
             studentUserCollection
