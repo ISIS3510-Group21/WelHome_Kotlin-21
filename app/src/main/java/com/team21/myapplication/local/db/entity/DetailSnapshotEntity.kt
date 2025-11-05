@@ -27,6 +27,6 @@ data class DetailSnapshotEntity(
     val latitude: Double?,
     val longitude: Double?,
     val status: String,
-
+    val isSaved: Boolean,     // <- guarda el estado de favorito
     val updatedAtMs: Long            // For staleness/expiration policies if needed
 )

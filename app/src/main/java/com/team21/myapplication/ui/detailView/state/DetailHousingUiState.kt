@@ -24,5 +24,7 @@ data class DetailHousingUiState(
 
     val latitude: Double? = null,
     val longitude: Double? = null,
-    val status: String = ""
+    val status: String = "",
+    val isSaved: Boolean = false,           // <- si este post está guardado por el usuario
+    val isFavoriteInFlight: Boolean = false // <- bloquea taps mientras se procesa
 )

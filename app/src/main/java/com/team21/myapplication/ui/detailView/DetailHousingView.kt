@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.team21.myapplication.R
 import androidx.compose.foundation.clickable
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.draw.alpha
 import com.team21.myapplication.ui.components.buttons.BlueButton
 import com.team21.myapplication.ui.components.buttons.GrayButton
 import com.team21.myapplication.ui.components.cards.GrayBorderCardWithIcon
@@ -68,13 +69,18 @@ fun DetailHousingView(
                         .clickable { onBack() }
                 )
                 Spacer(Modifier.weight(1f))
+                val heartIcon = if (uiState.isSaved) AppIcons.HeartUnSaved else AppIcons.HeartSaved
                 Icon(
-                    imageVector = AppIcons.HeartSaved,
-                    contentDescription = "Save",
+                    imageVector = heartIcon,
+                    contentDescription = if (uiState.isSaved) "Unsave" else "Save",
                     tint = MaterialTheme.colorScheme.onSecondaryContainer,
                     modifier = Modifier
                         .size(30.dp)
                         .padding(4.dp)
+                        .let { m ->
+                            if (uiState.isFavoriteInFlight) m else m.clickable { onToggleFavorite() }
+                        }
+                        .alpha(if (uiState.isFavoriteInFlight) 0.4f else 1f) // feedback visual mientras carga
                 )
             }
 

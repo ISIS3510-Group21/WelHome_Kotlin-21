@@ -46,6 +46,14 @@ fun DetailHousingRoute(
         vm.load(housingId = housingId, isOnline = isOnline, recentCache = recentCache)
     }
 
+    LaunchedEffect(isOnline) {
+        if (isOnline) {
+            vm.syncPendingFavorites(true)   // aplica cola offline → servidor
+            // opcional: volver a cargar para asegurar todo fresco
+            vm.load(housingId = housingId, isOnline = true, recentCache = recentCache)
+        }
+    }
+
     // Existing analytics dependencies (unchanged)
     val analytics = remember { AnalyticsHelper(ctx.applicationContext) }
     val authRepo = remember { AuthRepository() }
@@ -92,9 +100,10 @@ fun DetailHousingRoute(
                         ctx.startActivity(intent)
                     },
                     onViewAllAmenities = { /* TODO */ },
-                    onToggleFavorite = { /* TODO */ },
+                    onToggleFavorite = { vm.onToggleFavorite(isOnline) },
                     onCallHost = { /* TODO */ },
-                    onMessageHost = { /* TODO */ }
+                    onMessageHost = { /* TODO */ },
+
                 )
             }
         }

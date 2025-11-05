@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Message
 import androidx.compose.material.icons.filled.ArrowBackIos
 import androidx.compose.material.icons.filled.CropFree
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.outlined.Person
@@ -51,6 +52,7 @@ object AppIcons {
     val GoBack: ImageVector = Icons.Default.ArrowBackIos
 
     val HeartSaved: ImageVector = Icons.Default.FavoriteBorder
+    val HeartUnSaved: ImageVector = Icons.Default.Favorite
 
     val Bath: ImageVector = Icons.Outlined.Bathtub
 
