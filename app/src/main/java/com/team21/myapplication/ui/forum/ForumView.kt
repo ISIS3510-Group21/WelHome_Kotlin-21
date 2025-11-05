@@ -75,6 +75,7 @@ fun ForumContent(
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
         ) {
+            Spacer(modifier = Modifier.height(10.dp))
             Text(
                 text = "Forum",
                 style = MaterialTheme.typography.titleLarge,
