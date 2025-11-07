@@ -4,9 +4,14 @@ import android.content.Intent
 import android.util.Log
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.firestore.FirebaseFirestore
@@ -54,6 +59,29 @@ fun DetailHousingRoute(
         }
     }
 
+    // native icon colors
+    val view = LocalView.current
+
+    val statusBarColor = if (!isOnline) {
+        androidx.compose.ui.graphics.Color.Black
+    } else {
+        MaterialTheme.colorScheme.background
+    }
+
+    SideEffect {
+        val window = (view.context as android.app.Activity).window
+        // Variable de fondo
+        window.statusBarColor = statusBarColor.toArgb()
+
+        // La lógica para decidir el color de los íconos
+        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars =
+            if (!isOnline) {
+                false // Íconos blancos para fondo negro
+            } else {
+                statusBarColor.luminance() > 0.5f // Decide según la luminancia del fondo
+            }
+    }
+
     // Existing analytics dependencies (unchanged)
     val analytics = remember { AnalyticsHelper(ctx.applicationContext) }
     val authRepo = remember { AuthRepository() }
@@ -80,8 +108,6 @@ fun DetailHousingRoute(
     }
 
     Column {
-        // [EVENTUAL CONNECTIVITY] Banner visible when offline
-        ConnectivityBanner(visible = !isOnline, position = BannerPosition.Top)
 
         when {
             uiState.isLoading -> {

@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -25,11 +26,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -128,6 +133,29 @@ fun MapSearchView(
         mutableStateOf<LatLng?>(null)
     }
 
+    // native icons colors
+    val view = LocalView.current
+
+    val statusBarColor = if (!isOnline) {
+        androidx.compose.ui.graphics.Color.Black
+    } else {
+        MaterialTheme.colorScheme.background
+    }
+
+    SideEffect {
+        val window = (view.context as android.app.Activity).window
+        // Variable de fondo
+        window.statusBarColor = statusBarColor.toArgb()
+
+        // La lógica para decidir el color de los íconos
+        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars =
+            if (!isOnline) {
+                false // Íconos blancos para fondo negro
+            } else {
+                statusBarColor.luminance() > 0.5f // Decide según la luminancia del fondo
+            }
+    }
+
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_START) {
@@ -211,8 +239,17 @@ fun MapSearchView(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .statusBarsPadding()
                     .padding(16.dp)
             ) {
+                ConnectivityBanner(
+                    visible = !isOnline,
+                    position = BannerPosition.Top,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(Modifier.height(12.dp))
+
                 Text(
                     text = "Map Search",
                     style = LocalDSTypography.current.TitleView,
@@ -229,7 +266,6 @@ fun MapSearchView(
         },
         modifier = modifier.fillMaxSize()
     ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
                     .padding(innerPadding)
@@ -349,14 +385,8 @@ fun MapSearchView(
                     }
                 }
             }
-            ConnectivityBanner(
-                visible = !isOnline,
-                position = BannerPosition.Top,
-                modifier = Modifier.align(Alignment.TopCenter)
-            )
         }
     }
-}
 
 @Preview(showBackground = true)
 @Composable

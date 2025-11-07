@@ -60,6 +60,8 @@ import com.team21.myapplication.ui.components.banners.BannerPosition
 import androidx.compose.ui.graphics.luminance
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarResult
 
 @Composable
 fun WelcomeLayout(
@@ -195,7 +197,13 @@ fun WelcomeLayout(
                 text = "Forgot password?",
                 modifier = Modifier.clickable {
                     if(!isOnline){
-                        scope.launch { snackbarHostState.showSnackbar("You're offline. Password reset requires internet.")}
+                        scope.launch {
+                            val res = snackbarHostState.showSnackbar(
+                                message = "You're offline. Password reset requires internet.",
+                                actionLabel  = "OK",
+                                duration = SnackbarDuration.Indefinite // se oculta al tocar "OK"
+                         )
+                        }
                     } else{
                             context.startActivity(
                                 Intent(
@@ -238,7 +246,13 @@ fun WelcomeLayout(
             GrayButton(text = "Register now",
                 onClick = {
                     if (!isOnline) {
-                        scope.launch { snackbarHostState.showSnackbar("You're offline. Connect to sign up.") }
+                        scope.launch {
+                            snackbarHostState.showSnackbar(
+                                message = "You're offline. Connect to sign up.",
+                                actionLabel  = "OK",
+                                duration = SnackbarDuration.Indefinite // se oculta al tocar "OK"
+                            )
+                        }
                     } else {
                         onNavigateToSignUp()
                     }
