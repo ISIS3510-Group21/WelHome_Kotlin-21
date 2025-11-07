@@ -6,8 +6,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -18,15 +20,20 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.team21.myapplication.data.model.ForumPost
@@ -45,6 +52,28 @@ fun ForumScreen(
 ) {
     val state by forumViewModel.state.collectAsState()
     val isOnline by forumViewModel.isOnline.collectAsState()
+
+    val view = LocalView.current
+
+    val statusBarColor = if (!isOnline) {
+        androidx.compose.ui.graphics.Color.Black
+    } else {
+        MaterialTheme.colorScheme.background
+    }
+
+    SideEffect {
+        val window = (view.context as android.app.Activity).window
+        // Variable de fondo
+        window.statusBarColor = statusBarColor.toArgb()
+
+        // La lógica para decidir el color de los íconos
+        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars =
+            if (!isOnline) {
+                false // Íconos blancos para fondo negro
+            } else {
+                statusBarColor.luminance() > 0.5f // Decide según la luminancia del fondo
+            }
+    }
 
     ForumContent(
         modifier = modifier,
@@ -69,13 +98,20 @@ fun ForumContent(
     selectedThreadId: String? = null,
     onThreadClick: (ThreadForum) -> Unit = {}
 ) {
-    Box(modifier = modifier.fillMaxSize()) {
-        Column(
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+    ) {
+        ConnectivityBanner(
+            visible = !isOnline,
+            position = BannerPosition.Top,
             modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp)
-        ) {
-            Spacer(modifier = Modifier.height(10.dp))
+                .fillMaxWidth()
+                .statusBarsPadding()
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+        Column(Modifier.padding(horizontal = 16.dp)) {
             Text(
                 text = "Forum",
                 style = MaterialTheme.typography.titleLarge,
@@ -105,7 +141,11 @@ fun ForumContent(
                         ) {
                             Column {
                                 if (thread.forumPost.isEmpty() && thread.id == selectedThreadId) {
-                                    CircularProgressIndicator(modifier = Modifier.padding(16.dp).align(Alignment.CenterHorizontally))
+                                    CircularProgressIndicator(
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .align(Alignment.CenterHorizontally)
+                                    )
                                 } else {
                                     thread.forumPost.forEach { post ->
                                         CommentCard(
@@ -123,13 +163,8 @@ fun ForumContent(
                 }
             }
         }
+        }
 
-        ConnectivityBanner(
-            visible = !isOnline,
-            position = BannerPosition.Top,
-            modifier = Modifier.align(Alignment.TopCenter)
-        )
-    }
 }
 fun getIconForTopic(topicTitle: String): ImageVector {
     return when (topicTitle) {

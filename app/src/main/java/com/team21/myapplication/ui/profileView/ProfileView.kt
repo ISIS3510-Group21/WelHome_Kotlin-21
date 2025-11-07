@@ -18,6 +18,7 @@ import com.team21.myapplication.ui.components.icons.ProfilePicture
 import com.team21.myapplication.ui.components.text.BlackText
 import com.team21.myapplication.ui.components.text.BlueText
 import com.team21.myapplication.ui.components.text.GrayText
+import androidx.compose.ui.unit.Dp
 
 @Composable
 fun ProfileView(
@@ -25,12 +26,14 @@ fun ProfileView(
     name: String = "",
     email: String = "",
     country: String = "",
-    phoneNumber: String = ""
+    phoneNumber: String = "",
+    contentTopPadding: Dp = 0.dp
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState()) // Enable scrolling for long content
+            .padding(top = contentTopPadding)
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -39,8 +42,7 @@ fun ProfileView(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start
         ) {
-            Spacer(modifier = Modifier.height(100.dp))
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(32.dp))
             BlackText(
                 text = "Your profile",
                 size = 30.sp,

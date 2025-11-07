@@ -121,21 +121,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/*
-@Composable
-@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
-private fun MainEntry() {
-    val navController = rememberNavController()
-    androidx.compose.material3.Scaffold(
-        bottomBar = { AppNavBar(navController) }
-    ) {
-        AppNavGraph(
-            navController = navController
-        )
-    }
-}
-*/
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
@@ -169,28 +154,32 @@ fun MainScreen(
         viewModel.getHousingPosts()
     }
 
-    Scaffold { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize()) {
+    SideEffect {
+        val window = (view.context as android.app.Activity).window
+        // Variable de fondo
+        window.statusBarColor = statusBarColor.toArgb()
 
-            SideEffect {
-                val window = (view.context as android.app.Activity).window
-                // Variable de fondo
-                window.statusBarColor = statusBarColor.toArgb()
-
-                // La lógica para decidir el color de los íconos
-                WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars =
-                    if (!isOnline) {
-                        false // Íconos blancos para fondo negro
-                    } else {
-                        statusBarColor.luminance() > 0.5f // Decide según la luminancia del fondo
-                    }
+        // La lógica para decidir el color de los íconos
+        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars =
+            if (!isOnline) {
+                false // Íconos blancos para fondo negro
+            } else {
+                statusBarColor.luminance() > 0.5f // Decide según la luminancia del fondo
             }
+    }
+
+    Scaffold { innerPadding ->
+        Column(modifier = Modifier.fillMaxSize()) {
 
             ConnectivityBanner(
                 visible = !isOnline,
                 position = BannerPosition.Top,
-                modifier = Modifier.align(Alignment.TopCenter)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
             )
+            //Spacer(Modifier.height(12.dp))
+
             if (state.isLoading) {
                 LoadingScreen(modifier = Modifier.padding(innerPadding))
             } else {

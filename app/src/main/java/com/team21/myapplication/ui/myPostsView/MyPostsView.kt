@@ -47,14 +47,20 @@ import com.team21.myapplication.ui.components.banners.ConnectivityBanner
 import com.team21.myapplication.ui.createPostView.CreatePostActivity
 import com.team21.myapplication.utils.NetworkMonitor
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.Dp
+import androidx.core.view.WindowCompat
 
 
 @Composable
@@ -80,11 +86,27 @@ fun MyPostsScreen() {
     val state by vm.state.collectAsStateWithLifecycle()
     // Banner de conectividad (top)
     val isOnline by net.isOnline.collectAsStateWithLifecycle()
+    val view = LocalView.current
 
-    ConnectivityBanner(
-        visible = !isOnline,
-        position = BannerPosition.Top
-    )
+    val statusBarColor = if (!isOnline) {
+        androidx.compose.ui.graphics.Color.Black
+    } else {
+        MaterialTheme.colorScheme.background
+    }
+
+    SideEffect {
+        val window = (view.context as android.app.Activity).window
+        // Variable de fondo
+        window.statusBarColor = statusBarColor.toArgb()
+
+        // La lógica para decidir el color de los íconos
+        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars =
+            if (!isOnline) {
+                false // Íconos blancos para fondo negro
+            } else {
+                statusBarColor.luminance() > 0.5f // Decide según la luminancia del fondo
+            }
+    }
 
     LaunchedEffect(Unit) { vm.loadMyPosts() }
 
@@ -99,31 +121,49 @@ fun MyPostsScreen() {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    when {
-        state.error != null -> {
-            // TODO: mostrar texto de error
-            MyPostsScreenLayout(
-                posts = emptyList(),
-                onAddPostClick = {
-                    ctx.startActivity(Intent(ctx, CreatePostActivity::class.java))
-                })
+    Column(Modifier.fillMaxSize()) {
 
-        }
-        else -> {
-            MyPostsScreenLayout(
-                posts = state.posts,
-                onAddPostClick = {
-                    ctx.startActivity(Intent(ctx, CreatePostActivity::class.java))
-                })
-            if (state.isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(36.dp),
-                        strokeWidth = 3.dp
-                    )
+        ConnectivityBanner(
+            visible = !isOnline,
+            position = BannerPosition.Top,
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+        )
+
+        val topPad = if (!isOnline) 0.dp else 40.dp
+
+        when {
+            state.error != null -> {
+                // TODO: mostrar texto de error
+                MyPostsScreenLayout(
+                    posts = emptyList(),
+                    onAddPostClick = {
+                        ctx.startActivity(Intent(ctx, CreatePostActivity::class.java))
+                    },
+                    topPadding = topPad
+                )
+            }
+
+            else -> {
+
+                MyPostsScreenLayout(
+                    posts = state.posts,
+                    onAddPostClick = {
+                        ctx.startActivity(Intent(ctx, CreatePostActivity::class.java))
+                    },
+                    topPadding = topPad
+                )
+                if (state.isLoading) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(36.dp),
+                            strokeWidth = 3.dp
+                        )
+                    }
                 }
             }
         }
@@ -132,7 +172,8 @@ fun MyPostsScreen() {
 @Composable
 fun MyPostsScreenLayout(
     posts: List<BasicHousingPost>,
-    onAddPostClick: () -> Unit = {}
+    onAddPostClick: () -> Unit = {},
+    topPadding: Dp = 40.dp
 ) {
     // Principal component as Column
     Column(
@@ -141,7 +182,7 @@ fun MyPostsScreenLayout(
             .verticalScroll(rememberScrollState()) // allows scrolling
             .padding(16.dp)
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(topPadding))
 
         BlackText(
             text = "My posts",
@@ -185,7 +226,9 @@ fun MyPostsScreenLayout(
             }
 
             Box(
-                modifier = Modifier.widthIn(max = 560.dp).fillMaxWidth(),
+                modifier = Modifier
+                    .widthIn(max = 560.dp)
+                    .fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
                 // 2) Card base (igual que antes)
@@ -238,7 +281,10 @@ fun MyPostsScreenLayout(
                             .clip(RoundedCornerShape(12.dp))
                             .background(Color.Transparent)
                             .padding(1.dp)
-                            .background(Color(0xFF9AA0A6).copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                            .background(
+                                Color(0xFF9AA0A6).copy(alpha = 0.35f),
+                                RoundedCornerShape(12.dp)
+                            )
                     )
                 }
             }

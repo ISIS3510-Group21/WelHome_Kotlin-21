@@ -36,6 +36,9 @@ import com.team21.myapplication.utils.NetworkMonitor
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.zIndex
+import androidx.core.view.WindowCompat
 
 class BiometricLoginActivity : FragmentActivity() {
 
@@ -76,6 +79,8 @@ class BiometricLoginActivity : FragmentActivity() {
                         visible = !isOnline,
                         position = BannerPosition.Top,
                         modifier = Modifier.align(Alignment.TopCenter)
+                            .padding(WindowInsets.statusBars.asPaddingValues())
+                            .zIndex(1f) // por encima del resto
                     )
                     val context = LocalContext.current
                     val store = remember(context) { BiometricCredentialStore(context) }
@@ -363,6 +368,29 @@ private fun BiometricLoginScreen(
     fun showError(msg: String) { error = msg }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    // Cambia status bar según conectividad: negra (íconos blancos) cuando está offline
+    val view = LocalView.current
+
+    val statusBarColor = if (!isOnline) {
+        androidx.compose.ui.graphics.Color.Black
+    } else {
+        MaterialTheme.colorScheme.background
+    }
+
+    SideEffect {
+        val window = (view.context as android.app.Activity).window
+        // Variable de fondo
+        window.statusBarColor = statusBarColor.toArgb()
+
+        // La lógica para decidir el color de los íconos
+        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars =
+            if (!isOnline) {
+                false // Íconos blancos para fondo negro
+            } else {
+                statusBarColor.luminance() > 0.5f // Decide según la luminancia del fondo
+            }
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }

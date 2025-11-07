@@ -146,10 +146,6 @@ fun OwnerMainScreen() {
                         statusBarColor.luminance() > 0.5f // Decide según la luminancia del fondo
                     }
             }
-            ConnectivityBanner(
-                visible = !state.isOnline,
-                position = BannerPosition.Top,
-            )
         }
 
     ) { inner ->
@@ -170,6 +166,13 @@ fun OwnerMainScreen() {
             }
 
             Column(modifier = Modifier.padding(inner)) {
+                ConnectivityBanner(
+                    visible = !state.isOnline,
+                    position = BannerPosition.Top,
+                )
+
+                Spacer(Modifier.height(12.dp))
+
                 OwnerMainScreenLayout(
                     items = listToShow,
 
