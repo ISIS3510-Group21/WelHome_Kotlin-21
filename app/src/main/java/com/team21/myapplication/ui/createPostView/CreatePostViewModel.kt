@@ -28,6 +28,8 @@ import com.team21.myapplication.data.local.AppDatabase
 import com.team21.myapplication.data.local.entity.DraftPostEntity
 import com.team21.myapplication.data.local.entity.DraftImageEntity
 import com.team21.myapplication.data.local.files.DraftFileStore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.UUID
 
 
@@ -174,18 +176,25 @@ class CreatePostViewModel : ViewModel() {
         // 2. CHANGE STATE TO LOADING
         _uiState.value = state.copy(operationState = CreatePostOperationState.Loading)
 
-        viewModelScope.launch {
+        // corrutina principal: general en Dispatcher.IO
+        viewModelScope.launch(Dispatchers.IO) {
             try {
 
-                val allPhotos = buildList {
-                    state.mainPhoto?.let { add(it) }
-                    addAll(state.additionalPhotos)
+                // corrutina anidada 1 - Default: Procesar imágenes en memoria
+                val allPhotos = withContext(Dispatchers.Default) {
+                    buildList {
+                        state.mainPhoto?.let { add(it) }
+                        addAll(state.additionalPhotos)
+                    }
                 }
 
                 if (allPhotos.isEmpty()) {
-                    _uiState.value = _uiState.value.copy(
-                        operationState = CreatePostOperationState.Error("You must attach at least one image")
-                    )
+                    // Cambiar a Main para actualizar UI
+                    withContext(Dispatchers.Main) {
+                        _uiState.value = _uiState.value.copy(
+                            operationState = CreatePostOperationState.Error("You must attach at least one image")
+                        )
+                    }
                     return@launch
                 }
 
@@ -197,56 +206,69 @@ class CreatePostViewModel : ViewModel() {
                     return@launch
                 }
 
-                val post = HousingPost(
-                    id = "",   // "" para autogenerar
-                    address = state.address.trim(),
-                    closureDate = null,
-                    creationDate = Timestamp.now(),
-                    description = state.description.trim(),
-                    host = ownerId,
-                    location = Location(lat = 4.6097, lng = -74.0817), //todo: fix location
-                    price = state.price.toDoubleOrNull() ?: 0.0,
-                    rating = 5.0,
-                    status = "Available",
-                    statusChange = Timestamp.now(),
-                    title = state.title.trim(),
-                    updatedAt = Timestamp.now(),
-                    thumbnail = ""
-                )
-                val res = repository.createHousingPost(
-                    post,
-                    state.selectedAmenities,
-                    imageUris = allPhotos,
-                    selectedTagId = state.selectedTagId
-                )
+                // corrutina anidada 2 - Default: Construir objeto HousingPost
+                val post = withContext(Dispatchers.Default) {
+                    HousingPost(
+                        id = "",   // "" para autogenerar
+                        address = state.address.trim(),
+                        closureDate = null,
+                        creationDate = Timestamp.now(),
+                        description = state.description.trim(),
+                        host = ownerId,
+                        location = Location(lat = 4.6097, lng = -74.0817), //todo: fix location
+                        price = state.price.toDoubleOrNull() ?: 0.0,
+                        rating = 5.0,
+                        status = "Available",
+                        statusChange = Timestamp.now(),
+                        title = state.title.trim(),
+                        updatedAt = Timestamp.now(),
+                        thumbnail = ""
+                    )
+                }
+
+                // corrutina anidada 3 - IO: Crear el post en Firebase - op mas pesada
+                val res = withContext(Dispatchers.IO) {
+                    repository.createHousingPost(
+                        post,
+                        state.selectedAmenities,
+                        imageUris = allPhotos,
+                        selectedTagId = state.selectedTagId
+                    )
+                }
 
                 val result =  res.getOrNull()!!
 
-                if (res.isSuccess){
-                    val postId = result.postId
-                    val mainUrl = result.mainPhotoUrl ?: ""
+                // corrutina anidada 4 - IO: Guardar referencia en el owner (si fue exitoso)
+                if (res.isSuccess) {
+                    withContext(Dispatchers.IO) {
+                        val postId = result.postId
+                        val mainUrl = result.mainPhotoUrl ?: ""
 
-                    // Mapea a BasicHousingPost para la subcolección del owner.
-                    val basicPost = BasicHousingPost(
-                        id = postId,
-                        housing = postId,
-                        title = state.title.trim(),
-                        photoPath = mainUrl,
-                        price = state.price.toDoubleOrNull() ?: 0.0,
-                    )
-                    ownerRepo.addOwnerHousingPost(ownerId, postId, basicPost)
+                        // Mapea a BasicHousingPost para la subcolección del owner.
+                        val basicPost = BasicHousingPost(
+                            id = postId,
+                            housing = postId,
+                            title = state.title.trim(),
+                            photoPath = mainUrl,
+                            price = state.price.toDoubleOrNull() ?: 0.0,
+                        )
+                        ownerRepo.addOwnerHousingPost(ownerId, postId, basicPost)
+                    }
                 }
 
                 // UPDATE STATE ACCORDING TO RESULT
-                _uiState.value = _uiState.value.copy(
-                    operationState = if (res.isSuccess) {
-                        CreatePostOperationState.Success(result.postId)
-                    } else {
-                        CreatePostOperationState.Error(
-                            res.exceptionOrNull()?.message ?: "Unknown error while creating the post"
-                        )
-                    }
-                )
+                withContext(Dispatchers.Main) {
+                    _uiState.value = _uiState.value.copy(
+                        operationState = if (res.isSuccess) {
+                            CreatePostOperationState.Success(result.postId)
+                        } else {
+                            CreatePostOperationState.Error(
+                                res.exceptionOrNull()?.message ?: "Unknown error while creating the post"
+                            )
+                        }
+                    )
+                    onDone(res.isSuccess, res.exceptionOrNull()?.message)
+                }
             } catch (e: Exception) {
                 onDone(false, e.message)
             }

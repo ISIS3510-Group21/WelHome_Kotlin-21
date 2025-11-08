@@ -48,6 +48,8 @@ import kotlinx.coroutines.delay
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import com.team21.myapplication.utils.NetworkMonitor
+import androidx.compose.material3.Snackbar
+import androidx.compose.ui.graphics.Color
 
 
 import java.io.File
@@ -591,7 +593,7 @@ fun CreatePostScreenLayout(
                                             snackbarHostState.showSnackbar(
                                                 message = "This is the normally suggested price. For more details, connect to the Internet.",
                                                 actionLabel = "OK",
-                                                withDismissAction = true
+                                                //withDismissAction = true
                                             )
                                         }
                                     } else {
@@ -717,7 +719,7 @@ fun CreatePostScreenLayout(
                                     snackbarHostState.showSnackbar(
                                         message = "For higher accuracy, connect to the Internet.",
                                         actionLabel = "OK",
-                                        withDismissAction = true
+                                        //withDismissAction = true
                                     )
                                 }
                             } else {
@@ -805,7 +807,14 @@ fun CreatePostScreenLayout(
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(16.dp)
+                .padding(16.dp),
+            snackbar = { snackbarData ->
+                Snackbar(
+                    snackbarData = snackbarData,
+                    contentColor = Color.White,
+                    actionColor = Color.White
+                )
+            }
         )
     }
 }
