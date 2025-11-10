@@ -14,6 +14,7 @@ class StudentUserRepository {
     private val db = FirebaseFirestore.getInstance()
     private val studentUserCollection = db.collection("StudentUser")
     private val housingCollection = db.collection("HousingPost")
+    private val auth = AuthRepository()
 
     suspend fun getStudentUser(userId: String?): StudentUser? {
         if (userId == null) {
@@ -73,5 +74,7 @@ class StudentUserRepository {
         val savedCol = studentUserCollection.document(userId).collection("SavedHousing")
         savedCol.document(housingId).delete().await()
     }
+
+    suspend fun getCurrentUserDocument(): StudentUser? = getStudentUser(findStudentIdByEmail(auth.getCurrentUserEmail()))
 
 }

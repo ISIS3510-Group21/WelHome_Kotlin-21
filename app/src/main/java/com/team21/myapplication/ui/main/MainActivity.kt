@@ -53,6 +53,10 @@ import androidx.core.view.WindowCompat
 import com.team21.myapplication.ui.components.banners.BannerPosition
 import com.team21.myapplication.ui.components.banners.ConnectivityBanner
 import com.team21.myapplication.utils.App
+import com.team21.myapplication.data.repository.StudentUserRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
 
 class MainActivity : ComponentActivity() {
 
@@ -67,6 +71,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
 
         // Suscribe al topic una vez (ok si se llama repetido)
         FirebaseMessaging.getInstance().subscribeToTopic("trending_filters")
@@ -103,6 +108,19 @@ class MainActivity : ComponentActivity() {
                         ctx.intent.removeExtra("login_success")
                     }
                 }
+
+                val studentRepo = remember { StudentUserRepository() }
+
+                LaunchedEffect(Unit) {
+                    // Lee el StudentUser actual
+                    val current = withContext(Dispatchers.IO) { studentRepo.getCurrentUserDocument() }
+                    val nat = current?.nationality?.trim().orEmpty()
+                    if (nat.isNotEmpty()) {
+                        val topic = "nat_" + nat.lowercase().replace(" ", "_")
+                        FirebaseMessaging.getInstance().subscribeToTopic(topic)
+                    }
+                }
+
 
                 Scaffold(
                     bottomBar = { AppNavBar(navController) },
