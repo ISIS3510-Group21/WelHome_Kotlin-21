@@ -211,7 +211,37 @@ class DetailHousingViewModel(app: Application) : AndroidViewModel(app) {
             // ONLINE: escribe y luego confirma
             runCatching {
                 withContext(Dispatchers.IO) {
-                    if (!cur.isSaved) savedRepo.addSaved(uid, id)
+                    if (!cur.isSaved){
+                        savedRepo.addSaved(uid, id)
+
+                        // --- [EVENTO ANALÍTICO PARA SAVED POSTS] ---
+                        // Incluye: userId, nationality, housingId, tags[], timestamp
+                        try {
+                            val nationality = withContext(Dispatchers.IO) {
+                                studentRepo.getStudentUser(uid)?.nationality ?: "Unknown"
+                            }
+                            // Usa las tags cach en load(), si está vacío, pido al repo.
+                            val tags: List<String> = cachedTags.ifEmpty { withContext(Dispatchers.IO) { housingRepo.getTagsForPostId(id) }.map { it.name } }
+
+                            withContext(Dispatchers.IO) {
+                                FirebaseFirestore.getInstance()
+                                    .collection("savedEvents")
+                                    .add(
+                                        mapOf(
+                                            "userId" to uid,
+                                            "housingId" to id,
+                                            "nationality" to nationality,          // p.ej. "CO", "MX", "US"…
+                                            "tags" to tags,                        // array de strings
+                                            "ts" to FieldValue.serverTimestamp()   // para el histórico
+                                        )
+                                    )
+                            }
+                        } catch (_: Exception) {
+                            // no bloquea la UI si el log falla
+                        }
+
+                    }
+
                     else savedRepo.removeSaved(uid, id)
                 }
                 // éxito → actualiza estado y snapshot

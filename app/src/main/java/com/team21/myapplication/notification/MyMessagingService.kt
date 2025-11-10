@@ -43,6 +43,12 @@ class MyMessagingService : FirebaseMessagingService() {
             showDetailNotification(this, title, body, housingId) 
             return
         }
+        if (route == "saved") {
+            val nat = message.data["nationality"].orEmpty()
+            val tag = message.data["tag"]
+            showSavedPostsNotification(this, title, body, nat, tag)
+            return
+        }
         if (route == "filterResults" && tagsCsv.isNotBlank()) {
             showTrendingDirectToResults(this, title, body, tagsCsv)
             return
@@ -91,6 +97,67 @@ class MyMessagingService : FirebaseMessagingService() {
         } catch (_: SecurityException) { /* no crashea si falta permiso */ }
 
     }
+
+    @SuppressLint("MissingPermission")
+    private fun showSavedPostsNotification(
+        ctx: Context,
+        title: String,
+        body: String,
+        nationality: String?,
+        tag: String?
+    ) {
+        ensureChannel(ctx)
+
+        // 1) Raíz: Main (puedes pasar un flag para saltarte guards si los usas)
+        val mainIntent = Intent(ctx, com.team21.myapplication.ui.main.MainActivity::class.java).apply {
+            putExtra(EXTRA_BYPASS_AUTH_GUARD, true)
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        }
+
+        // 2) Destino: Saved
+        val savedIntent = Intent(
+            ctx,
+            com.team21.myapplication.ui.saved.SavedPostsActivity::class.java   // <-- ajusta el paquete si difiere
+        ).apply {
+            putExtra("EXTRA_FROM_NOTIFICATION", true)
+            // Si quieres destacar un tag al entrar (opcional, la UI lo puede ignorar):
+            if (!tag.isNullOrBlank()) putExtra("EXTRA_FILTER_TAG", tag)
+            putExtra("EXTRA_NATIONALITY", nationality ?: "")
+            addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        }
+
+        val stack = TaskStackBuilder.create(ctx).apply {
+            addNextIntent(mainIntent)
+            addNextIntent(savedIntent)
+        }
+
+        val pending = stack.getPendingIntent(
+            4001,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS)
+            != PackageManager.PERMISSION_GRANTED
+        ) return
+
+        val smallIcon = runCatching { R.drawable.ic_notification }.getOrDefault(R.mipmap.ic_launcher)
+
+        val notif = NotificationCompat.Builder(ctx, CHANNEL_ID)
+            .setSmallIcon(smallIcon)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setAutoCancel(true)
+            .setContentIntent(pending)
+            .build()
+
+        try {
+            NotificationManagerCompat.from(ctx)
+                .notify((System.currentTimeMillis() % Int.MAX_VALUE).toInt(), notif)
+        } catch (_: SecurityException) { /* ignora si falta permiso */ }
+    }
+
 
     private fun showTrending(ctx: Context, title: String, body: String, tagsCsv: String) {
         ensureChannel(ctx)
