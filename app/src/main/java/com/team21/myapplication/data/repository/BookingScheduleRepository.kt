@@ -79,7 +79,7 @@ class BookingScheduleRepository {
         val zone = ZoneId.of("America/Bogota")
 
         if (!isOnline) {
-            // OFFLINE -> devolvemos cache si hay
+            // OFFLINE -> devuelve cache si hay
             val cached = availabilityCache[housingId]
             return if (cached != null) cached else (emptyMap<LocalDate, List<LocalTime>>() to null)
         }
@@ -87,6 +87,7 @@ class BookingScheduleRepository {
         // Online -> perdir a Firestore y actualizar cache
         val fresh = getAvailabilityByDay(housingId)
         val now = Instant.now()
+        // guardar en cache
         availabilityCache[housingId] = fresh to now
         return fresh to now
     }

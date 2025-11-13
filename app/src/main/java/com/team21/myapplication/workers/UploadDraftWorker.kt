@@ -37,11 +37,12 @@ class UploadDraftWorker(
     override suspend fun doWork(): Result {
         val draftId = inputData.getString(KEY_DRAFT_ID) ?: return Result.failure()
 
+        // Leer desde room
         val db = AppDatabase.getDatabase(applicationContext)
         val dao = db.draftPostDao()
         val draft: DraftPostEntity = dao.getDraftById(draftId) ?: return Result.failure()
 
-        val images = dao.getImagesFor(draftId)
+        val images = dao.getImagesFor(draftId) //Obtiene rutas locales
         if (images.isEmpty()) return Result.failure()
 
         val repo = HousingPostRepository()
@@ -50,7 +51,7 @@ class UploadDraftWorker(
         val myPostsDao = AppDatabase.getDatabase(applicationContext).myPostsDao()
         val ownerId = auth.getCurrentUserId() ?: draft.ownerId
 
-        // Reconstruir modelo HousingPost
+        // Reconstruir modelo HousingPost (firebase)
         val post = HousingPost(
             id = "",
             address = draft.address,
@@ -74,9 +75,10 @@ class UploadDraftWorker(
             .filter { it.isNotBlank() }
             .map { Ammenities(id = it.trim(), name = "", iconPath = "") }
 
-        // URIs desde rutas locales
+        // convertir rutas locales a uris
         val uris = images.map { Uri.fromFile(File(it.localPath)) }
 
+        // subir a firebase
         val res = repo.createHousingPost(
             housingPost = post,
             selectedAmenities = amenities,
@@ -86,7 +88,7 @@ class UploadDraftWorker(
 
         return if (res.isSuccess) {
 
-            // 1) Tomar postId y miniatura desde el repo (tu repo ya los retorna)
+            // 1) Tomar postId y miniatura desde el repo
             val created = res.getOrNull()
             val postId = created?.postId ?: return Result.retry()
             val mainUrl = created.mainPhotoUrl ?: ""

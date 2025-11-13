@@ -7,12 +7,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.team21.myapplication.data.local.SecureSessionManager
 import com.team21.myapplication.data.repository.AuthRepository
+import com.team21.myapplication.ui.components.text.BlackText
 import com.team21.myapplication.ui.createAccountView.WelcomeActivity
+import com.team21.myapplication.ui.forum.ForumScreen
 import com.team21.myapplication.ui.ownerMainView.OwnerMainScreen
 import com.team21.myapplication.ui.profileView.ProfileRoute
 import com.team21.myapplication.ui.myPostsView.MyPostsScreen
@@ -29,8 +32,15 @@ fun OwnerNavGraph(
     ) {
         composable(OwnerDest.Home.route)    { OwnerMainScreen() }
         composable(OwnerDest.MyPosts.route) { MyPostsScreen() }
-        composable(OwnerDest.Forum.route)   { Text("Forum") }
-        composable(OwnerDest.Visits.route)  { Text("Visits") }
+
+        composable(OwnerDest.Forum.route)   {
+            ForumScreen(
+                navController = navController
+            )
+        }
+
+        composable(OwnerDest.Visits.route)  { BlackText("This feature will be available soon", size=30.sp)}
+
         composable(OwnerDest.Profile.route) {
             val ctx = LocalContext.current
             val activity = ctx as Activity

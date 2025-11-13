@@ -456,6 +456,7 @@ class CreatePostViewModel : ViewModel() {
             addAll(s.additionalPhotos)
         }
         val imageEntities = allUris.mapIndexed { idx, uri ->
+            // DraftFileStore -> copia la imagen al almacenamiento interno
             val path = DraftFileStore.copyIntoDraft(context, draftId, uri, idx)
             DraftImageEntity(
                 draftId = draftId,
@@ -480,6 +481,7 @@ class CreatePostViewModel : ViewModel() {
             createdAtMillis = System.currentTimeMillis(),
             ownerId = ownerId
         )
+        // guarda en room
         draftDao.upsertWithImages(draft, imageEntities)
         return draftId
     }
@@ -513,12 +515,11 @@ class CreatePostViewModel : ViewModel() {
                 val draftId = saveDraftFromUiState(context, ownerId)
                 com.team21.myapplication.workers.enqueueUploadDraft(context, draftId)
                 _uiState.value = _uiState.value.copy(
-                    // usa tu Success actual; si es data class con postId, pon "DRAFT_SAVED"
                     operationState = CreatePostOperationState.Success("DRAFT_SAVED")
                 )
                 onDone(true, "draft")
             } else {
-                // Flujo online tal como ya lo tienes
+                // Flujo online: crear post
                 createPost(onDone)
             }
         }

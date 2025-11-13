@@ -33,16 +33,18 @@ import androidx.compose.ui.text.font.FontWeight
 import com.team21.myapplication.ui.bookVisit.state.BookVisitUiState
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.platform.LocalContext
 import com.team21.myapplication.utils.App
 import com.team21.myapplication.ui.components.banners.ConnectivityBanner
 import com.team21.myapplication.ui.components.banners.BannerPosition
-
+import com.team21.myapplication.ui.theme.GrayIcon
 
 
 @Composable
@@ -146,7 +148,7 @@ fun BookVisitView(
                 BlackText(text = "Select an hour")
                 Spacer(modifier = Modifier.height(8.dp))
 
-                if (state.selectedDateMillis != null && state.availableHours.isEmpty()) {
+                if (state.selectedDateMillis != null && state.availableHours.isEmpty() && !state.isLoadingHours) {
                     BlackText(text = "No availability for this date")
                     Spacer(modifier = Modifier.height(8.dp))
                 }
@@ -171,12 +173,29 @@ fun BookVisitView(
                             .height(180.dp)
                     ) {
                         items(state.availableHours) { h ->
-                            BlueButton(
-                                text = if (h == state.selectedHour) "✓ $h" else h,
-                                onClick = { onSelectHour(h) },
-                                enabled = true,
-                                modifier = Modifier.fillMaxWidth()
-                            )
+                            val isSelected = h == state.selectedHour
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .then(
+                                        if (isSelected) {
+                                            Modifier.border(
+                                                width = 3.dp,
+                                                color = GrayIcon,
+                                                shape = MaterialTheme.shapes.medium
+                                            )
+                                        } else {
+                                            Modifier
+                                        }
+                                    )
+                            ) {
+                                BlueButton(
+                                    text = h,
+                                    onClick = { onSelectHour(h) },
+                                    enabled = true,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
                         }
                     }
                 }

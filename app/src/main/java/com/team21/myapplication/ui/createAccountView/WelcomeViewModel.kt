@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.SharingStarted
 import androidx.lifecycle.ViewModelProvider
 import com.team21.myapplication.data.local.SecureSessionManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class WelcomeViewModel(
@@ -57,8 +58,8 @@ class WelcomeViewModel(
         viewModelScope.launch {
             // rama offline
             if (!isOnline.value) {
-                // (offline) verificar prefs y recrear sesión
-                val ok = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                // (offline) verificar prefs y recrear sesión -> verificar credenciales locales
+                val ok = withContext(Dispatchers.IO) {
                     sessionManager.verifyOfflineEmailAndPassword(state.email.trim(), state.password)
                 }
 
@@ -77,8 +78,10 @@ class WelcomeViewModel(
                     )
                     return@launch
                 }
+                // recrear sesion activa
                 sessionManager.saveSession(ident.userId, ident.email, ident.isOwner)
 
+                // navegar a main
                 _uiState.value = _uiState.value.copy(
                     operationState = SignInOperationState.Success(
                         userId = ident.userId,
@@ -90,17 +93,21 @@ class WelcomeViewModel(
             // --- fin rama offline ---
 
             // rama online
-            val result = withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val result = withContext(Dispatchers.IO) {
+                // 1. Login con Firebase
                 repository.signIn(state.email.trim(), state.password)
             }
             _uiState.value = _uiState.value.copy(
                 operationState = if (result.isSuccess) {
                     val uid = result.getOrNull()!!
-                    val owner = withContext(kotlinx.coroutines.Dispatchers.IO) { repository.isOwner(uid) }
+                    val owner = withContext(Dispatchers.IO) { repository.isOwner(uid) }
 
-                    withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    withContext(Dispatchers.IO) {
+                        // guardar sesión activa (30 días validez)
                         sessionManager.saveSession(uid, state.email.trim(), owner)
-                        sessionManager.saveOfflineIdentity(uid, state.email.trim(), owner)   // NUEVO
+                        // guardar identidad offline (persistente)
+                        sessionManager.saveOfflineIdentity(uid, state.email.trim(), owner)
+                        // guardar pwd cifrada
                         sessionManager.saveOfflinePassword(state.password)
                     }
 

@@ -15,10 +15,12 @@ data class BasicProfileLocal(
 
 class SecureSessionManager(context: Context) {
 
+    // MasterKey para cifrado AES-256-GCM
     private val masterKey = MasterKey.Builder(context)
         .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
         .build()
 
+    // EncryptedSharedPreferences: Cifra todas las keys y values
     private val sharedPreferences: SharedPreferences = EncryptedSharedPreferences.create(
         context,
         "secure_session_prefs",
