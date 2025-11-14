@@ -7,21 +7,27 @@ import com.team21.myapplication.data.model.HousingPreview
 
 /**
  * LRU de HousingPreview para "recently seen" - owner.
- * - Tamaño máx = 1/4 de la memoria disponible (KB).
+ * - Tamaño máx = 1/8 de la memoria disponible (KB).
  * - se guarda una lista de IDs en orden MRU (máx 50).
+ * initialCapacity = 32 -> Reduce rehashes de 2 a 1 para el límite de 50 posts
+ * loadFactor = 0.75 (estándar)
+ *
  */
 object RecentlySeenCache {
 
     private var cache: LruCache<String, HousingPreview>? = null
-    private val order: LinkedHashMap<String, Unit> = LinkedHashMap(16, 0.75f, /* accessOrder */ true)
+    private val order: LinkedHashMap<String, Unit> = LinkedHashMap(32, 0.75f, /* accessOrder */ true)
 
     @Synchronized
     fun init(context: Context) {
         if (cache != null) return
+        // 1. Obtener memoria disponible de la app
         val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         val maxMemKb = am.memoryClass * 1024
-        val quarterKb = maxMemKb / 4
+        // 2. Usar 1/8 de la memoria para el cache
+        val quarterKb = maxMemKb / 8
 
+        // 3. Crear LruCache con tamaño máximo
         cache = object : LruCache<String, HousingPreview>(quarterKb) {
             override fun sizeOf(key: String, value: HousingPreview): Int {
                 val s = (value.title.length) + (value.photoPath?.length ?: 0) + (value.housing?.length ?: 0)

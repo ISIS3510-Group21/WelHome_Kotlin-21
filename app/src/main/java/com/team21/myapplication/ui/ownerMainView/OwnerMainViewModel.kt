@@ -63,7 +63,7 @@ class OwnerMainViewModel(
             val defaults = withContext(Dispatchers.IO) {
                 if (onlineNow) {
                     // ONLINE: trae TODOS los previews
-                    val all = housingRepo.getAllPreviews()
+                    val all = housingRepo.getFirstNPreviews(40)
 
                     // Guarda snapshot TOP-15 en Room (reemplaza)
                     ownerOfflineDao.clearAll()

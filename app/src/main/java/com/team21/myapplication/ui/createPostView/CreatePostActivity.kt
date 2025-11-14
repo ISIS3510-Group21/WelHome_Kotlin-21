@@ -15,6 +15,7 @@ import com.team21.myapplication.ui.theme.AppTheme
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.team21.myapplication.data.local.AppDatabase
 import kotlinx.coroutines.launch
 
 /**
@@ -86,8 +87,9 @@ class CreatePostActivity : ComponentActivity() {
         }
 
         lifecycleScope.launch {
-            val db = com.team21.myapplication.data.local.AppDatabase.getDatabase(this@CreatePostActivity)
+            val db = AppDatabase.getDatabase(this@CreatePostActivity)
             val pending = db.draftPostDao().getAllDraftsOnce()
+            // Encola cada borrador pendiente
             pending.forEach { draft ->
                 com.team21.myapplication.workers.enqueueUploadDraft(this@CreatePostActivity, draft.id)
             }

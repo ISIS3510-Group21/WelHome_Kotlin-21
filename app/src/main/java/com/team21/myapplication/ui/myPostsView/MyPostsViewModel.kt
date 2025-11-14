@@ -1,3 +1,4 @@
+// MY POSTS VIEW MODEL
 package com.team21.myapplication.ui.myPostsView
 
 import androidx.lifecycle.ViewModel
@@ -34,9 +35,12 @@ class MyPostsViewModel(
     private var observedOwnerId: String? = null
 
     fun loadMyPosts() {
-        viewModelScope.launch {
+        viewModelScope.launch { // Inicia corrutina ligada al ciclo de vida del ViewModel
+            // ejecutado en Main (Dispatcher.Main)
             _state.value = _state.value.copy(isLoading = true, error = null)
 
+
+            // Resolver usuario
             val uidOnline = authRepo.getCurrentUserId()
             val uidLocal = session.getSession()?.userId
             val ownerId = uidOnline ?: uidLocal ?: run {
@@ -60,8 +64,8 @@ class MyPostsViewModel(
             // Observa borradores + resuelve foto principal local
             val draftsFlow = draftDao.observeAllDrafts().map { drafts ->
                 drafts.map { d ->
-                    // obtén la ruta del main (si no tienes query directa, usa getImagesFor en hilo IO)
-                    val imgs = draftDao.getImagesFor(d.id)   // ok si Room permite en main? mejor con withContext(IO) fuera del map si lo prefieres
+                    // obtener la ruta del main
+                    val imgs = draftDao.getImagesFor(d.id)
                     val mainPath = imgs.firstOrNull { it.isMain }?.localPath ?: imgs.firstOrNull()?.localPath.orEmpty()
 
                     BasicHousingPost(
@@ -75,19 +79,20 @@ class MyPostsViewModel(
                 }
             }
 
-            // Combina ambos para la UI
+            // Combinar ambos para la UI
             observeJob?.cancel()
             observeJob = combine(postedFlow, draftsFlow) { posted, drafts ->
-                // Orden simple: borradores arriba (más recientes primero)
+                // borradores arriba (más recientes primero)
                 val draftsSorted = drafts.sortedByDescending { it.id }
                 draftsSorted + posted
             }.collectIn(viewModelScope) { merged ->
                 _state.value = _state.value.copy(posts = merged, isLoading = false)
             }
 
-            // Refresh remoto si hay internet (mantén tu lógica tal cual)
+            // Refresh remoto si hay internet
             if (net.isOnline.value) {
                 try {
+                    // pedir los posts al backend con dispatcher de IO para no saturar el hilo principal
                     val list = withContext(Dispatchers.IO) { ownerRepo.getOwnerHousingPosts(ownerId).getOrThrow() }
                     val entities = list.map {
                         com.team21.myapplication.data.local.entity.MyPostEntity(
@@ -99,6 +104,7 @@ class MyPostsViewModel(
                             updatedAt = System.currentTimeMillis()
                         )
                     }
+                    // persistir en Room -> usar dispatcher IO para no saturar el hilo principal
                     withContext(Dispatchers.IO) { dao.upsertAll(entities) }
                 } catch (e: Throwable) {
                     _state.value = _state.value.copy(error = e.message)
