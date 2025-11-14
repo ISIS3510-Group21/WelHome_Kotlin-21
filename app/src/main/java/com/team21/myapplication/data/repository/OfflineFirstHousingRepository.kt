@@ -21,7 +21,6 @@ class OfflineFirstHousingRepository(
 
     fun getRecommendedHousings(): Flow<List<HousingPreview>> {
         // 💡 Este Flow trabaja en hilos de I/O internamente (Room lo maneja así automáticamente)
-        // Cumple con el patrón de "una corrutina en I/O y otra en Main"
         return housingDao.getRecommendedHousings().map { entities ->
             entities.map { it.toHousingPreview() }
         }

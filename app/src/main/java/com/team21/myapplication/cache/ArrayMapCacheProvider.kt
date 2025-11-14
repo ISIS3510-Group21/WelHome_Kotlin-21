@@ -16,4 +16,5 @@ class ArrayMapCacheProvider<K, V> : CacheProvider<K, V> {
     override fun remove(key: K) { map.remove(key) }
     override fun clear() { map.clear() }
     override fun size(): Int = map.size
+    fun values(): Collection<V> = map.values
 }
