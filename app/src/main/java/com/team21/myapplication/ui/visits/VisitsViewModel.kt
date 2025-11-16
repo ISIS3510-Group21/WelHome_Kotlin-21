@@ -1,10 +1,10 @@
-
 package com.team21.myapplication.ui.visits
 
 import android.app.Application
-import android.util.ArrayMap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.team21.myapplication.cache.ArrayMapCacheProvider
+import com.team21.myapplication.cache.CacheProvider
 import com.team21.myapplication.data.model.Booking
 import com.team21.myapplication.data.repository.BookingRepository
 import com.team21.myapplication.utils.NetworkMonitor
@@ -20,7 +20,7 @@ class VisitsViewModel(application: Application) : AndroidViewModel(application) 
 
     private val networkMonitor = NetworkMonitor.get(application)
     val isOnline: StateFlow<Boolean> = networkMonitor.isOnline
-    private val bookingCache = ArrayMap<String, Booking>()
+    private val bookingCache: ArrayMapCacheProvider<String, Booking> = ArrayMapCacheProvider()
 
     init {
         viewModelScope.launch {
@@ -44,14 +44,14 @@ class VisitsViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun loadBookingsFromCache() {
-        val cachedBookings = bookingCache.values.toList()
+        val cachedBookings = bookingCache.values().toList()
         _state.value = _state.value.copy(visits = cachedBookings, isLoading = false)
     }
 
     private fun updateCache(bookings: List<Booking>) {
         bookingCache.clear()
         for (booking in bookings) {
-            bookingCache[booking.id] = booking
+            bookingCache.put(booking.id, booking)
         }
     }
 }
