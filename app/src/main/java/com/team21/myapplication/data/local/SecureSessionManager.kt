@@ -2,9 +2,11 @@ package com.team21.myapplication.data.local
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
-import android.util.Log
+import java.io.IOException
+import java.security.GeneralSecurityException
 
 //DTO local
 data class BasicProfileLocal(
@@ -15,19 +17,38 @@ data class BasicProfileLocal(
 
 class SecureSessionManager(context: Context) {
 
-    // MasterKey para cifrado AES-256-GCM
-    private val masterKey = MasterKey.Builder(context)
-        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-        .build()
+    private val masterKey: MasterKey
+    private val sharedPreferences: SharedPreferences
 
-    // EncryptedSharedPreferences: Cifra todas las keys y values
-    private val sharedPreferences: SharedPreferences = EncryptedSharedPreferences.create(
-        context,
-        "secure_session_prefs",
-        masterKey,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
+    init {
+        masterKey = MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+
+        sharedPreferences = try {
+            EncryptedSharedPreferences.create(
+                context,
+                "secure_session_prefs",
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        } catch (e: Exception) {
+            if (e is GeneralSecurityException || e is IOException) {
+                Log.e("SecureSessionManager", "Error reading encrypted preferences, deleting and re-creating.", e)
+                context.deleteSharedPreferences("secure_session_prefs")
+                EncryptedSharedPreferences.create(
+                    context,
+                    "secure_session_prefs",
+                    masterKey,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                )
+            } else {
+                throw e
+            }
+        }
+    }
 
     companion object {
         private const val KEY_USER_ID = "user_id"
