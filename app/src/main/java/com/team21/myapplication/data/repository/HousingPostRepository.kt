@@ -9,7 +9,9 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.storage.FirebaseStorage
 import com.team21.myapplication.data.model.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
@@ -222,16 +224,17 @@ class HousingPostRepository {
             )
             val finalId = docRef.id
 
-            // subir imagenes
+            // modified: upload images and get separate thumbnail
             if (imageUris.isEmpty()) {
                 return Result.failure(Exception("You must attach at least one image"))
             }
-            val uploadedPictures = uploadImages(finalId, imageUris)
-            if (uploadedPictures.isEmpty()) {
+            val uploadResult = uploadImages(finalId, imageUris)
+            if (uploadResult.pictures.isEmpty()) {
                 return Result.failure(Exception("Image upload failed."))
             }
 
-            val thumbnailUrl = uploadedPictures.first().PhotoPath
+            val thumbnailUrl = uploadResult.mainThumbnail // Use the specific thumbnail
+            val uploadedPictures = uploadResult.pictures // Pictures in high resolution
 
             val batch = db.batch()
 
@@ -332,27 +335,38 @@ class HousingPostRepository {
         }
     }
 
-    private suspend fun uploadImages(postId: String, imageUris: List<Uri>): List<Picture> {
+    private suspend fun uploadImages(postId: String, imageUris: List<Uri>): ImagesUploadResult = coroutineScope {
         val uploader = com.team21.myapplication.data.storage.Providers.storageUploader
         val folder = "housing_posts/$postId"
 
-        val uploadedPictures = mutableListOf<Picture>()
-        imageUris.forEachIndexed { index, uri ->
-            try {
-                val desired = "image_${index}_${UUID.randomUUID()}.jpg"
-                val res = uploader.upload(uri = uri, folder = folder, desiredName = desired)
+        // New: Parallel processing with async
+        val uploadJobs = imageUris.mapIndexed { index, uri ->
+            async(Dispatchers.IO) {
+                try {
+                    val desired = "image_${index}_${UUID.randomUUID()}.jpg"
+                    val res = uploader.upload(uri = uri, folder = folder, desiredName = desired)
 
-                uploadedPictures.add(
-                    Picture(
-                        PhotoPath =  res.url,
-                        name = res.suggestedName
+                    // Returns both the picture and the thumbnail
+                    Triple(
+                        Picture(
+                            PhotoPath = res.url,  //  High resolution
+                            name = res.suggestedName
+                        ),
+                        res.thumbnailUrl,  // Thumbnail
+                        index
                     )
-                )
-            } catch (_: Exception) {
-                // continúa con las demás imágenes
+                } catch (e: Exception) {
+                    null
+                }
             }
         }
-        return uploadedPictures
+
+        val results = uploadJobs.awaitAll().filterNotNull()
+
+        ImagesUploadResult(
+            pictures = results.map { it.first },
+            mainThumbnail = results.firstOrNull()?.second ?: "" // Thumbnail of first image
+        )
     }
 
     private suspend fun updateHousingTagWithPreview(
@@ -408,7 +422,11 @@ class HousingPostRepository {
 
     // obtiene los primeros N como HousingPreview (para "default list")
     suspend fun getFirstNPreviews(limit: Int = 20): List<HousingPreview> {
-        val snapshot = col.limit(limit.toLong()).get().await()
+        val snapshot = col
+            .limit(limit.toLong())
+            //.get(com.google.firebase.firestore.Source.CACHE) // Intenta caché primero
+            .get()
+            .await()
         return snapshot.documents.mapNotNull { d ->
             val p = mapHousingPostBase(d)
             if (p == null) null else HousingPreview(
@@ -439,6 +457,12 @@ class HousingPostRepository {
             )
         }
     }
+
+    // Cambiar el retorno para incluir el thumbnail de la imagen principal
+    private data class ImagesUploadResult(
+        val pictures: List<Picture>,
+        val mainThumbnail: String
+    )
 
 
 }

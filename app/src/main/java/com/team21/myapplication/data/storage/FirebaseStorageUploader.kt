@@ -13,6 +13,13 @@ class FirebaseStorageUploader : StorageUploader {
         val ref = storage.reference.child(folder).child(name)
         ref.putFile(uri).await()
         val url = ref.downloadUrl.await().toString()
-        return UploadResult(url = url, suggestedName = name)
+
+        // Firebase no genera thumbnails, así que se usa la misma URL
+        // La compresión ya se hace antes del upload en CreatePostViewModel
+        return UploadResult(
+            url = url, // Alta resolución (comprimida por ImageCompressor)
+            thumbnailUrl = url, // Misma URL (ya está optimizada)
+            suggestedName = name
+        )
     }
 }

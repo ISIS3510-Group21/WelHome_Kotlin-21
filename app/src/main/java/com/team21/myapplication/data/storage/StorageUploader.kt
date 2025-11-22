@@ -2,7 +2,11 @@ package com.team21.myapplication.data.storage
 
 import android.net.Uri
 
-data class UploadResult(val url: String, val suggestedName: String)
+data class UploadResult(
+    val url: String, // URL alta resolución
+    val thumbnailUrl: String, // URL miniatura
+    val suggestedName: String
+)
 
 interface StorageUploader {
     /**

@@ -14,6 +14,7 @@ class CloudinaryStorageUploader : StorageUploader {
             val req = MediaManager.get().upload(uri)
                 .unsigned(CloudinaryConfig.UPLOAD_PRESET)
                 .option("folder", folder)
+                .option("quality", "auto:good") // new: automatic quality optimized
 
             desiredName?.let { req.option("public_id", it.substringBeforeLast(".")) }
 
@@ -21,10 +22,22 @@ class CloudinaryStorageUploader : StorageUploader {
                 override fun onStart(requestId: String?) {}
                 override fun onProgress(requestId: String?, bytes: Long, totalBytes: Long) {}
                 override fun onSuccess(requestId: String?, resultData: MutableMap<Any?, Any?>?) {
-                    val url = (resultData?.get("secure_url") as? String).orElse("")
+                    val baseUrl = (resultData?.get("secure_url") as? String).orElse("")
+
+                    // new: Generate thumbnail URLs using Cloudinary transformations
+                    val thumbnailUrl = baseUrl.replace(
+                        "/upload/",
+                        "/upload/c_thumb,w_400,h_300,q_auto:eco/"
+                    )
+
                     val publicId = (resultData?.get("public_id") as? String).orElse("image_${System.currentTimeMillis()}")
                     val suggestedName = if (publicId.contains("/")) publicId.substringAfterLast("/") else publicId
-                    cont.resume(UploadResult(url = url, suggestedName = "$suggestedName.jpg"))
+
+                    cont.resume(UploadResult(
+                        url = baseUrl, // High resolution,
+                        thumbnailUrl = thumbnailUrl, // Thumbnail
+                        suggestedName = "$suggestedName.jpg"
+                    ))
                 }
                 override fun onError(requestId: String?, error: ErrorInfo?) {
                     cont.resumeWithException(IllegalStateException(error?.description ?: "Cloudinary error"))
