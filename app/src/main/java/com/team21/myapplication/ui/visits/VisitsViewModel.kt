@@ -4,7 +4,6 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.team21.myapplication.cache.ArrayMapCacheProvider
-import com.team21.myapplication.cache.CacheProvider
 import com.team21.myapplication.data.model.Booking
 import com.team21.myapplication.data.repository.BookingRepository
 import com.team21.myapplication.utils.NetworkMonitor
@@ -34,7 +33,7 @@ class VisitsViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    private fun loadBookings() {
+    fun loadBookings() {
         _state.value = _state.value.copy(isLoading = true)
         viewModelScope.launch {
             val bookings = repository.getUserBookings()
