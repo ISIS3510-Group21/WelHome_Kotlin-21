@@ -38,6 +38,7 @@ fun VisitInfoCard(
     housingTitle: String,
     visitDateTime: String,
     visitStatus: String,
+    rating: Float,
     onRateClick: () -> Unit
 ) {
     Card(
@@ -85,31 +86,53 @@ fun VisitInfoCard(
                 )
             }
 
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.clickable { onRateClick() }
-            ) {
-                Column(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .background(Color(0xFF4A448C), shape = CircleShape),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Star,
-                        contentDescription = "Rate",
-                        tint = Color.White,
-                        modifier = Modifier.size(32.dp)
-                    )
+            if (visitStatus.equals("Completed", ignoreCase = true)) {
+                if (rating > 0) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = String.format("%.1f", rating),
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF4A448C)
+                        )
+                        Icon(
+                            imageVector = Icons.Outlined.Star,
+                            contentDescription = "Rated",
+                            tint = Color(0xFF4A448C),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                } else {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.clickable { onRateClick() }
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .size(60.dp)
+                                .background(Color(0xFF4A448C), shape = CircleShape),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Star,
+                                contentDescription = "Rate",
+                                tint = Color.White,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+                        Text(
+                            text = "Rate",
+                            color = Color(0xFF4A448C),
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
                 }
-                Text(
-                    text = "Rate",
-                    color = Color(0xFF4A448C),
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
             }
         }
     }
@@ -122,7 +145,21 @@ fun VisitInfoCardPreview() {
         imageUrl = "https://www.nydailynews.com/wp-content/uploads/migration/2012/09/21/4YDFQ5XGGZKTZLJSZHGXLUON2A.jpg",
         housingTitle = "CityU",
         visitDateTime = "Aug 23 • 7:00am",
-        visitStatus = "Scheduled",
+        visitStatus = "Completed",
+        rating = 4.5f,
+        onRateClick = {}
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun VisitInfoCardNotRatedPreview() {
+    VisitInfoCard(
+        imageUrl = "https://www.nydailynews.com/wp-content/uploads/migration/2012/09/21/4YDFQ5XGGZKTZLJSZHGXLUON2A.jpg",
+        housingTitle = "CityU",
+        visitDateTime = "Aug 23 • 7:00am",
+        visitStatus = "Completed",
+        rating = 0f,
         onRateClick = {}
     )
 }

@@ -25,6 +25,7 @@ import com.team21.myapplication.ui.createAccountView.WelcomeActivity
 import com.team21.myapplication.ui.mapsearch.MapSearchView
 import com.team21.myapplication.ui.profileView.ProfileRoute
 import com.team21.myapplication.ui.saved.SavedPostsRoute
+import com.team21.myapplication.ui.visits.RateVisitView
 import com.team21.myapplication.ui.visits.VisitsView
 
 object DetailRoutes {
@@ -192,6 +193,14 @@ fun AppNavGraph(
                 housingId = housingId,
                 onBack = { navController.popBackStack() }
             )
+        }
+
+        composable(
+            route = "rateVisit/{visitId}",
+            arguments = listOf(navArgument("visitId") { type = NavType.StringType })
+        ) {
+            val visitId = it.arguments?.getString("visitId")
+            RateVisitView(navController, visitId)
         }
     }
 }
