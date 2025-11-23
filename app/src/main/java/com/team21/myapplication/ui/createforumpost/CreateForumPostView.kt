@@ -1,5 +1,6 @@
 package com.team21.myapplication.ui.createforumpost
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -7,6 +8,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -22,6 +24,7 @@ import com.team21.myapplication.ui.theme.BlueCallToAction
 fun CreateForumPostScreenLayout(
     viewModel: CreateForumPostViewModel,
     onNavigateBack: () -> Unit = {},
+    modifier: Modifier = Modifier
 ) {
     val threads by viewModel.threads.collectAsState()
     val postCreationState by viewModel.postCreationState.collectAsState()
@@ -44,7 +47,7 @@ fun CreateForumPostScreenLayout(
     }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(16.dp)

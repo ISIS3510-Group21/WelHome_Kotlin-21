@@ -3,6 +3,9 @@ package com.team21.myapplication.ui.createforumpost
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModelProvider
 import com.team21.myapplication.data.repository.ForumRepository
 import com.team21.myapplication.data.repository.StudentUserRepository
@@ -24,10 +27,13 @@ class CreateForumPostActivity : ComponentActivity() {
 
         setContent {
             AppTheme {
-                CreateForumPostScreenLayout(
-                    viewModel = viewModel,
-                    onNavigateBack = { finish() }
-                )
+                Scaffold { innerPadding ->
+                    CreateForumPostScreenLayout(
+                        viewModel = viewModel,
+                        onNavigateBack = { finish() },
+                        modifier = Modifier.padding(innerPadding)
+                    )
+                }
             }
         }
     }
