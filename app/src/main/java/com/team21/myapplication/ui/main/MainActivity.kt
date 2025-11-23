@@ -124,6 +124,8 @@ class MainActivity : ComponentActivity() {
 
                 Scaffold(
                     bottomBar = { AppNavBar(navController) },
+                    // Pinta SOLO una vez el fondo global de la app
+                    containerColor = MaterialTheme.colorScheme.background,
                     // ⬇️ Evita que este Scaffold meta insets automáticos
                     contentWindowInsets = WindowInsets(0, 0, 0, 0)
                 ) { inner ->
@@ -186,40 +188,39 @@ fun MainScreen(
             }
     }
 
-    Scaffold { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize()) {
+    // Eliminamos Scaffold interno para evitar un draw completo adicional
+    // Aplicamos statusBarsPadding al contenedor raíz para reservar espacio del sistema
+    Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
 
             ConnectivityBanner(
                 visible = !isOnline,
                 position = BannerPosition.Top,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
+                modifier = Modifier.fillMaxWidth()
             )
-            //Spacer(Modifier.height(12.dp))
+            // Espaciado diferente si no hay banner (online) para no quedar pegado
+            if (!isOnline) {
+                Spacer(Modifier.height(12.dp))
+            } else {
+                Spacer(Modifier.height(16.dp))
+            }
 
             if (state.isLoading) {
-                LoadingScreen(modifier = Modifier.padding(innerPadding))
+                LoadingScreen() // sin padding adicional, ya fondo global está pintado
             } else {
                 LazyColumn(
-                    modifier = Modifier
-                        .padding(innerPadding)
-                        .fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    // El top ya lo maneja statusBarsPadding + Spacer; mantenemos padding interno estándar
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 4.dp)
                 ) {
                     item {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp)
-                        ) {
-                            SearchBar(
-                                query = "",
-                                onQueryChange = {},
-                                placeholder = "Search",
-                                asButton = true,
-                                onClick = onOpenFilters
-                            )
-                        }
+                        SearchBar(
+                            query = "",
+                            onQueryChange = {},
+                            placeholder = "Search",
+                            asButton = true,
+                            onClick = onOpenFilters,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
 
                     item {
@@ -233,46 +234,38 @@ fun MainScreen(
                     }
 
                     item {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp)
-                        ) {
-                            Text(
-                                text = "Recently seen",
-                                style = LocalDSTypography.current.Section,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            text = "Recently seen",
+                            style = LocalDSTypography.current.Section,
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp)
+                        )
                     }
 
                     items(state.recentlySeenHousings) { listing ->
-                        Row(
-                            modifier = Modifier.padding(vertical = 4.dp, horizontal = 16.dp)
-                        ) {
-                            HousingBasicInfoCard(
-                                title = listing.title,
-                                rating = listing.rating,
-                                pricePerMonthLabel = "$${listing.price}/month",
-                                imageUrl = listing.photoPath,
-                                reviewsCount = 0,
-                                onClick = {
-                                    resolveHousingId(listing)?.let { id ->
-                                        onNavigateToDetail(id)
-                                    }
-                                    viewModel.logHousingPostClick(
-                                        postId = listing.housing,
-                                        postTitle = listing.title,
-                                        price = listing.price
-                                    )
+                        HousingBasicInfoCard(
+                            title = listing.title,
+                            rating = listing.rating,
+                            pricePerMonthLabel = "$$${listing.price}/month",
+                            imageUrl = listing.photoPath,
+                            reviewsCount = 0,
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                resolveHousingId(listing)?.let { id ->
+                                    onNavigateToDetail(id)
                                 }
-                            )
-                        }
+                                viewModel.logHousingPostClick(
+                                    postId = listing.housing,
+                                    postTitle = listing.title,
+                                    price = listing.price
+                                )
+                            }
+                        )
+                        Spacer(Modifier.height(4.dp))
                     }
                 }
             }
         }
-    }
 }
 
 /** Resuelve el ID del housing venga como DocumentReference o como String/path. */

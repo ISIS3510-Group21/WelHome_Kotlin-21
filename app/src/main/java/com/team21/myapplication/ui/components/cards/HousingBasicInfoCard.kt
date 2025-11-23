@@ -13,18 +13,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.team21.myapplication.R
-import com.team21.myapplication.ui.theme.BlackText
-import com.team21.myapplication.ui.theme.GrayIcon
 import com.team21.myapplication.ui.theme.LocalDSTypography
 import com.team21.myapplication.ui.theme.AppTheme
-import com.team21.myapplication.ui.theme.WhiteBackground
 
 @Composable
 fun HousingBasicInfoCard(
@@ -40,16 +37,18 @@ fun HousingBasicInfoCard(
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(4.dp),
+        // Color.Unspecified evita pintar un fondo transparente (reduce overdraw)
+        colors = CardDefaults.cardColors(containerColor = Color.Unspecified),
+        // Elevación a 0 para evitar sombra (otra pasada) y reducir overdraw
+        elevation = CardDefaults.cardElevation(0.dp),
         onClick = onClick ?: {}
     ) {
         Column(Modifier.fillMaxWidth()) {
 
+            // El Card ya tiene shape, no necesitamos clip adicional en la imagen
             val imgModifier = Modifier
                 .fillMaxWidth()
                 .height(180.dp)
-                .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
 
             when {
                 imageUrl != null -> AsyncImage(
