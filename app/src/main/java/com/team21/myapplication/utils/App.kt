@@ -4,6 +4,7 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
+import coil.Coil
 import com.cloudinary.android.MediaManager
 import com.team21.myapplication.data.local.SecureSessionManager
 import com.team21.myapplication.workers.UploadDraftWorker
@@ -30,6 +31,9 @@ class App : Application() {
 
         // Inicializar SecureSessionManager
         sessionManager = SecureSessionManager(this)
+
+        //configuración de coil
+        Coil.setImageLoader(CoilConfiguration.setupImageLoader(this))
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val ch = NotificationChannel(

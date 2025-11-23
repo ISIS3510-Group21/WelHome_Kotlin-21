@@ -1,6 +1,7 @@
 package com.team21.myapplication.ui.ownerMainView
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.team21.myapplication.data.repository.AuthRepository
@@ -62,15 +63,25 @@ class OwnerMainViewModel(
 
             val defaults = withContext(Dispatchers.IO) {
                 if (onlineNow) {
-                    // ONLINE: trae TODOS los previews
-                    val all = housingRepo.getFirstNPreviews(40)
+                    try {
 
-                    // Guarda snapshot TOP-15 en Room (reemplaza)
-                    ownerOfflineDao.clearAll()
-                    ownerOfflineDao.insertAll(all.take(15).map { it.toOwnerOfflineEntity() })
+                        // ONLINE: trae TODOS los previews
+                        val all = housingRepo.getFirstNPreviews(40)
 
-                    // Lo que mostrará la UI cuando online (todos)
-                    all
+                        if (all.isNotEmpty()) {
+                            // Guarda snapshot TOP-15 en Room (reemplaza)
+                            ownerOfflineDao.clearAll()
+                            ownerOfflineDao.insertAll(
+                                all.take(15).map { it.toOwnerOfflineEntity() })
+                        }
+
+                        // Lo que mostrará la UI cuando online (todos)
+                        all
+                    }catch (e: Exception) {
+                        Log.e("OwnerMainViewModel", "Error loading posts from Firebase", e)
+                        // Fallback: intenta cargar desde Room por si hay datos antiguos
+                        ownerOfflineDao.getTopN(15).map { it.toHousingPreview() }
+                    }
                 } else {
                     // OFFLINE: si no hay “recent”, usa snapshot TOP-15 de Room
                     ownerOfflineDao.getTopN(15).map { it.toHousingPreview() }

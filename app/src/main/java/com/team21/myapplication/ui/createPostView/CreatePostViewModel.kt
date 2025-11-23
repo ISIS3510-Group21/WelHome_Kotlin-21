@@ -28,7 +28,10 @@ import com.team21.myapplication.data.local.AppDatabase
 import com.team21.myapplication.data.local.entity.DraftPostEntity
 import com.team21.myapplication.data.local.entity.DraftImageEntity
 import com.team21.myapplication.data.local.files.DraftFileStore
+import com.team21.myapplication.utils.ImageCompressor
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
@@ -51,6 +54,9 @@ class CreatePostViewModel : ViewModel() {
     private val aiRepo = AiRepository()
 
     private val tagRepo = HousingTagRepository()
+
+    // New: Tag name "cache"
+    private val tagNameCache = mutableMapOf<String, String>()
 
     // StateFlow with all the state
     private val _uiState = MutableStateFlow(CreatePostUiState())
@@ -84,10 +90,12 @@ class CreatePostViewModel : ViewModel() {
         }
 
         viewModelScope.launch {
-            val tagName = try {
-                tagRepo.getTagNameById(tagId) ?: "Home"
-            } catch (e: Exception) {
-                "Home"
+            val tagName = tagNameCache.getOrPut(tagId) {
+                try {
+                    tagRepo.getTagNameById(tagId) ?: "Home"
+                } catch (e: Exception) {
+                    "Home"
+                }
             }
             _uiState.value = current.copy(selectedTagId = tagId, selectedTagLabel = tagName)
         }
@@ -161,7 +169,7 @@ class CreatePostViewModel : ViewModel() {
 
     // --- MAIN FUNCTION: CREATE POST ---
 
-    fun createPost(onDone: (Boolean, String?) -> Unit = { _, _ -> }) {
+    fun createPost(context: Context, onDone: (Boolean, String?) -> Unit = { _, _ -> }) {
         val state = _uiState.value
 
         // 1. DATA VALIDATION
@@ -170,6 +178,11 @@ class CreatePostViewModel : ViewModel() {
             _uiState.value = state.copy(
                 operationState = CreatePostOperationState.Error(validationError)
             )
+            return
+        }
+
+        // New: Prevent duplicate calls
+        if (state.operationState is CreatePostOperationState.Loading) {
             return
         }
 
@@ -182,10 +195,24 @@ class CreatePostViewModel : ViewModel() {
 
                 // corrutina anidada 1 - Default: Procesar imágenes en memoria
                 val allPhotos = withContext(Dispatchers.Default) {
-                    buildList {
+                    val photosToProcess = buildList {
                         state.mainPhoto?.let { add(it) }
                         addAll(state.additionalPhotos)
                     }
+                    // new: Compress in parallel
+                    photosToProcess.map { uri ->
+                        async {
+                            try {
+                                ImageCompressor.compressImage(
+                                    context = context,
+                                    uri = uri,
+                                    quality = 85
+                                )
+                            } catch (e: Exception) {
+                                uri // If compression fails, use original
+                            }
+                        }
+                    }.awaitAll()
                 }
 
                 if (allPhotos.isEmpty()) {
@@ -520,7 +547,7 @@ class CreatePostViewModel : ViewModel() {
                 onDone(true, "draft")
             } else {
                 // Flujo online: crear post
-                createPost(onDone)
+                createPost(context, onDone)
             }
         }
     }
