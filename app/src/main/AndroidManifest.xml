@@ -116,7 +116,10 @@
             android:exported="true"
             android:label="Forum"
             android:theme="@style/Theme.WelHome" />
-
+        <activity android:name=".ui.createforumpost.CreateForumPostActivity"
+            android:exported="true"
+            android:label="Create Forum Post"
+            android:theme="@style/Theme.WelHome" />
         <activity
             android:name=".ui.visits.VisitsActivity"
             android:exported="true"

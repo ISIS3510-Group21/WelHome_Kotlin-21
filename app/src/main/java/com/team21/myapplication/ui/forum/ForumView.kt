@@ -1,5 +1,6 @@
 package com.team21.myapplication.ui.forum
 
+import android.content.Intent
 import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -43,8 +45,10 @@ import com.team21.myapplication.data.model.ForumPost
 import com.team21.myapplication.data.model.ThreadForum
 import com.team21.myapplication.ui.components.banners.BannerPosition
 import com.team21.myapplication.ui.components.banners.ConnectivityBanner
+import com.team21.myapplication.ui.components.buttons.BlueButton
 import com.team21.myapplication.ui.components.cards.CommentCard
 import com.team21.myapplication.ui.components.cards.ExpandableCard
+import com.team21.myapplication.ui.createforumpost.CreateForumPostActivity
 import com.team21.myapplication.ui.theme.AppTheme
 
 @Composable
@@ -57,6 +61,7 @@ fun ForumScreen(
     val isOnline by forumViewModel.isOnline.collectAsState()
 
     val view = LocalView.current
+    val context = LocalContext.current
 
     val statusBarColor = if (!isOnline) {
         androidx.compose.ui.graphics.Color.Black
@@ -87,7 +92,10 @@ fun ForumScreen(
             Log.d("ForumScreen", "Thread clicked: $it")
             forumViewModel.onThreadClicked(it)
         },
-        selectedThreadId = state.selectedThread?.id
+        selectedThreadId = state.selectedThread?.id,
+        onCreatePostClick = {
+            context.startActivity(Intent(context, CreateForumPostActivity::class.java))
+        }
     )
 }
 
@@ -99,86 +107,89 @@ fun ForumContent(
     isLoading: Boolean = false,
     isOnline: Boolean = true,
     selectedThreadId: String? = null,
-    onThreadClick: (ThreadForum) -> Unit = {}
+    onThreadClick: (ThreadForum) -> Unit = {},
+    onCreatePostClick: () -> Unit = {}
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-    ) {
-        ConnectivityBanner(
-            visible = !isOnline,
-            position = BannerPosition.Top,
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-        Column(Modifier.padding(horizontal = 16.dp)) {
-            Text(
-                text = "Forum",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 16.dp, bottom = 10.dp)
+                .fillMaxSize()
+        ) {
+            ConnectivityBanner(
+                visible = !isOnline,
+                position = BannerPosition.Top,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
             )
 
-            Text(
-                text = "Topics",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF757575)
-            )
+            Spacer(modifier = Modifier.height(24.dp))
+            Column(Modifier.padding(horizontal = 16.dp)) {
+                Text(
+                    text = "Forum",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 16.dp, bottom = 10.dp)
+                )
 
-            Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Topics",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF757575)
+                )
 
-            if (isLoading && threads.isEmpty()) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
-            } else {
-                LazyColumn(contentPadding = PaddingValues(bottom = 16.dp)) {
-                    items(threads) { thread ->
-                        ExpandableCard(
-                            title = thread.title,
-                            icon = getIconForTopic(thread.title),
-                            initiallyExpanded = thread.id == selectedThreadId,
-                            onExpand = { onThreadClick(thread) }
-                        ) {
-                            Column {
-                                if (thread.forumPost.isEmpty() && thread.id == selectedThreadId) {
-                                    if(isOnline) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier
-                                                .padding(16.dp)
-                                                .align(Alignment.CenterHorizontally)
-                                        )
-                                    } else {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(16.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                                Icon(
-                                                    imageVector = Icons.Outlined.SignalWifiOff,
-                                                    contentDescription = "No internet connection."
-                                                )
-                                                Spacer(modifier = Modifier.height(8.dp))
-                                                Text(
-                                                    text = "No internet connection.",
-                                                    textAlign = TextAlign.Center
-                                                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                if (isLoading && threads.isEmpty()) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                } else {
+                    LazyColumn(contentPadding = PaddingValues(bottom = 80.dp)) {
+                        items(threads) { thread ->
+                            ExpandableCard(
+                                title = thread.title,
+                                icon = getIconForTopic(thread.title),
+                                initiallyExpanded = thread.id == selectedThreadId,
+                                onExpand = { onThreadClick(thread) }
+                            ) {
+                                Column {
+                                    if (thread.forumPost.isEmpty() && thread.id == selectedThreadId) {
+                                        if(isOnline) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier
+                                                    .padding(16.dp)
+                                                    .align(Alignment.CenterHorizontally)
+                                            )
+                                        } else {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(16.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                    Icon(
+                                                        imageVector = Icons.Outlined.SignalWifiOff,
+                                                        contentDescription = "No internet connection."
+                                                    )
+                                                    Spacer(modifier = Modifier.height(8.dp))
+                                                    Text(
+                                                        text = "No internet connection.",
+                                                        textAlign = TextAlign.Center
+                                                    )
+                                                }
                                             }
                                         }
-                                    }
-                                } else {
-                                    thread.forumPost.forEach { post ->
-                                        CommentCard(
-                                            imageUrl = post.userPhoto.takeIf { it.isNotBlank() },
-                                            name = post.userName,
-                                            country = "Canada",
-                                            comment = post.content,
-                                            rating = 4.95f
-                                        )
+                                    } else {
+                                        thread.forumPost.forEach { post ->
+                                            CommentCard(
+                                                imageUrl = post.userPhoto.takeIf { it.isNotBlank() },
+                                                name = post.userName,
+                                                country = "Canada",
+                                                comment = post.content,
+                                                rating = 4.95f
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -187,8 +198,15 @@ fun ForumContent(
                 }
             }
         }
-        }
 
+        BlueButton(
+            text = "Create Post",
+            onClick = onCreatePostClick,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = 16.dp, vertical = 16.dp)
+        )
+    }
 }
 fun getIconForTopic(topicTitle: String): ImageVector {
     return when (topicTitle) {
