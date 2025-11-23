@@ -16,7 +16,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.DirectionsCar
 import androidx.compose.material.icons.outlined.Restaurant
+import androidx.compose.material.icons.outlined.SignalWifiOff
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,6 +33,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
@@ -141,11 +144,32 @@ fun ForumContent(
                         ) {
                             Column {
                                 if (thread.forumPost.isEmpty() && thread.id == selectedThreadId) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier
-                                            .padding(16.dp)
-                                            .align(Alignment.CenterHorizontally)
-                                    )
+                                    if(isOnline) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier
+                                                .padding(16.dp)
+                                                .align(Alignment.CenterHorizontally)
+                                        )
+                                    } else {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.SignalWifiOff,
+                                                    contentDescription = "No internet connection."
+                                                )
+                                                Spacer(modifier = Modifier.height(8.dp))
+                                                Text(
+                                                    text = "No internet connection.",
+                                                    textAlign = TextAlign.Center
+                                                )
+                                            }
+                                        }
+                                    }
                                 } else {
                                     thread.forumPost.forEach { post ->
                                         CommentCard(
