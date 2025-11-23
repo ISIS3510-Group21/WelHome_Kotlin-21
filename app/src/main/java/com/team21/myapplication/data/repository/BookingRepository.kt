@@ -143,4 +143,13 @@ class BookingRepository {
 
         return bookingDoc.id
     }
+
+    suspend fun rateVisit(visitId: String, rating: Float, comment: String) {
+        val visitRef = col.document(visitId)
+        val updates = mapOf(
+            "rating" to rating,
+            "userComment" to comment
+        )
+        visitRef.update(updates).await()
+    }
 }

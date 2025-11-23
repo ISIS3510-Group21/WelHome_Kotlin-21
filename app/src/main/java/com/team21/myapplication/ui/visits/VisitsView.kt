@@ -69,7 +69,7 @@ fun VisitsView(
         VisitsScreen(
             bookings = state.visits,
             onRateClick = { booking ->
-                // Handle rate click
+                navController.navigate("rateVisit/${booking.id}")
             },
             isOnline = isOnline
         )
@@ -88,12 +88,7 @@ fun VisitsScreen(
 
     val filteredBookings = when (tabs[selectedTabIndex]) {
         "Scheduled" -> bookings.filter { it.state.equals("Scheduled", ignoreCase = true) }
-        "Completed" -> bookings.filter {
-            it.state.equals("Completed", ignoreCase = true) || it.state.equals(
-                "Missed",
-                ignoreCase = true
-            )
-        }
+        "Completed" -> bookings.filter { it.state.equals("Completed", ignoreCase = true) }
         else -> bookings
     }
 
@@ -176,6 +171,7 @@ fun VisitsScreen(
                             housingTitle = booking.housingTitle,
                             visitDateTime = formatTimestamp(booking.date, booking.slot),
                             visitStatus = booking.state,
+                            rating = booking.rating,
                             onRateClick = { onRateClick(booking) }
                         )
                     }
@@ -210,7 +206,7 @@ fun VisitsViewPreview() {
 
     val bookings = listOf(
         Booking(id = "1", housingTitle = "Portal de los Rosales", state = "Missed", date = Timestamp(yesterday), slot = "7:00am"),
-        Booking(id = "2", housingTitle = "Living 72", state = "Completed", date = Timestamp(yesterday), slot = "7:00am"),
+        Booking(id = "2", housingTitle = "Living 72", state = "Completed", date = Timestamp(yesterday), slot = "7:00am", rating = 4.5f),
         Booking(id = "3", housingTitle = "CityU", state = "Scheduled", date = Timestamp(tomorrow), slot = "7:00am"),
     )
     AppTheme {
