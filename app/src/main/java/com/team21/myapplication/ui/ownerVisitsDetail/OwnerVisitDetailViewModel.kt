@@ -1,0 +1,137 @@
+package com.team21.myapplication.ui.ownerVisitsDetail
+
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.team21.myapplication.data.repository.BookingRepository
+import com.team21.myapplication.data.repository.StudentUserRepository
+import com.team21.myapplication.ui.ownerVisitsDetail.state.OwnerVisitDetailState
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+class OwnerVisitDetailViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val bookingRepository = BookingRepository()
+    private val studentRepository = StudentUserRepository()
+
+    private val _state = MutableStateFlow(OwnerVisitDetailState())
+    val state: StateFlow<OwnerVisitDetailState> = _state.asStateFlow()
+
+    /**
+     * Carga el detalle de una visita
+     * @param bookingId ID del booking o ID compuesto para slots disponibles
+     * @param isAvailable Si es un slot disponible (true) o un booking real (false)
+     * @param propertyImageUrl URL de la imagen de la propiedad
+     * @param propertyName Nombre de la propiedad
+     * @param visitDate Fecha de la visita (ya formateada)
+     * @param visitTime Hora de la visita (ya formateada)
+     */
+    fun loadVisitDetail(
+        bookingId: String,
+        isAvailable: Boolean,
+        propertyImageUrl: String,
+        propertyName: String,
+        visitDate: String,
+        visitTime: String
+    ) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true, error = null)
+
+            try {
+                if (isAvailable) {
+                    // Es un slot disponible - no hay booking real
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        propertyImageUrl = propertyImageUrl,
+                        visitStatus = VisitStatus.AVAILABLE,
+                        visitDate = visitDate,
+                        visitTime = visitTime,
+                        visitorName = "",
+                        visitorNationality = "",
+                        visitorPhotoUrl = null,
+                        visitorFeedback = null,
+                        visitorRating = null,
+                        ownerComment = "",
+                        bookingId = bookingId,
+                        isAvailable = true
+                    )
+                } else {
+                    // Es un booking real - obtener detalles de Firestore
+                    loadBookingDetails(bookingId, propertyImageUrl, visitDate, visitTime)
+                }
+
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "Error loading visit details"
+                )
+            }
+        }
+    }
+
+    private suspend fun loadBookingDetails(
+        bookingId: String,
+        propertyImageUrl: String,
+        visitDate: String,
+        visitTime: String
+    ) {
+        try {
+            // Obtener el booking directamente por ID
+            val booking = bookingRepository.getBookingById(bookingId)
+
+            if (booking == null) {
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    error = "Booking not found"
+                )
+                return
+            }
+
+            // Obtener información del visitante
+            val (visitorName, visitorPhotoUrl) = studentRepository.getStudentBasicInfo(booking.user)
+
+            // Obtener nacionalidad del estudiante
+            val studentUser = studentRepository.getStudentUser(booking.user)
+            val visitorNationality = studentUser?.nationality ?: "Unknown"
+
+            // Determinar el estado de la visita
+            val visitStatus = when {
+                booking.state.equals("Completed", ignoreCase = true) -> VisitStatus.COMPLETED
+                booking.state.equals("Missed", ignoreCase = true) -> VisitStatus.MISSED
+                booking.state.equals("Scheduled", ignoreCase = true) && booking.confirmedVisit -> VisitStatus.SCHEDULED
+                else -> VisitStatus.CONFIRMED
+            }
+
+            // Convertir rating de Float a Int (si existe y es > 0)
+            val rating = if (booking.rating > 0) booking.rating.toInt() else null
+
+            _state.value = _state.value.copy(
+                isLoading = false,
+                propertyImageUrl = propertyImageUrl.ifBlank { booking.thumbnail },
+                visitStatus = visitStatus,
+                visitDate = visitDate,
+                visitTime = visitTime,
+                visitorName = visitorName,
+                visitorNationality = visitorNationality,
+                visitorPhotoUrl = visitorPhotoUrl,
+                visitorFeedback = booking.userComment.ifBlank { null },
+                visitorRating = rating,
+                ownerComment = booking.ownerComment,
+                bookingId = bookingId,
+                isAvailable = false
+            )
+
+        } catch (e: Exception) {
+            _state.value = _state.value.copy(
+                isLoading = false,
+                error = e.message ?: "Error loading booking details"
+            )
+        }
+    }
+
+    fun updateOwnerComment(comment: String) {
+        _state.value = _state.value.copy(ownerComment = comment)
+    }
+}

@@ -464,5 +464,30 @@ class HousingPostRepository {
         val mainThumbnail: String
     )
 
+    /**
+     * Obtiene título y thumbnail de múltiples housing IDs
+     * Retorna Map<housingId, Pair<title, thumbnail>>
+     */
+    suspend fun getHousingBasicDetails(housingIds: List<String>): Map<String, Pair<String, String>> {
+        if (housingIds.isEmpty()) return emptyMap()
+
+        val results = mutableMapOf<String, Pair<String, String>>()
+
+        try {
+            for (housingId in housingIds) {
+                val doc = col.document(housingId).get().await()
+                if (doc.exists()) {
+                    val title = doc.getString("title") ?: ""
+                    val thumbnail = doc.getString("thumbnail") ?: ""
+                    results[housingId] = title to thumbnail
+                }
+            }
+        } catch (e: Exception) {
+            // Log error
+        }
+
+        return results
+    }
+
 
 }

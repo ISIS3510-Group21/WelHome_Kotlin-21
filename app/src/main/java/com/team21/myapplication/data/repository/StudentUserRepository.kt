@@ -77,4 +77,19 @@ class StudentUserRepository {
 
     suspend fun getCurrentUserDocument(): StudentUser? = getStudentUser(findStudentIdByEmail(auth.getCurrentUserEmail()))
 
+    /**
+     * Obtiene el nombre y foto de un estudiante por su ID
+     */
+    suspend fun getStudentBasicInfo(studentId: String): Pair<String, String?> {
+        return try {
+            val doc = studentUserCollection.document(studentId).get().await()
+            val name = doc.getString("name") ?: "Unknown User"
+            val photoPath = doc.getString("photoPath")
+            Pair(name, photoPath)
+        } catch (e: Exception) {
+            Log.e("StudentUserRepo", "Error obteniendo info: ${e.message}")
+            Pair("Unknown User", null)
+        }
+    }
+
 }

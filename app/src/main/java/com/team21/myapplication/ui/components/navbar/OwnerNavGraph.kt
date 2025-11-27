@@ -2,23 +2,22 @@ package com.team21.myapplication.ui.components.navbar
 
 import android.app.Activity
 import android.content.Intent
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.team21.myapplication.data.local.SecureSessionManager
 import com.team21.myapplication.data.repository.AuthRepository
-import com.team21.myapplication.ui.components.text.BlackText
 import com.team21.myapplication.ui.createAccountView.WelcomeActivity
 import com.team21.myapplication.ui.forum.ForumScreen
 import com.team21.myapplication.ui.ownerMainView.OwnerMainScreen
 import com.team21.myapplication.ui.profileView.ProfileRoute
 import com.team21.myapplication.ui.myPostsView.MyPostsScreen
+import com.team21.myapplication.ui.ownerVisits.OwnerVisitsRoute
+import com.team21.myapplication.ui.ownerVisitsDetail.OwnerVisitDetailActivity
 
 @Composable
 fun OwnerNavGraph(
@@ -39,7 +38,20 @@ fun OwnerNavGraph(
             )
         }
 
-        composable(OwnerDest.Visits.route)  { BlackText("This feature will be available soon", size=30.sp)}
+        composable(OwnerDest.Visits.route) {
+            val ctx = LocalContext.current
+
+            OwnerVisitsRoute(
+                onVisitClick = { visit ->
+                    val intent = OwnerVisitDetailActivity.newIntent(ctx, visit)
+                    ctx.startActivity(intent)
+                },
+                onAddVisitClick = {
+                    navController.navigate("addVisit")
+                }
+            )
+        }
+
 
         composable(OwnerDest.Profile.route) {
             val ctx = LocalContext.current

@@ -64,4 +64,26 @@ class OwnerUserRepository {
             Result.failure(e)
         }
     }
+
+    /**
+     * Obtiene solo los IDs de las propiedades del owner
+     */
+    suspend fun getOwnerHousingIds(ownerId: String): Result<List<String>> {
+        return try {
+            val snap = firestore
+                .collection("OwnerUser")
+                .document(ownerId)
+                .collection("HousingPost")
+                .get()
+                .await()
+
+            val ids = snap.documents.mapNotNull { doc ->
+                doc.getString("id") ?: doc.id
+            }
+
+            Result.success(ids)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

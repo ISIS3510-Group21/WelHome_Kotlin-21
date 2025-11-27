@@ -9,6 +9,7 @@ import java.time.*
 import java.time.format.DateTimeFormatter
 import java.util.*
 import com.google.firebase.firestore.FieldValue
+import android.util.Log
 
 class BookingRepository {
     private val db = FirebaseFirestore.getInstance()
@@ -99,7 +100,12 @@ class BookingRepository {
             .firstOrNull { slot ->
                 val timeTs = slot.get("time") as? Timestamp ?: return@firstOrNull false
                 val lt = timeTs.toDate().toInstant().atZone(zone).toLocalTime()
-                lt == parsedTime
+                // Log más explícito para depurar
+
+                Log.e("BookingRepository", "Found slot raw: $lt, parsedTime: $parsedTime")
+
+                // Compara solo hora y minuto (ignora segundos y milisegundos)
+                lt.hour == parsedTime.hour && lt.minute == parsedTime.minute
             } ?: throw IllegalStateException("BookingSlot not found for $selectedLocalDate $parsedTime")
 
         // 5) Preparar la escritura del Booking y la eliminación del Slot
@@ -151,5 +157,48 @@ class BookingRepository {
             "userComment" to comment
         )
         visitRef.update(updates).await()
+    }
+
+    /**
+     * Obtiene todos los bookings asociados a una lista de housing IDs
+     * Útil para que el owner vea todas las visitas a sus propiedades
+     */
+    suspend fun getBookingsByHousingIds(housingIds: List<String>): List<Booking> {
+        if (housingIds.isEmpty()) return emptyList()
+
+        return try {
+            // Firestore tiene límite de 10 elementos en "in" queries
+            // Si hay más de 10 propiedades, dividimos en chunks
+            val bookings = mutableListOf<Booking>()
+
+            housingIds.chunked(10).forEach { chunk ->
+                val snapshot = col
+                    .whereIn("housing", chunk)
+                    .get()
+                    .await()
+
+                bookings.addAll(
+                    snapshot.documents.mapNotNull { doc ->
+                        doc.toObject(Booking::class.java)
+                    }
+                )
+            }
+
+            bookings
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    /**
+     * Obtiene un booking específico por su ID
+     */
+    suspend fun getBookingById(bookingId: String): Booking? {
+        return try {
+            val doc = col.document(bookingId).get().await()
+            doc.toObject(Booking::class.java)
+        } catch (e: Exception) {
+            null
+        }
     }
 }

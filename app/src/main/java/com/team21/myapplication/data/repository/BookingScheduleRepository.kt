@@ -95,4 +95,70 @@ class BookingScheduleRepository {
     /** Para leer la fecha/hora de cache sin pedir a red. */
     fun getCachedStamp(housingId: String): Instant? = availabilityCache[housingId]?.second
 
+    /**
+     * Obtiene todos los slots disponibles para una lista de housing IDs del owner.
+     * Retorna una lista de tuplas (housingId, LocalDate, LocalTime, housingTitle, thumbnail)
+     */
+    suspend fun getAvailableSlotsByHousingIds(
+        housingIds: List<String>,
+        housingDetailsMap: Map<String, Pair<String, String>> // housingId -> (title, thumbnail)
+    ): List<AvailableSlotInfo> {
+        if (housingIds.isEmpty()) return emptyList()
+
+        val zone = ZoneId.of("America/Bogota")
+        val results = mutableListOf<AvailableSlotInfo>()
+
+        try {
+            for (housingId in housingIds) {
+                val scheduleId = findScheduleDocId(housingId) ?: continue
+
+                val datesSnap = scheduleCol.document(scheduleId)
+                    .collection("BookingDate")
+                    .get().await()
+
+                for (dateDoc in datesSnap.documents) {
+                    val dateTs = dateDoc.get("date") as? Timestamp ?: continue
+                    val localDate = dateTs.toDate().toInstant().atZone(zone).toLocalDate()
+
+                    val slotsSnap = dateDoc.reference.collection("BookingSlot").get().await()
+                    for (slotDoc in slotsSnap.documents) {
+                        val availableUsersAny = slotDoc.get("availableUsers") ?: slotDoc.get("avilableUsers")
+                        val availableUsers = (availableUsersAny as? Number)?.toInt() ?: 0
+                        if (availableUsers <= 0) continue
+
+                        val timeTs = slotDoc.get("time") as? Timestamp ?: continue
+                        val localTime = timeTs.toDate().toInstant().atZone(zone).toLocalTime()
+
+                        val (title, thumbnail) = housingDetailsMap[housingId] ?: ("" to "")
+
+                        results.add(
+                            AvailableSlotInfo(
+                                housingId = housingId,
+                                date = localDate,
+                                time = localTime,
+                                housingTitle = title,
+                                thumbnail = thumbnail,
+                                timestamp = timeTs
+                            )
+                        )
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // Log error pero no fallar completamente
+        }
+
+        return results
+    }
+
+    // Data class auxiliar
+    data class AvailableSlotInfo(
+        val housingId: String,
+        val date: LocalDate,
+        val time: LocalTime,
+        val housingTitle: String,
+        val thumbnail: String,
+        val timestamp: Timestamp
+    )
+
 }
