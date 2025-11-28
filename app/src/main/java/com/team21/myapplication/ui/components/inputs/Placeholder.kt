@@ -53,7 +53,8 @@ fun PlaceholderTextField(
     visualTransformation: VisualTransformation = VisualTransformation.None,
     maxChars: Int? = null,
     maxCharsMessage: String = "You have reached the maximum number of characters.",
-    maxLines: Int = 1
+    maxLines: Int = 1,
+    enabled: Boolean = true
 
 ) {
 
@@ -100,6 +101,7 @@ fun PlaceholderTextField(
                     .fillMaxSize()
                     .defaultMinSize(minHeight = coercedHeight)
                     .padding(end = endPaddingForIcon),
+                enabled = enabled,
                 textStyle = TextStyle(
                     fontFamily = Poppins,
                     fontSize = tfSize,
