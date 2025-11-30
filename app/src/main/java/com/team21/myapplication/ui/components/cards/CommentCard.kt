@@ -1,12 +1,25 @@
+
 package com.team21.myapplication.ui.components.cards
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.HourglassTop
 import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -33,81 +46,120 @@ fun CommentCard(
     name: String,
     country: String,
     comment: String,
-    rating: Float
+    rating: Float,
+    isOffline: Boolean = false
 ) {
-    Column(
-        modifier = modifier
-            .padding(16.dp)
+    val cardColors = if (isOffline) {
+        CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
+        )
+    } else {
+        CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    }
+
+    val contentAlpha = if (isOffline) 0.7f else 1f
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = cardColors,
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isOffline) 0.dp else 1.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            // Avatar
-            if (imageUrl != null) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(imageUrl)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = name,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer)
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFBDBDF9)), // similar a fondo morado claro
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Avatar",
-                        tint = Color.White,
-                        modifier = Modifier.size(28.dp)
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Avatar
+                if (imageUrl != null) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(imageUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFBDBDF9)), // similar a fondo morado claro
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Avatar",
+                            tint = Color.White,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = name,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha)
+                        )
+                        if (isOffline) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Icon(
+                                imageVector = Icons.Outlined.HourglassTop,
+                                contentDescription = "Pending Post",
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Pending",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                        }
+                    }
+                    Text(
+                        text = country,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha * 0.7f)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            if (!isOffline) {
+                Spacer(modifier = Modifier.height(8.dp))
 
-            Column {
-                Text(
-                    text = name,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    color = Color.Black
-                )
-                Text(
-                    text = country,
-                    fontSize = 14.sp,
-                    color = Color.Gray
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RatingBar(rating = rating)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "%.2f".format(rating),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
-        }
 
-        Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            RatingBar(rating = rating)
-            Spacer(modifier = Modifier.width(6.dp))
             Text(
-                text = "%.2f".format(rating),
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                color = Color.Black
+                text = comment,
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f * contentAlpha)
             )
         }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = comment,
-            fontSize = 14.sp,
-            color = Color.Black.copy(alpha = 0.9f)
-        )
     }
 }
 
@@ -125,7 +177,7 @@ fun RatingBar(
             Icon(
                 imageVector = Icons.Filled.Star,
                 contentDescription = null,
-                tint = Color(0xFF000000),
+                tint = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(18.dp)
             )
         }
@@ -133,7 +185,7 @@ fun RatingBar(
             Icon(
                 imageVector = Icons.Outlined.StarBorder,
                 contentDescription = null,
-                tint = Color(0xFF000000),
+                tint = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(18.dp)
             )
         }
@@ -141,7 +193,7 @@ fun RatingBar(
             Icon(
                 imageVector = Icons.Outlined.StarBorder,
                 contentDescription = null,
-                tint = Color(0xFF000000),
+                tint = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(18.dp)
             )
         }
@@ -153,13 +205,24 @@ fun RatingBar(
 fun CommentCardPreview() {
     MaterialTheme {
         Surface {
-            CommentCard(
-                imageUrl = null,
-                name = "Jhon Doe",
-                country = "Canada",
-                rating = 3.5f,
-                comment = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco"
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(16.dp)) {
+                CommentCard(
+                    imageUrl = null,
+                    name = "Jhon Doe",
+                    country = "Canada",
+                    rating = 3.5f,
+                    comment = "This post is published and looks normal.",
+                    isOffline = false
+                )
+                CommentCard(
+                    imageUrl = null,
+                    name = "Jane Doe",
+                    country = "Colombia",
+                    rating = 4.8f,
+                    comment = "This post is pending publication and has a different style to indicate it.",
+                    isOffline = true
+                )
+            }
         }
     }
 }
