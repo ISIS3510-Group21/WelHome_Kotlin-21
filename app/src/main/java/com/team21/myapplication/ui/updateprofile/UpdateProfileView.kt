@@ -26,6 +26,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,6 +42,8 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.google.firebase.Timestamp
 import com.team21.myapplication.data.model.StudentUser
+import com.team21.myapplication.utils.NetworkMonitor
+import com.team21.myapplication.utils.PendingProfileSync
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -175,9 +179,18 @@ fun UpdateProfileScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             val context = LocalContext.current
+            val networkMonitor = remember { NetworkMonitor.get(context) }
+            val isOnline by networkMonitor.isOnline.collectAsState()
 
-// --- Recordar fecha actual ---
-            var birthDate by remember { mutableStateOf(user.birthDate) }
+            // Efecto para sincronizar perfil pendiente al recuperar conectividad
+            LaunchedEffect(isOnline) {
+                if (isOnline) {
+                    PendingProfileSync.load(context)?.let { pending ->
+                        onSave(pending)
+                        PendingProfileSync.clear(context)
+                    }
+                }
+            }
 
 // Formato reutilizable
             val dateFormatter = remember {
@@ -266,7 +279,13 @@ fun UpdateProfileScreen(
                             university = university,
                             birthDate = birthDate
                         )
-                        onSave(updatedUser)
+                        if (isOnline) {
+                            onSave(updatedUser)
+                        } else {
+                            PendingProfileSync.save(context, updatedUser)
+                            // Aquí se podría mostrar Snackbar/Toast: "Guardado localmente. Se sincronizará cuando haya conexión."
+                            onBack()
+                        }
                     }
                 },
                 modifier = Modifier.fillMaxWidth()

@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -19,17 +21,40 @@ import com.team21.myapplication.ui.components.text.BlackText
 import com.team21.myapplication.ui.components.text.BlueText
 import com.team21.myapplication.ui.components.text.GrayText
 import androidx.compose.ui.unit.Dp
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ColorScheme
+import androidx.compose.ui.platform.LocalContext
+import com.team21.myapplication.utils.NetworkMonitor
+import com.team21.myapplication.utils.PendingProfileSync
+import com.team21.myapplication.data.model.StudentUser
 
 @Composable
 fun ProfileView(
     onLogout: () -> Unit = {},
     onEditProfile: () -> Unit = {},
+    onPublishPending: (StudentUser) -> Unit = {},
     name: String = "",
     email: String = "",
     country: String = "",
     phoneNumber: String = "",
     contentTopPadding: Dp = 0.dp
 ) {
+    val context = LocalContext.current
+    val networkMonitor = NetworkMonitor.get(context)
+    val isOnline = networkMonitor.isOnline.collectAsState().value
+
+    // Al recuperar conexión, intentar publicar cambios pendientes
+    LaunchedEffect(isOnline) {
+        if (isOnline) {
+            PendingProfileSync.load(context)?.let { pending ->
+                onPublishPending(pending)
+                PendingProfileSync.clear(context)
+            }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -38,6 +63,21 @@ fun ProfileView(
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Banner informativo si hay datos sin publicar
+        if (PendingProfileSync.hasPending(context)) {
+            Surface(
+                tonalElevation = 2.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
+            ) {
+                Text(
+                    text = "There are profile changes pending to be published.",
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
+        }
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,

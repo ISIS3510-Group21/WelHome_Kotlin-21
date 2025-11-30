@@ -22,6 +22,9 @@ import com.team21.myapplication.ui.components.banners.BannerPosition
 import com.team21.myapplication.ui.components.banners.ConnectivityBanner
 import androidx.compose.material3.Scaffold
 import com.team21.myapplication.ui.updateprofile.UpdateProfileActivity
+import com.team21.myapplication.ui.updateprofile.UpdateProfileViewModel
+import com.team21.myapplication.ui.updateprofile.UpdateProfileViewModelFactory
+import com.team21.myapplication.data.repository.StudentUserRepository
 
 @Composable
 fun ProfileRoute(
@@ -37,6 +40,11 @@ fun ProfileRoute(
         )
     )
     val state: ProfileUiState = vm.state.collectAsStateWithLifecycle().value
+
+    // ViewModel encargado de publicar el perfil pendiente cuando vuelve la conexión
+    val updateVm: UpdateProfileViewModel = viewModel(
+        factory = UpdateProfileViewModelFactory(StudentUserRepository())
+    )
 
     val isOnline by com.team21.myapplication.utils.NetworkMonitor
         .get(context).isOnline.collectAsStateWithLifecycle()
@@ -83,6 +91,15 @@ fun ProfileRoute(
                 onEditProfile = {
                     val intent = Intent(context, UpdateProfileActivity::class.java)
                     context.startActivity(intent)
+                },
+                onPublishPending = { pending ->
+                    // Publicar el cambio pendiente usando el repositorio existente
+                    updateVm.updateUser(pending) { success ->
+                        if (success) {
+                            // Refrescar la información visible del perfil
+                            vm.load()
+                        }
+                    }
                 },
                 name = state.name,
                 email = state.email,
