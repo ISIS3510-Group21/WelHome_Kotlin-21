@@ -1,3 +1,4 @@
+
 package com.team21.myapplication.data.model
 
 import com.google.firebase.Timestamp
@@ -20,5 +21,6 @@ data class ForumPost (
     val creationDate: Timestamp ?= null,
     val user: String = "",
     val userName: String = "",
-    val userPhoto: String = ""
+    val userPhoto: String = "",
+    val isOffline: Boolean = false
 )

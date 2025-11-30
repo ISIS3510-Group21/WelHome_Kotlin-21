@@ -1,3 +1,4 @@
+
 package com.team21.myapplication.data.local
 
 import android.content.Context
@@ -11,12 +12,14 @@ import com.team21.myapplication.data.local.dao.ForumPostDao
 import com.team21.myapplication.data.local.dao.HousingDao
 import com.team21.myapplication.data.local.dao.MapCacheDao
 import com.team21.myapplication.data.local.dao.MyPostsDao
+import com.team21.myapplication.data.local.dao.OfflineForumPostDao
 import com.team21.myapplication.data.local.dao.OwnerOfflinePreviewDao
 import com.team21.myapplication.data.local.dao.ThreadForumDao
 import com.team21.myapplication.data.local.entity.ForumPostEntity
 import com.team21.myapplication.data.local.entity.HousingEntity
 import com.team21.myapplication.data.local.entity.MyPostEntity
 import com.team21.myapplication.data.local.entity.MapCacheEntry
+import com.team21.myapplication.data.local.entity.OfflineForumPostEntity
 import com.team21.myapplication.data.local.entity.OwnerOfflinePreviewEntity
 import com.team21.myapplication.data.local.dao.DraftPostDao
 import com.team21.myapplication.data.local.entity.DraftPostEntity
@@ -35,8 +38,10 @@ import com.team21.myapplication.data.local.entity.ThreadForumEntity
         ForumPostEntity::class,
         DraftPostEntity::class,
         DraftImageEntity::class,
-        AmenityEntity::class],
-    version = 4, // Incremented version
+        AmenityEntity::class,
+        OfflineForumPostEntity::class
+    ],
+    version = 5, // Incremented version
     exportSchema = false
 )
 @TypeConverters(MapLocationConverter::class, TimestampConverter::class) // Added TimestampConverter
@@ -52,6 +57,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun draftPostDao(): DraftPostDao
 
     abstract fun amenityDao(): AmenityDao
+    abstract fun offlineForumPostDao(): OfflineForumPostDao
 
     companion object {
         @Volatile

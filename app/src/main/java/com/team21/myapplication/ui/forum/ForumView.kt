@@ -1,3 +1,4 @@
+
 package com.team21.myapplication.ui.forum
 
 import android.content.Intent
@@ -187,7 +188,8 @@ fun ForumContent(
                                                 name = post.userName,
                                                 country = "Canada",
                                                 comment = post.content,
-                                                rating = 4.95f
+                                                rating = 4.95f,
+                                                isOffline = post.isOffline
                                             )
                                         }
                                     }
@@ -227,7 +229,8 @@ fun ForumScreenPreview() {
             positiveVotes = 495,
             negativeVotes = 5,
             userName = "Jhon Doe",
-            userPhoto = ""
+            userPhoto = "",
+            isOffline = true
         ),
         ForumPost(
             id = "2",
