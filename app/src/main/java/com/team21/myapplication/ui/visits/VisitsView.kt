@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.google.firebase.Timestamp
@@ -54,7 +55,6 @@ import com.team21.myapplication.ui.theme.AppTheme
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
 
 @Composable
 fun VisitsView(
@@ -85,8 +85,12 @@ fun VisitsView(
     Box(modifier = modifier.fillMaxSize()) {
         VisitsScreen(
             bookings = state.visits,
+            pendingRatings = state.pendingRatings, // Pass the pending ratings map
             onRateClick = { booking ->
-                navController.navigate("rateVisit/${booking.id}")
+                // Prevent rating if there is a pending rating for this visit
+                if (state.pendingRatings[booking.id] == null) {
+                    navController.navigate("rateVisit/${booking.id}")
+                }
             },
             isOnline = isOnline
         )
@@ -96,6 +100,7 @@ fun VisitsView(
 @Composable
 fun VisitsScreen(
     bookings: List<Booking>,
+    pendingRatings: Map<String, Float>, // Receive the map
     onRateClick: (Booking) -> Unit,
     modifier: Modifier = Modifier,
     isOnline: Boolean = true
@@ -119,15 +124,13 @@ fun VisitsScreen(
 
     SideEffect {
         val window = (view.context as android.app.Activity).window
-        // Variable de fondo
         window.statusBarColor = statusBarColor.toArgb()
 
-        // La lógica para decidir el color de los íconos
         WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars =
             if (!isOnline) {
-                false // Íconos blancos para fondo negro
+                false
             } else {
-                statusBarColor.luminance() > 0.5f // Decide según la luminancia del fondo
+                statusBarColor.luminance() > 0.5f
             }
     }
 
@@ -138,9 +141,8 @@ fun VisitsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(top = if (!isOnline) 40.dp else 0.dp) // Desplaza el contenido hacia abajo
+                .padding(top = if (!isOnline) 40.dp else 0.dp)
         ) {
-
             Spacer(Modifier.height(40.dp))
 
             Column(Modifier.padding(horizontal = 16.dp)) {
@@ -189,6 +191,7 @@ fun VisitsScreen(
                             visitDateTime = formatTimestamp(booking.date, booking.slot),
                             visitStatus = booking.state,
                             rating = booking.rating,
+                            pendingRating = pendingRatings[booking.id],
                             onRateClick = { onRateClick(booking) }
                         )
                     }
@@ -208,15 +211,12 @@ fun VisitsScreen(
 
 private fun formatTimestamp(timestamp: Timestamp, slot: String): String {
     val sdf = SimpleDateFormat("MMM dd, yyyy • hh:mm a", Locale.getDefault())
-    val dateString = sdf.format(timestamp.toDate())
-    return "$dateString"
+    return sdf.format(timestamp.toDate())
 }
-
 
 @Preview(showBackground = true)
 @Composable
 fun VisitsViewPreview() {
-    // Create timestamps for different dates to make the preview more realistic
     val now = Date()
     val tomorrow = Date(now.time + (1000 * 60 * 60 * 24))
     val yesterday = Date(now.time - (1000 * 60 * 60 * 24))
@@ -225,8 +225,13 @@ fun VisitsViewPreview() {
         Booking(id = "1", housingTitle = "Portal de los Rosales", state = "Missed", date = Timestamp(yesterday), slot = "7:00am"),
         Booking(id = "2", housingTitle = "Living 72", state = "Completed", date = Timestamp(yesterday), slot = "7:00am", rating = 4.5f),
         Booking(id = "3", housingTitle = "CityU", state = "Scheduled", date = Timestamp(tomorrow), slot = "7:00am"),
+        Booking(id = "4", housingTitle = "Another Place", state = "Completed", date = Timestamp(yesterday), slot = "9:00am", rating = 0f) // Not rated
     )
     AppTheme {
-        VisitsScreen(bookings = bookings, onRateClick = {})
+        VisitsScreen(
+            bookings = bookings,
+            pendingRatings = mapOf("4" to 3.5f), // Example of a pending rating
+            onRateClick = {}
+        )
     }
 }
