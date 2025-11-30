@@ -150,6 +150,11 @@
             android:exported="false"
             android:theme="@style/Theme.WelHome" />
 
+        <activity
+            android:name=".ui.updateprofile.UpdateProfileActivity"
+            android:exported="true"
+            android:theme="@style/Theme.WelHome" />
+
         <!-- ✅ Servicio de FCM en tu package .notification -->
         <service
             android:name=".notification.MyMessagingService"
