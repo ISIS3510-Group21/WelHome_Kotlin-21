@@ -2,6 +2,8 @@ package com.team21.myapplication.ui.updateprofile
 
 import android.app.DatePickerDialog
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -173,33 +175,56 @@ fun UpdateProfileScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             val context = LocalContext.current
-            val calendar = Calendar.getInstance()
-            calendar.time = birthDate.toDate()
-            val year = calendar.get(Calendar.YEAR)
-            val month = calendar.get(Calendar.MONTH)
-            val day = calendar.get(Calendar.DAY_OF_MONTH)
 
-            val datePickerDialog = DatePickerDialog(
-                context,
-                { _, selectedYear, selectedMonth, selectedDayOfMonth ->
-                    val newDate = Calendar.getInstance()
-                    newDate.set(selectedYear, selectedMonth, selectedDayOfMonth)
-                    birthDate = Timestamp(newDate.time)
-                }, year, month, day
-            )
+// --- Recordar fecha actual ---
+            var birthDate by remember { mutableStateOf(user.birthDate) }
 
-            OutlinedTextField(
-                value = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(birthDate.toDate()),
-                onValueChange = { },
-                label = { Text("Birth Date") },
-                readOnly = true,
+// Formato reutilizable
+            val dateFormatter = remember {
+                SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+            }
+
+// Calendar inicial (solo se crea una vez)
+            val calendar = remember {
+                Calendar.getInstance().apply {
+                    time = birthDate.toDate()
+                }
+            }
+
+// Recordar el DatePickerDialog
+            val datePickerDialog = remember {
+                DatePickerDialog(
+                    context,
+                    { _, year, month, day ->
+                        val newDate = Calendar.getInstance()
+                        newDate.set(year, month, day)
+                        birthDate = Timestamp(newDate.time)
+                    },
+                    calendar.get(Calendar.YEAR),
+                    calendar.get(Calendar.MONTH),
+                    calendar.get(Calendar.DAY_OF_MONTH)
+                )
+            }
+
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { datePickerDialog.show() },
-                trailingIcon = {
-                    Icon(Icons.Default.DateRange, contentDescription = "Select Date")
-                }
-            )
+                    .clickable { datePickerDialog.show() }
+            ) {
+                OutlinedTextField(
+                    value = dateFormatter.format(birthDate.toDate()),
+                    onValueChange = { },
+                    label = { Text("Birth Date") },
+                    readOnly = true,              // no se deshabilita el campo
+                    enabled = true,               // se mantiene la apariencia normal
+                    trailingIcon = {
+                        Icon(Icons.Default.DateRange, contentDescription = "Select Date")
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                )
+            }
+
 
             Spacer(modifier = Modifier.height(16.dp))
 
