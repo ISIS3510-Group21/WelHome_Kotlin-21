@@ -1,5 +1,6 @@
 package com.team21.myapplication.ui.profileView
 
+import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
@@ -20,6 +21,7 @@ import androidx.core.view.WindowCompat
 import com.team21.myapplication.ui.components.banners.BannerPosition
 import com.team21.myapplication.ui.components.banners.ConnectivityBanner
 import androidx.compose.material3.Scaffold
+import com.team21.myapplication.ui.updateprofile.UpdateProfileActivity
 
 @Composable
 fun ProfileRoute(
@@ -78,6 +80,10 @@ fun ProfileRoute(
             LaunchedEffect(Unit) { vm.load() }
             ProfileView(
                 onLogout = onLogout,
+                onEditProfile = {
+                    val intent = Intent(context, UpdateProfileActivity::class.java)
+                    context.startActivity(intent)
+                },
                 name = state.name,
                 email = state.email,
                 country = state.country,

@@ -3,8 +3,10 @@ package com.team21.myapplication.data.repository
 import android.util.Log
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.FieldValue
 import com.team21.myapplication.data.model.StudentUser
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.tasks.await
 
 // TODO: remove logs - just for debugging
@@ -34,7 +36,7 @@ class StudentUserRepository {
             Log.d("StudentUserRepo", "Datos del documento: ${documentSnapshot.data}")
 
             if (documentSnapshot.exists()) {
-                documentSnapshot.toObject(StudentUser::class.java)
+                documentSnapshot.toObject(StudentUser::class.java)?.copy(id = documentSnapshot.id)
             } else {
                 Log.e("StudentUserRepo", "El documento con ID $userId NO existe")
                 null
@@ -73,6 +75,59 @@ class StudentUserRepository {
     suspend fun removeSavedHousing(userId: String, housingId: String) {
         val savedCol = studentUserCollection.document(userId).collection("SavedHousing")
         savedCol.document(housingId).delete().await()
+    }
+
+    fun getCurrentUser(): Flow<StudentUser?> = channelFlow {
+        val email = auth.getCurrentUserEmail()
+        if (email == null) {
+            send(null)
+            close()
+            return@channelFlow
+        }
+
+        val userId = findStudentIdByEmail(email)
+        if (userId == null) {
+            send(null)
+            close()
+            return@channelFlow
+        }
+
+        val listener = studentUserCollection.document(userId).addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                return@addSnapshotListener
+            }
+            if (snapshot != null && snapshot.exists()) {
+                val user = snapshot.toObject(StudentUser::class.java)?.copy(id = snapshot.id)
+                trySend(user)
+            } else {
+                trySend(null)
+            }
+        }
+        awaitClose { listener.remove() }
+    }
+
+
+    suspend fun updateUser(user: StudentUser): Boolean {
+        if (user.id.isBlank()) {
+            Log.e("StudentUserRepo", "User ID is blank. Cannot update user.")
+            return false
+        }
+        return try {
+            val data = mapOf(
+                "name" to user.name,
+                "phoneNumber" to user.phoneNumber,
+                "gender" to user.gender,
+                "nationality" to user.nationality,
+                "language" to user.language,
+                "university" to user.university,
+                "birthDate" to user.birthDate
+            )
+            studentUserCollection.document(user.id).update(data).await()
+            true
+        } catch (e: Exception) {
+            Log.e("StudentUserRepo", "Error updating user: ", e)
+            false
+        }
     }
 
     suspend fun getCurrentUserDocument(): StudentUser? = getStudentUser(findStudentIdByEmail(auth.getCurrentUserEmail()))

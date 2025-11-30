@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.Dp
 @Composable
 fun ProfileView(
     onLogout: () -> Unit = {},
+    onEditProfile: () -> Unit = {},
     name: String = "",
     email: String = "",
     country: String = "",
@@ -144,6 +145,13 @@ fun ProfileView(
         )
 
         Spacer(modifier = Modifier.height(32.dp)) // Spacer before the button
+
+        BlueButton(
+            text = "Edit Profile",
+            onClick = onEditProfile
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         BlueButton(
             text = "Log out",
