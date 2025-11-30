@@ -30,8 +30,7 @@ import com.team21.myapplication.ui.components.text.BlackText
 import com.team21.myapplication.ui.components.text.BlueText
 import com.team21.myapplication.ui.components.text.GrayText
 import com.team21.myapplication.ui.theme.AppTheme
-import com.team21.myapplication.ui.theme.BlueSecondary
-import com.team21.myapplication.ui.theme.GrayIcon
+import com.team21.myapplication.ui.theme.*
 
 // Estados posibles de una visita
 enum class VisitStatus {
@@ -55,15 +54,19 @@ fun OwnerVisitDetailView(
     visitorFeedback: String? = null,
     visitorRating: Int? = null,
     ownerComment: String = "",
+    ownerCommentDraft: String = "",
+    isEditingOwnerComment: Boolean = false,
     onCommentChange: (String) -> Unit = {},
     onSaveComment: () -> Unit = {},
+    onStartEditOwnerComment: () -> Unit = {},
+    onCancelEditOwnerComment: () -> Unit = {},
     onMessageClick: () -> Unit = {},
     onBackClick: () -> Unit = {},
+    snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
-    var comment by remember { mutableStateOf(ownerComment) }
+
     var showSnackbar by remember { mutableStateOf(false) }
-    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(showSnackbar) {
         if (showSnackbar) {
@@ -98,6 +101,16 @@ fun OwnerVisitDetailView(
                     containerColor = MaterialTheme.colorScheme.background
                 )
             )
+        },
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState
+            ) { snackbarData ->
+                Snackbar(
+                    snackbarData = snackbarData,
+                    contentColor = WhiteBackground
+                )
+            }
         }
     ) { paddingValues ->
         Column(
@@ -189,7 +202,7 @@ fun OwnerVisitDetailView(
                 ) {
                     BlackText(
                         text = "Visitor Information",
-                        size = 18.sp,
+                        size = 20.sp,
                         fontWeight = FontWeight.SemiBold
                     )
 
@@ -210,7 +223,7 @@ fun OwnerVisitDetailView(
                 ) {
                     BlackText(
                         text = "Visitor Information",
-                        size = 18.sp,
+                        size = 20.sp,
                         fontWeight = FontWeight.SemiBold
                     )
 
@@ -297,7 +310,7 @@ fun OwnerVisitDetailView(
             ) {
                 BlackText(
                     text = "Feedback",
-                    size = 18.sp,
+                    size = 20.sp,
                     fontWeight = FontWeight.SemiBold
                 )
 
@@ -308,20 +321,41 @@ fun OwnerVisitDetailView(
                         // Mostrar rating y feedback del visitante
                         if (visitorRating != null) {
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                repeat(5) { index ->
-                                    Icon(
-                                        imageVector = if (index < visitorRating)
-                                            AppIcons.StarFilled
-                                        else
-                                            AppIcons.Star,
-                                        contentDescription = "Star ${index + 1}",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(24.dp)
-                                    )
+                                // Estrellas
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    repeat(5) { index ->
+                                        Icon(
+                                            imageVector = if (index < visitorRating)
+                                                AppIcons.StarFilled
+                                            else
+                                                AppIcons.Star,
+                                            contentDescription = "Star ${index + 1}",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(30.dp)
+                                        )
+                                    }
                                 }
+
+                                // Número
+                                BlueText(
+                                    text = "${visitorRating}/5",
+                                    size = 16.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
                             }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+                        } else {
+                            // Caso: visita completada pero sin rating
+                            GrayText(
+                                text = "This visit has not been rated yet",
+                                size = 14.sp
+                            )
                             Spacer(modifier = Modifier.height(8.dp))
                         }
 
@@ -330,14 +364,14 @@ fun OwnerVisitDetailView(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .background(
-                                        BlueSecondary,
+                                        Color(BlueSecondary.value),
                                         RoundedCornerShape(12.dp)
                                     )
-                                    .padding(16.dp)
+                                    .padding(12.dp)
                             ) {
-                                GrayText(
+                                BlackText(
                                     text = visitorFeedback,
-                                    size = 14.sp
+                                    size = 16.sp
                                 )
                             }
 
@@ -345,11 +379,19 @@ fun OwnerVisitDetailView(
                                 Spacer(modifier = Modifier.height(4.dp))
                                 BlueText(
                                     text = "More",
-                                    size = 14.sp,
-                                    fontWeight = FontWeight.Medium
+                                    size = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    underline = true
                                 )
                             }
+                        } else {
+                            // Visita completada pero sin comentarios
+                            GrayText(
+                                text = "There are no comments for this visit yet",
+                                size = 16.sp
+                            )
                         }
+
                     }
 
                     VisitStatus.MISSED -> {
@@ -376,7 +418,7 @@ fun OwnerVisitDetailView(
                                 )
                                 GrayText(
                                     text = "No feedback was provided as the visit was missed",
-                                    size = 14.sp
+                                    size = 16.sp
                                 )
                             }
                         }
@@ -424,7 +466,7 @@ fun OwnerVisitDetailView(
             ) {
                 BlackText(
                     text = "Add Your Comment",
-                    size = 18.sp,
+                    size = 20.sp,
                     fontWeight = FontWeight.SemiBold
                 )
 
@@ -436,43 +478,117 @@ fun OwnerVisitDetailView(
                     } else {
                         "Your private comments about this visit will only be visible to you"
                     },
-                    size = 13.sp
+                    size = 16.sp
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Comment TextField
-                PlaceholderTextField(
-                    placeholderText = "e.g Student seemed very interested, asked about the lease terms...",
-                    value = comment,
-                    onValueChange = {
-                        // Solo permitir cambios si la visita ya pasó
-                        if (visitStatus == VisitStatus.COMPLETED || visitStatus == VisitStatus.MISSED) {
-                            comment = it
-                            onCommentChange(it)
-                        }
-                    },
-                    height = 120.dp,
-                    maxChars = 500,
-                    maxCharsMessage = "Maximum 500 characters",
-                    // Deshabilitar si no es COMPLETED o MISSED
-                    enabled = (visitStatus == VisitStatus.COMPLETED || visitStatus == VisitStatus.MISSED)
-                )
+                val canEdit = (visitStatus == VisitStatus.COMPLETED || visitStatus == VisitStatus.MISSED)
 
-                Spacer(modifier = Modifier.height(16.dp))
+                if (!canEdit) {
+                    // No se puede editar aún: dejamos el TextField morado deshabilitado
+                    PlaceholderTextField(
+                        placeholderText = "e.g Student seemed very interested, asked about the lease terms...",
+                        value = ownerComment,
+                        onValueChange = { /* no-op, está deshabilitado */ },
+                        height = 120.dp,
+                        maxChars = 500,
+                        maxCharsMessage = "Maximum 500 characters",
+                        enabled = false
+                    )
 
-                // Save Comment Button
-                BlueButton(
-                    text = "Save Comment",
-                    onClick = {
-                        if (visitStatus == VisitStatus.COMPLETED || visitStatus == VisitStatus.MISSED) {
-                            onSaveComment()
-                        } else {
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    BlueButton(
+                        text = "Save Comment",
+                        onClick = {
+                            // Mostrar snackbar explicando por qué no se puede
                             showSnackbar = true
+                        },
+                        enabled = false
+                    )
+                } else {
+                    // La visita está COMPLETED o MISSED: se permite comentar / editar
+
+                    if (ownerComment.isBlank() && !isEditingOwnerComment) {
+                        // Caso 1: no hay comentario aún → TextField morado y "Save Comment"
+                        PlaceholderTextField(
+                            placeholderText = "e.g Student seemed very interested, asked about the lease terms...",
+                            value = ownerCommentDraft,
+                            onValueChange = { onCommentChange(it) },
+                            height = 120.dp,
+                            maxChars = 500,
+                            maxCharsMessage = "Maximum 500 characters",
+                            enabled = true
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        BlueButton(
+                            text = "Save Comment",
+                            onClick = { onSaveComment() },
+                            enabled = true
+                        )
+                    } else if (!isEditingOwnerComment) {
+                        // Caso 2: ya hay comentario y NO estamos editando → BlackText + botón "Edit"
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    Color(BlueSecondary.value),
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .padding(12.dp)
+                        ) {
+                            BlackText(
+                                text = ownerComment,
+                                size = 16.sp,
+                                fontWeight = FontWeight.Normal
+                            )
                         }
-                    },
-                    enabled = (visitStatus == VisitStatus.COMPLETED || visitStatus == VisitStatus.MISSED)
-                )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        TextButton(onClick = onStartEditOwnerComment) {
+                            BlueText(
+                                text = "Edit comment",
+                                size = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                            )
+                        }
+                    } else {
+                        // Caso 3: ya hay comentario y ESTAMOS editando → TextField + Update + Cancel
+                        PlaceholderTextField(
+                            placeholderText = "e.g Student seemed very interested, asked about the lease terms...",
+                            value = ownerCommentDraft,
+                            onValueChange = { onCommentChange(it) },
+                            height = 120.dp,
+                            maxChars = 500,
+                            maxCharsMessage = "Maximum 500 characters",
+                            enabled = true
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Botón "Update Comment"
+                        BlueButton(
+                            text = "Update Comment",
+                            onClick = { onSaveComment() },
+                            enabled = true
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Acción "Cancel"
+                        TextButton(onClick = onCancelEditOwnerComment) {
+                            BlackText(
+                                text = "Cancel",
+                                size = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                            )
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -569,6 +685,7 @@ private data class Tuple5<A, B, C, D, E>(
 @Composable
 fun OwnerVisitDetailView_Completed_Preview() {
     AppTheme {
+        val snackbarHostState = remember { SnackbarHostState() }
         OwnerVisitDetailView(
             propertyImageUrl = "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400",
             visitStatus = VisitStatus.COMPLETED,
@@ -579,7 +696,9 @@ fun OwnerVisitDetailView_Completed_Preview() {
             visitorPhotoUrl = "https://i.pravatar.cc/150?img=12",
             visitorFeedback = "Description text about something on this page that can be long or short, it can be a single line or a long and explaining information...",
             visitorRating = 4,
-            ownerComment = "e.g Student seemed very interested, asked about the lease terms..."
+            ownerComment = "e.g Student seemed very interested, asked about the lease terms...",
+            isEditingOwnerComment = false,
+            snackbarHostState = snackbarHostState
         )
     }
 }
@@ -588,6 +707,7 @@ fun OwnerVisitDetailView_Completed_Preview() {
 @Composable
 fun OwnerVisitDetailView_Missed_Preview() {
     AppTheme {
+        val snackbarHostState = remember { SnackbarHostState() }
         OwnerVisitDetailView(
             propertyImageUrl = "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400",
             visitStatus = VisitStatus.MISSED,
@@ -595,7 +715,8 @@ fun OwnerVisitDetailView_Missed_Preview() {
             visitTime = "4:00 PM",
             visitorName = "Vova Parkhomchuk",
             visitorNationality = "USA",
-            visitorPhotoUrl = "https://i.pravatar.cc/150?img=12"
+            visitorPhotoUrl = "https://i.pravatar.cc/150?img=12",
+            snackbarHostState = snackbarHostState
         )
     }
 }
@@ -603,6 +724,7 @@ fun OwnerVisitDetailView_Missed_Preview() {
 @Preview(showBackground = true, backgroundColor = 0xFFFCFCFC)
 @Composable
 fun OwnerVisitDetailView_Confirmed_Preview() {
+    val snackbarHostState = remember { SnackbarHostState() }
     AppTheme {
         OwnerVisitDetailView(
             propertyImageUrl = "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400",
@@ -611,7 +733,8 @@ fun OwnerVisitDetailView_Confirmed_Preview() {
             visitTime = "4:00 PM",
             visitorName = "Vova Parkhomchuk",
             visitorNationality = "Colombia",
-            visitorPhotoUrl = "https://i.pravatar.cc/150?img=12"
+            visitorPhotoUrl = "https://i.pravatar.cc/150?img=12",
+            snackbarHostState = snackbarHostState
         )
     }
 }
@@ -620,6 +743,7 @@ fun OwnerVisitDetailView_Confirmed_Preview() {
 @Composable
 fun OwnerVisitDetailView_Available_Preview() {
     AppTheme {
+        val snackbarHostState = remember { SnackbarHostState() }
         OwnerVisitDetailView(
             propertyImageUrl = "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400",
             visitStatus = VisitStatus.AVAILABLE,
@@ -627,7 +751,8 @@ fun OwnerVisitDetailView_Available_Preview() {
             visitTime = "4:00 PM",
             visitorName = "",
             visitorNationality = "",
-            visitorPhotoUrl = null
+            visitorPhotoUrl = null,
+            snackbarHostState = snackbarHostState
         )
     }
 }
@@ -636,6 +761,7 @@ fun OwnerVisitDetailView_Available_Preview() {
 @Composable
 fun OwnerVisitDetailView_Scheduled_Preview() {
     AppTheme {
+        val snackbarHostState = remember { SnackbarHostState() }
         OwnerVisitDetailView(
             propertyImageUrl = "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400",
             visitStatus = VisitStatus.SCHEDULED,
@@ -643,7 +769,8 @@ fun OwnerVisitDetailView_Scheduled_Preview() {
             visitTime = "4:00 PM",
             visitorName = "Vova Parkhomchuk",
             visitorNationality = "Ukraine",
-            visitorPhotoUrl = "https://i.pravatar.cc/150?img=12"
+            visitorPhotoUrl = "https://i.pravatar.cc/150?img=12",
+            snackbarHostState = snackbarHostState
         )
     }
 }

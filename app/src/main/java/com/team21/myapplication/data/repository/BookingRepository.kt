@@ -201,4 +201,17 @@ class BookingRepository {
             null
         }
     }
+
+    suspend fun updateOwnerComment(bookingId: String, ownerComment: String) {
+        try {
+            col.document(bookingId)
+                .update("ownerComment", ownerComment)
+                .await()
+        } catch (e: Exception) {
+            // Puedes loguear si quieres
+            Log.e("BookingRepository", "Error updating ownerComment", e)
+            throw e
+        }
+    }
+
 }
