@@ -17,6 +17,11 @@ data class OwnerVisitDetailState(
     val visitorFeedback: String? = null,
     val visitorRating: Int? = null,
     val ownerComment: String = "",
+    val isSavingComment: Boolean = false,
+    val commentSaveMessage: String? = null,   // texto para snackbar (éxito / error)
+    val commentSaveError: Boolean = false,     // para saber si el mensaje es de error
+    val isEditingOwnerComment: Boolean = false,
+    val ownerCommentDraft: String = "",
 
     // Metadata
     val bookingId: String = "",

@@ -54,6 +54,7 @@ class OwnerVisitDetailViewModel(application: Application) : AndroidViewModel(app
                         visitorFeedback = null,
                         visitorRating = null,
                         ownerComment = "",
+                        ownerCommentDraft = "",
                         bookingId = bookingId,
                         isAvailable = true
                     )
@@ -119,6 +120,7 @@ class OwnerVisitDetailViewModel(application: Application) : AndroidViewModel(app
                 visitorFeedback = booking.userComment.ifBlank { null },
                 visitorRating = rating,
                 ownerComment = booking.ownerComment,
+                ownerCommentDraft = booking.ownerComment,
                 bookingId = bookingId,
                 isAvailable = false
             )
@@ -132,6 +134,77 @@ class OwnerVisitDetailViewModel(application: Application) : AndroidViewModel(app
     }
 
     fun updateOwnerComment(comment: String) {
-        _state.value = _state.value.copy(ownerComment = comment)
+        _state.value = _state.value.copy(ownerCommentDraft = comment)
     }
+
+    fun setEditingOwnerComment(isEditing: Boolean) {
+        val current = _state.value
+        _state.value = current.copy(
+            isEditingOwnerComment = isEditing,
+            // Si salimos del modo edición (Cancel), el borrador vuelve al valor guardado
+            ownerCommentDraft = if (!isEditing) current.ownerComment else current.ownerCommentDraft
+        )
+    }
+
+
+
+    /**
+     * Guarda el comentario del owner en la colección Booking.
+     * Devuelve true si todo salió bien, false si hubo error.
+     */
+    suspend fun saveOwnerComment(): Boolean {
+        val currentState = _state.value
+        val bookingId = currentState.bookingId
+        val comment = currentState.ownerCommentDraft   // usar borrador
+
+        // Si por alguna razón no tenemos bookingId, no podemos guardar
+        if (bookingId.isBlank()) {
+            _state.value = currentState.copy(
+                commentSaveMessage = "Could not identify this visit to save the comment.",
+                commentSaveError = true
+            )
+            return false
+        }
+
+        return try {
+            // Marcamos que estamos guardando
+            _state.value = currentState.copy(
+                isSavingComment = true,
+                commentSaveMessage = null
+            )
+
+            // Llamada al repositorio: crea/actualiza el campo ownerComment
+            bookingRepository.updateOwnerComment(bookingId, comment)
+
+            // Actualizamos el estado con éxito
+            _state.value = _state.value.copy(
+                isSavingComment = false,
+                commentSaveMessage = "Comment saved successfully.",
+                commentSaveError = false,
+                isEditingOwnerComment = false,   // salir del modo edición
+                ownerComment = comment,           // lo guardado en DB
+                ownerCommentDraft = comment       // sincroniza borrador
+            )
+            true
+
+        } catch (e: Exception) {
+            // En caso de error, informamos a la UI
+            _state.value = _state.value.copy(
+                isSavingComment = false,
+                commentSaveMessage = "Could not save your comment. Please try again.",
+                commentSaveError = true
+            )
+            false
+        }
+    }
+
+    /**
+     * Se llama desde la UI cuando ya se mostró el snackbar,
+     * para limpiar el mensaje del estado.
+     */
+    fun onCommentSaveMessageConsumed() {
+        _state.value = _state.value.copy(commentSaveMessage = null)
+    }
+
+
 }

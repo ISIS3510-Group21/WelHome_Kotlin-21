@@ -32,6 +32,9 @@ import com.team21.myapplication.ui.ownerVisits.state.OwnerVisitsViewModelFactory
 import com.team21.myapplication.ui.theme.AppTheme
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 
 @Composable
 fun OwnerVisitsRoute(
@@ -45,6 +48,23 @@ fun OwnerVisitsRoute(
     val viewModel: OwnerVisitsViewModel = viewModel(factory = factory)
 
     val state by viewModel.state.collectAsState()
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                // Cada vez que la pantalla vuelva a primer plano, recarga la lista
+                viewModel.loadOwnerVisits()
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
 
     OwnerVisitsScreen(
         visits = state.visits,
@@ -146,6 +166,16 @@ private fun OwnerVisitsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            val currentTab = tabs[selectedTabIndex]
+
+            val emptyStateMessage = when (currentTab) {
+                "Upcoming" -> "You have no upcoming visits"
+                "Past" -> "You have no past visits"
+                "Available" -> "You have no available time slots"
+                "All" -> "You have no visits yet"
+                else -> "You have no visits yet"
+            }
+
             // Contenido según el estado
             when {
                 isLoading -> {
@@ -186,7 +216,7 @@ private fun OwnerVisitsScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         GrayText(
-                            text = "You have no scheduled appointments",
+                            text = emptyStateMessage,
                             size = 16.sp,
                             fontWeight = FontWeight.Medium,
                             modifier = Modifier.fillMaxWidth()

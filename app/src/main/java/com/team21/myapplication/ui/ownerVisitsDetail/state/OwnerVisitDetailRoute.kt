@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -12,6 +13,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.team21.myapplication.ui.ownerVisitsDetail.OwnerVisitDetailView
 import com.team21.myapplication.ui.ownerVisitsDetail.OwnerVisitDetailViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun OwnerVisitDetailRoute(
@@ -30,6 +32,18 @@ fun OwnerVisitDetailRoute(
     val viewModel: OwnerVisitDetailViewModel = viewModel(factory = factory)
 
     val state by viewModel.state.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    // Escuchar mensajes de guardado de comentario y mostrarlos como snackbar
+    LaunchedEffect(state.commentSaveMessage) {
+        val message = state.commentSaveMessage
+        if (message != null) {
+            snackbarHostState.showSnackbar(message)
+            viewModel.onCommentSaveMessageConsumed()
+        }
+    }
+
 
     // Cargar datos cuando se monta el composable
     LaunchedEffect(bookingId) {
@@ -77,10 +91,19 @@ fun OwnerVisitDetailRoute(
                 visitorFeedback = state.visitorFeedback,
                 visitorRating = state.visitorRating,
                 ownerComment = state.ownerComment,
+                ownerCommentDraft = state.ownerCommentDraft,
+                isEditingOwnerComment = state.isEditingOwnerComment,
                 onCommentChange = { viewModel.updateOwnerComment(it) },
-                onSaveComment = { /* TODO: Implementar después */ },
+                onSaveComment = {
+                    scope.launch {
+                        viewModel.saveOwnerComment()
+                    }
+                },
+                onStartEditOwnerComment = { viewModel.setEditingOwnerComment(true) },
+                onCancelEditOwnerComment = { viewModel.setEditingOwnerComment(false) },
                 onMessageClick = { /* TODO: Implementar después */ },
                 onBackClick = onBack,
+                snackbarHostState = snackbarHostState,
                 modifier = modifier
             )
         }
