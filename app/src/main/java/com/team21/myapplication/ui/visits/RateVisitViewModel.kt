@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 sealed interface RateVisitUiState {
     object Idle : RateVisitUiState
@@ -34,7 +36,10 @@ class RateVisitViewModel(application: Application) : AndroidViewModel(applicatio
             if (networkMonitor.isOnline.first()) {
                 _uiState.value = RateVisitUiState.Loading
                 try {
-                    bookingRepository.rateVisit(visitId, rating, comment)
+                    // IO y Main combinadas: persistencia en IO, UI en Main
+                    withContext(Dispatchers.IO) {
+                        bookingRepository.rateVisit(visitId, rating, comment)
+                    }
                     _uiState.value = RateVisitUiState.Success
                 } catch (e: Exception) {
                     _uiState.value = RateVisitUiState.Error(e.message)
