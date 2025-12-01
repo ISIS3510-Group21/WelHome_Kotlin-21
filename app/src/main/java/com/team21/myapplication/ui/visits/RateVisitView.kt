@@ -1,5 +1,6 @@
 package com.team21.myapplication.ui.visits
 
+import android.app.Application
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -7,17 +8,28 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
+import com.team21.myapplication.utils.NetworkMonitor
+import com.team21.myapplication.ui.components.banners.ConnectivityBanner
+import com.team21.myapplication.ui.components.banners.BannerPosition
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RateVisitView(navController: NavController, visitId: String?) {
     var rating by remember { mutableStateOf(0f) }
     var comment by remember { mutableStateOf("") }
-    val rateVisitViewModel: RateVisitViewModel = viewModel()
+    val context = LocalContext.current
+
+    // Correctly instantiate the AndroidViewModel
+    val rateVisitViewModel: RateVisitViewModel = viewModel(
+        factory = ViewModelProvider.AndroidViewModelFactory.getInstance(context.applicationContext as Application)
+    )
+
     val uiState by rateVisitViewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -25,14 +37,22 @@ fun RateVisitView(navController: NavController, visitId: String?) {
     LaunchedEffect(uiState) {
         when (val state = uiState) {
             is RateVisitUiState.Success -> {
+                // Navigate back when the rating is successfully submitted online
                 navController.popBackStack()
             }
             is RateVisitUiState.Error -> {
                 scope.launch {
-                    snackbarHostState.showSnackbar(
-                        message = state.message ?: "An unknown error occurred"
-                    )
+                    snackbarHostState.showSnackbar(state.message ?: "An unknown error occurred")
                 }
+                // Reset state to allow further interactions
+                rateVisitViewModel.resetState()
+            }
+            is RateVisitUiState.Offline -> {
+                // Show a confirmation and navigate back immediately
+                scope.launch {
+                    snackbarHostState.showSnackbar("No internet. Rating will sync later.")
+                }
+                navController.popBackStack()
             }
             else -> {}
         }
@@ -59,6 +79,14 @@ fun RateVisitView(navController: NavController, visitId: String?) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            // Banner de conectividad (visible cuando no hay internet)
+            val networkMonitor = remember { NetworkMonitor.get(context) }
+            val isOnline by networkMonitor.isOnline.collectAsState()
+            ConnectivityBanner(
+                visible = !isOnline,
+                position = BannerPosition.Top
+            )
+
             val isLoading = uiState is RateVisitUiState.Loading
 
             Text("Visit ID: $visitId")
@@ -84,7 +112,7 @@ fun RateVisitView(navController: NavController, visitId: String?) {
             Button(
                 onClick = {
                     if (visitId != null) {
-                        rateVisitViewModel.rateVisit(visitId, rating, comment)
+                        rateVisitViewModel.submitRating(visitId, rating, comment)
                     }
                 },
                 enabled = !isLoading

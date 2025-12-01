@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.withContext
 
 class CreateForumPostViewModel(
     private val forumRepository: ForumRepository,
@@ -30,7 +33,11 @@ class CreateForumPostViewModel(
 
     private fun loadThreads() {
         viewModelScope.launch {
-            _threads.value = forumRepository.getThreads()
+            // IO para lectura de hilos
+            val threads = withContext(Dispatchers.IO) {
+                forumRepository.getThreads()
+            }
+            _threads.value = threads
         }
     }
 
@@ -43,8 +50,13 @@ class CreateForumPostViewModel(
         viewModelScope.launch {
             _postCreationState.value = PostCreationState.Loading
             try {
+                // Corrutinas anidadas y uso de IO: obtener auth y perfil en paralelo
                 val auth = FirebaseAuth.getInstance().currentUser?.uid
-                val userProfile = studentUserRepository.getStudentUser(auth)
+                val userProfileDeferred = async(Dispatchers.IO) {
+                    studentUserRepository.getStudentUser(auth)
+                }
+                // Preparación ligera en Main
+                val userProfile = userProfileDeferred.await()
                 val forumPost = ForumPost(
                     content = postContent,
                     user = auth ?: "",
@@ -52,14 +64,15 @@ class CreateForumPostViewModel(
                     userPhoto = userProfile?.photoPath ?: ""
                 )
 
-                if (threadId == null && !newThreadTitle.isNullOrBlank() && !newThreadDescription.isNullOrBlank()) {
-                    // Create new thread and post
-                    Log.d("CreateForumPostViewModel", "Creating new thread and post")
-                    Log.d("CreateForumPostViewModel", "forumPost: $forumPost")
-                    forumRepository.createThread(newThreadTitle, newThreadDescription, forumPost)
-                } else if (threadId != null) {
-                    // Create post in existing thread
-                    forumRepository.createPost(threadId, forumPost)
+                // Trabajo de IO encapsulado con withContext(IO)
+                withContext(Dispatchers.IO) {
+                    if (threadId == null && !newThreadTitle.isNullOrBlank() && !newThreadDescription.isNullOrBlank()) {
+                        Log.d("CreateForumPostViewModel", "Creating new thread and post")
+                        Log.d("CreateForumPostViewModel", "forumPost: $forumPost")
+                        forumRepository.createThread(newThreadTitle, newThreadDescription, forumPost)
+                    } else if (threadId != null) {
+                        forumRepository.createPost(threadId, forumPost)
+                    }
                 }
                 _postCreationState.value = PostCreationState.Success
             } catch (e: Exception) {

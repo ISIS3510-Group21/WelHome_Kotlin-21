@@ -22,10 +22,17 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.TextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,6 +47,10 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.google.firebase.Timestamp
 import com.team21.myapplication.data.model.StudentUser
+import com.team21.myapplication.ui.components.banners.BannerPosition
+import com.team21.myapplication.ui.components.banners.ConnectivityBanner
+import com.team21.myapplication.utils.NetworkMonitor
+import com.team21.myapplication.utils.PendingProfileSync
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -85,6 +96,15 @@ fun UpdateProfileScreen(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Banner de conectividad (visible cuando no hay internet)
+            val bannerContext = LocalContext.current
+            val bannerNetworkMonitor = remember { NetworkMonitor.get(bannerContext) }
+            val isOnlineBanner by bannerNetworkMonitor.isOnline.collectAsState()
+            ConnectivityBanner(
+                visible = !isOnlineBanner,
+                position = BannerPosition.Top
+            )
+
             AsyncImage(
                 model = user.photoPath.ifEmpty { null },
                 contentDescription = "Profile picture",
@@ -122,17 +142,44 @@ fun UpdateProfileScreen(
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            OutlinedTextField(
-                value = gender,
-                onValueChange = {
-                    gender = it
-                    genderError = null
-                },
-                label = { Text("Gender") },
-                modifier = Modifier.fillMaxWidth(),
-                isError = genderError != null,
-                supportingText = { genderError?.let { Text(it) } }
-            )
+            // Gender: selección con dropdown
+            var genderExpanded by remember { mutableStateOf(false) }
+            val genderOptions = listOf("Female", "Male", "Other")
+
+            ExposedDropdownMenuBox(
+                expanded = genderExpanded,
+                onExpandedChange = { genderExpanded = !genderExpanded },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = gender,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Gender") },
+                    isError = genderError != null,
+                    supportingText = { genderError?.let { Text(it) } },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = genderExpanded) },
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth()
+                )
+
+                DropdownMenu(
+                    expanded = genderExpanded,
+                    onDismissRequest = { genderExpanded = false }
+                ) {
+                    genderOptions.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(option) },
+                            onClick = {
+                                gender = option
+                                genderError = null
+                                genderExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
             Spacer(modifier = Modifier.height(8.dp))
 
             OutlinedTextField(
@@ -175,9 +222,18 @@ fun UpdateProfileScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             val context = LocalContext.current
+            val networkMonitor = remember { NetworkMonitor.get(context) }
+            val isOnline by networkMonitor.isOnline.collectAsState()
 
-// --- Recordar fecha actual ---
-            var birthDate by remember { mutableStateOf(user.birthDate) }
+            // Efecto para sincronizar perfil pendiente al recuperar conectividad
+            LaunchedEffect(isOnline) {
+                if (isOnline) {
+                    PendingProfileSync.load(context)?.let { pending ->
+                        onSave(pending)
+                        PendingProfileSync.clear(context)
+                    }
+                }
+            }
 
 // Formato reutilizable
             val dateFormatter = remember {
@@ -266,7 +322,13 @@ fun UpdateProfileScreen(
                             university = university,
                             birthDate = birthDate
                         )
-                        onSave(updatedUser)
+                        if (isOnline) {
+                            onSave(updatedUser)
+                        } else {
+                            PendingProfileSync.save(context, updatedUser)
+                            // Aquí se podría mostrar Snackbar/Toast: "Guardado localmente. Se sincronizará cuando haya conexión."
+                            onBack()
+                        }
                     }
                 },
                 modifier = Modifier.fillMaxWidth()

@@ -17,4 +17,9 @@ class ArrayMapCacheProvider<K, V> : CacheProvider<K, V> {
     override fun clear() { map.clear() }
     override fun size(): Int = map.size
     fun values(): Collection<V> = map.values
+
+    companion object {
+        // Singleton instance for pending ratings
+        val pendingRatingsCache = ArrayMapCacheProvider<String, PendingRating>()
+    }
 }
