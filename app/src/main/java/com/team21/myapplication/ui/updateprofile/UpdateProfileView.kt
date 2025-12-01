@@ -47,6 +47,8 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.google.firebase.Timestamp
 import com.team21.myapplication.data.model.StudentUser
+import com.team21.myapplication.ui.components.banners.BannerPosition
+import com.team21.myapplication.ui.components.banners.ConnectivityBanner
 import com.team21.myapplication.utils.NetworkMonitor
 import com.team21.myapplication.utils.PendingProfileSync
 import java.text.SimpleDateFormat
@@ -94,6 +96,15 @@ fun UpdateProfileScreen(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Banner de conectividad (visible cuando no hay internet)
+            val bannerContext = LocalContext.current
+            val bannerNetworkMonitor = remember { NetworkMonitor.get(bannerContext) }
+            val isOnlineBanner by bannerNetworkMonitor.isOnline.collectAsState()
+            ConnectivityBanner(
+                visible = !isOnlineBanner,
+                position = BannerPosition.Top
+            )
+
             AsyncImage(
                 model = user.photoPath.ifEmpty { null },
                 contentDescription = "Profile picture",
