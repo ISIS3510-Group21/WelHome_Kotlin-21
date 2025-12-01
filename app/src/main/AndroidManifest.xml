@@ -186,5 +186,10 @@
             android:exported="false"
             android:theme="@style/Theme.WelHome" />
 
+        <activity
+            android:name=".ui.postBookingSchedule.PostBookingScheduleActivity"
+            android:exported="false"
+            android:theme="@style/Theme.WelHome" />
+
     </application>
 </manifest>
