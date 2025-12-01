@@ -9,15 +9,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.team21.myapplication.data.model.ThreadForum
+import com.team21.myapplication.ui.components.banners.BannerPosition
+import com.team21.myapplication.ui.components.banners.ConnectivityBanner
 import com.team21.myapplication.ui.components.buttons.BlueButton
 import com.team21.myapplication.ui.components.icons.AppIcons
 import com.team21.myapplication.ui.components.inputs.PlaceholderTextField
 import com.team21.myapplication.ui.components.text.BlackText
 import com.team21.myapplication.ui.theme.BlueCallToAction
+import com.team21.myapplication.utils.NetworkMonitor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,6 +56,15 @@ fun CreateForumPostScreenLayout(
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
+        // Banner de conectividad (visible cuando no hay internet)
+        val context = LocalContext.current
+        val networkMonitor = remember { NetworkMonitor.get(context) }
+        val isOnline by networkMonitor.isOnline.collectAsState()
+        ConnectivityBanner(
+            visible = !isOnline,
+            position = BannerPosition.Top
+        )
+
         // --- HEADER ---
         Row(
             modifier = Modifier.fillMaxWidth(),

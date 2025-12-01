@@ -14,6 +14,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
+import com.team21.myapplication.utils.NetworkMonitor
+import com.team21.myapplication.ui.components.banners.ConnectivityBanner
+import com.team21.myapplication.ui.components.banners.BannerPosition
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,6 +79,14 @@ fun RateVisitView(navController: NavController, visitId: String?) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            // Banner de conectividad (visible cuando no hay internet)
+            val networkMonitor = remember { NetworkMonitor.get(context) }
+            val isOnline by networkMonitor.isOnline.collectAsState()
+            ConnectivityBanner(
+                visible = !isOnline,
+                position = BannerPosition.Top
+            )
+
             val isLoading = uiState is RateVisitUiState.Loading
 
             Text("Visit ID: $visitId")

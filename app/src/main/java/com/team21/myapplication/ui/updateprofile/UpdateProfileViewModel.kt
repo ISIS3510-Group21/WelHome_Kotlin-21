@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class UpdateProfileViewModel(private val studentUserRepository: StudentUserRepository) : ViewModel() {
 
@@ -17,15 +19,24 @@ class UpdateProfileViewModel(private val studentUserRepository: StudentUserRepos
 
     init {
         viewModelScope.launch {
-            studentUserRepository.getCurrentUser().collect {
-                _user.value = it
+            // Corrutina usando dispatcher: carga de usuario en IO
+            withContext(Dispatchers.IO) {
+                studentUserRepository.getCurrentUser().collect {
+                    // Cambiar al Main para actualizar estado
+                    withContext(Dispatchers.Main) {
+                        _user.value = it
+                    }
+                }
             }
         }
     }
 
     fun updateUser(user: StudentUser, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
-            val result = studentUserRepository.updateUser(user)
+            // Validación ligera en Main, persistencia en IO
+            val result = withContext(Dispatchers.IO) {
+                studentUserRepository.updateUser(user)
+            }
             onResult(result)
         }
     }
