@@ -18,6 +18,7 @@ import com.team21.myapplication.ui.profileView.ProfileRoute
 import com.team21.myapplication.ui.myPostsView.MyPostsScreen
 import com.team21.myapplication.ui.ownerVisits.OwnerVisitsRoute
 import com.team21.myapplication.ui.ownerVisitsDetail.OwnerVisitDetailActivity
+import com.team21.myapplication.ui.postBookingSchedule.PostBookingScheduleActivity
 
 @Composable
 fun OwnerNavGraph(
@@ -47,7 +48,8 @@ fun OwnerNavGraph(
                     ctx.startActivity(intent)
                 },
                 onAddVisitClick = {
-                    navController.navigate("addVisit")
+                    val intent = PostBookingScheduleActivity.newIntent(ctx)
+                    ctx.startActivity(intent)
                 }
             )
         }

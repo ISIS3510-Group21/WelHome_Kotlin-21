@@ -489,5 +489,29 @@ class HousingPostRepository {
         return results
     }
 
+    suspend fun getHousingBasicDetailsWithAddress(
+        housingIds: List<String>
+    ): Map<String, Triple<String, String, String>> {
+        if (housingIds.isEmpty()) return emptyMap()
+
+        val col = db.collection("HousingPost")
+
+        val result = mutableMapOf<String, Triple<String, String, String>>()
+
+        for (id in housingIds) {
+            val snap = col.document(id).get().await()
+            if (!snap.exists()) continue
+
+            val title = snap.getString("title").orEmpty()
+            val thumbnail = snap.getString("thumbnail").orEmpty()
+            val address = snap.getString("address").orEmpty()
+
+            result[id] = Triple(title, thumbnail, address)
+        }
+
+        return result
+    }
+
+
 
 }

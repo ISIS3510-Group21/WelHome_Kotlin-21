@@ -7,6 +7,7 @@ import java.time.*
 import java.time.format.DateTimeFormatter
 import android.util.ArrayMap
 import java.time.Instant
+import com.google.firebase.firestore.FieldValue
 
 class BookingScheduleRepository {
 
@@ -160,5 +161,122 @@ class BookingScheduleRepository {
         val thumbnail: String,
         val timestamp: Timestamp
     )
+
+    /**
+     * Agrega nuevos slots disponibles para un housingId y una fecha dada.
+     *
+     * - Crea el documento en BookingSchedule si no existe.
+     * - Crea el BookingDate correspondiente si no existe.
+     * - Crea documentos en BookingSlot para cada hora.
+     * - availableUsers = 1, duration = 1, description = "".
+     * - Timestamps en zona America/Bogota (UTC-5) con segundos y nanos en 0.
+     */
+    suspend fun addAvailableSlots(
+        housingId: String,
+        date: LocalDate,
+        times: List<LocalTime>
+    ): Result<Unit> {
+        if (times.isEmpty()) return Result.success(Unit)
+
+        return try {
+            val zone = ZoneId.of("America/Bogota")
+
+            // 1) Obtener o crear documento padre en BookingSchedule
+            val existingScheduleId = findScheduleDocId(housingId)
+            val scheduleRef = if (existingScheduleId != null) {
+                scheduleCol.document(existingScheduleId)
+            } else {
+                val newRef = scheduleCol.document()
+                val nowTs = Timestamp.now()
+                val payload = mapOf(
+                    "id" to newRef.id,
+                    "housing" to housingId,          // String simple
+                    "availableDates" to 0,           // se incrementa BookingDate
+                    "updatedAt" to nowTs
+                )
+                newRef.set(payload).await()
+                newRef
+            }
+
+            // 2) Buscar o crear BookingDate para la fecha dada
+            val datesCol = scheduleRef.collection("BookingDate")
+            val datesSnap = datesCol.get().await()
+
+            var dateDocRef = datesSnap.documents.firstOrNull { doc ->
+                val ts = doc.get("date") as? Timestamp ?: return@firstOrNull false
+                val localDate = ts.toDate().toInstant().atZone(zone).toLocalDate()
+                localDate == date
+            }?.reference
+
+            if (dateDocRef == null) {
+                dateDocRef = datesCol.document()
+
+                val dateStart = date.atStartOfDay(zone)
+                val dateTs = Timestamp(dateStart.toEpochSecond(), 0)
+
+                val datePayload = mapOf(
+                    "id" to dateDocRef.id,
+                    "date" to dateTs,
+                    "availableSlots" to 0
+                )
+                dateDocRef.set(datePayload).await()
+
+                // aumentar availableDates en el root
+                scheduleRef.update(
+                    mapOf(
+                        "availableDates" to FieldValue.increment(1),
+                        "updatedAt" to Timestamp.now()
+                    )
+                ).await()
+            }
+
+            // 3) Crear BookingSlot para cada hora (evitando duplicados)
+            val slotsCol = dateDocRef!!.collection("BookingSlot")
+            val existingSlotsSnap = slotsCol.get().await()
+            val existingTimes: Set<LocalTime> = existingSlotsSnap.documents.mapNotNull { doc ->
+                val timeTs = doc.get("time") as? Timestamp ?: return@mapNotNull null
+                timeTs.toDate().toInstant().atZone(zone).toLocalTime()
+            }.toSet()
+
+            var newSlots = 0
+
+            for (time in times) {
+                if (existingTimes.contains(time)) {
+                    // ya existe un slot para esta hora -> ignorar
+                    continue
+                }
+
+                val slotRef = slotsCol.document()
+                val zoned = date.atTime(time).atZone(zone).withSecond(0).withNano(0)
+                val timeTs = Timestamp(zoned.toEpochSecond(), 0)
+
+                val slotPayload = mapOf(
+                    "id" to slotRef.id,
+                    "time" to timeTs,
+                    "duration" to 1,          // siempre 1
+                    "availableUsers" to 1,    // siempre 1
+                    "description" to ""       // vacío
+                )
+
+                slotRef.set(slotPayload).await()
+                newSlots++
+            }
+
+            // 4) Actualizar contadores si realmente se crearon slots
+            if (newSlots > 0) {
+                dateDocRef.update(
+                    mapOf(
+                        "availableSlots" to FieldValue.increment(newSlots.toLong())
+                    )
+                ).await()
+                scheduleRef.update("updatedAt", Timestamp.now()).await()
+            }
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
 
 }
