@@ -18,10 +18,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import android.app.Activity
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.Timestamp
 import com.team21.myapplication.data.model.OwnerScheduledVisit
@@ -35,6 +40,9 @@ import java.util.*
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.team21.myapplication.ui.components.banners.BannerPosition
+import com.team21.myapplication.ui.components.banners.ConnectivityBanner
+import com.team21.myapplication.utils.NetworkMonitor
 
 @Composable
 fun OwnerVisitsRoute(
@@ -48,13 +56,52 @@ fun OwnerVisitsRoute(
     val viewModel: OwnerVisitsViewModel = viewModel(factory = factory)
 
     val state by viewModel.state.collectAsState()
+    //observar conectividad
+    val networkMonitor = remember {
+        NetworkMonitor.get(context)
+    }
+    val isOnline by networkMonitor.isOnline.collectAsState()
+
+    val statusBarColor = if (!isOnline) {
+        Color.Black
+    } else {
+        MaterialTheme.colorScheme.background
+    }
+    val view = LocalView.current
+
+    SideEffect {
+        val window = (view.context as android.app.Activity).window
+        // Variable de fondo
+        window.statusBarColor = statusBarColor.toArgb()
+
+        // La lógica para decidir el color de los íconos
+        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars =
+            if (!isOnline) {
+                false // Íconos blancos para fondo negro
+            } else {
+                statusBarColor.luminance() > 0.5f // Decide según la luminancia del fondo
+            }
+    }
+
     val lifecycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                // Cada vez que la pantalla vuelva a primer plano, recarga la lista
-                viewModel.loadOwnerVisits()
+                val hasVisits = viewModel.state.value.visits.isNotEmpty()
+
+                // Siempre recargamos, incluso offline (usará cache + drafts locales)
+                viewModel.loadOwnerVisits(showLoading = !hasVisits)
+
+
+                // Solo refrescamos si hay internet
+                //if (isOnline) {
+                    //val hasVisits = viewModel.state.value.visits.isNotEmpty()
+
+                    // Si ya hay visitas, refrescamos SIN mostrar loading
+                    // Si no hay visitas, sí mostramos el loading
+                    //viewModel.loadOwnerVisits(showLoading = !hasVisits)
+                //}
             }
         }
 
@@ -72,7 +119,8 @@ fun OwnerVisitsRoute(
         error = state.error,
         onVisitClick = onVisitClick,
         onAddVisitClick = onAddVisitClick,
-        modifier = modifier
+        modifier = modifier,
+        isOnline = isOnline
     )
 }
 
@@ -83,7 +131,8 @@ private fun OwnerVisitsScreen(
     error: String?,
     onVisitClick: (OwnerScheduledVisit) -> Unit,
     onAddVisitClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isOnline: Boolean = true
 ) {
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabs = listOf("Upcoming", "Past", "Available", "All")
@@ -120,51 +169,11 @@ private fun OwnerVisitsScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            Spacer(modifier = Modifier.height(40.dp))
-
-            // Header
-            Column(
-                modifier = Modifier.padding(horizontal = 16.dp)
-            ) {
-                BlackText(
-                    text = "Scheduled Visits",
-                    size = 28.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Tabs de filtrado
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    tabs.forEachIndexed { index, title ->
-                        val isSelected = selectedTabIndex == index
-                        val background = if (isSelected)
-                            MaterialTheme.colorScheme.primaryContainer
-                        else
-                            Color.Transparent
-
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(background)
-                                .clickable { selectedTabIndex = index }
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                        ) {
-                            BlackText(
-                                text = title,
-                                size = 15.sp,
-                                fontWeight = FontWeight.Medium,
-                                modifier = Modifier.align(Alignment.Center)
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
+            // banner de conectividad
+            ConnectivityBanner(
+                visible = !isOnline,
+                position = BannerPosition.Top
+            )
 
             val currentTab = tabs[selectedTabIndex]
 
@@ -209,20 +218,39 @@ private fun OwnerVisitsScreen(
                 }
 
                 filteredVisits.isEmpty() -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 32.dp),
-                        contentAlignment = Alignment.Center
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(bottom = 80.dp)
                     ) {
-                        GrayText(
-                            text = emptyStateMessage,
-                            size = 16.sp,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        // Header + tabs
+                        item {
+                            VisitsHeaderWithTabs(
+                                tabs = tabs,
+                                selectedTabIndex = selectedTabIndex,
+                                onTabSelected = { selectedTabIndex = it }
+                            )
+                        }
+
+                        // Mensaje de estado vacío
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 32.dp)
+                                    .padding(top = 40.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                GrayText(
+                                    text = emptyStateMessage,
+                                    size = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
+                        }
                     }
                 }
+
 
                 else -> {
                     // Lista de visitas
@@ -230,7 +258,24 @@ private fun OwnerVisitsScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = 80.dp)
                     ) {
+                        // Primer item: título + tabs + espacio
+                        item {
+                            VisitsHeaderWithTabs(
+                                tabs = tabs,
+                                selectedTabIndex = selectedTabIndex,
+                                onTabSelected = { selectedTabIndex = it }
+                            )
+                        }
+
+                        // Resto de ítems: las visitas
                         items(filteredVisits) { visit ->
+                            val clickHandler: () -> Unit =
+                                if (visit.isPendingDraft) {
+                                    {}   // no hace nada
+                                } else {
+                                    { onVisitClick(visit) }
+                                }
+
                             ScheduledVisitCard(
                                 date = SimpleDateFormat("EEE, MMM dd", Locale.ENGLISH)
                                     .format(visit.date.toDate()),
@@ -239,15 +284,69 @@ private fun OwnerVisitsScreen(
                                 visitorName = visit.visitorName,
                                 propertyImageUrl = visit.propertyImageUrl,
                                 status = visit.status,
-                                onCardClick = { onVisitClick(visit) }
+                                isPending = visit.isPendingDraft,
+                                onCardClick = clickHandler
                             )
                         }
                     }
                 }
+
             }
         }
     }
 }
+
+@Composable
+private fun VisitsHeaderWithTabs(
+    tabs: List<String>,
+    selectedTabIndex: Int,
+    onTabSelected: (Int) -> Unit
+) {
+    Spacer(modifier = Modifier.height(40.dp))
+
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp)
+    ) {
+        BlackText(
+            text = "Scheduled Visits",
+            size = 28.sp,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            tabs.forEachIndexed { index, title ->
+                val isSelected = selectedTabIndex == index
+                val background = if (isSelected)
+                    MaterialTheme.colorScheme.primaryContainer
+                else
+                    Color.Transparent
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(background)
+                        .clickable { onTabSelected(index) }
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    BlackText(
+                        text = title,
+                        size = 15.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
 
 @Preview(showBackground = true, backgroundColor = 0xFFFCFCFC)
 @Composable

@@ -26,3 +26,23 @@ fun enqueueUploadDraft(context: Context, draftId: String) {
         request
     )
 }
+
+fun enqueueUploadScheduleDraft(context: Context, draftId: String) {
+    val constraints = Constraints.Builder()
+        .setRequiredNetworkType(NetworkType.CONNECTED)
+        .build()
+
+    val request = OneTimeWorkRequestBuilder<UploadScheduleDraftWorker>()
+        .setConstraints(constraints)
+        .setInputData(
+            workDataOf(UploadScheduleDraftWorker.KEY_DRAFT_ID to draftId)
+        )
+        .addTag("uploadScheduleDraft:$draftId")
+        .build()
+
+    WorkManager.getInstance(context).enqueueUniqueWork(
+        "uploadScheduleDraft:$draftId",
+        ExistingWorkPolicy.KEEP,
+        request
+    )
+}

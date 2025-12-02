@@ -35,12 +35,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.AlertDialog
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import com.team21.myapplication.ui.components.banners.BannerPosition
+import com.team21.myapplication.ui.components.banners.ConnectivityBanner
 
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PostBookingView(
     state: PostBookingScheduleUiState,
+    isOnline: Boolean,
     onBack: () -> Unit,
     onSelectProperty: (String) -> Unit,
     onSelectDate: (Long?) -> Unit,
@@ -76,6 +79,13 @@ fun PostBookingView(
                         .verticalScroll(scrollState)
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                 ) {
+
+                    // banner de conectividad
+                    ConnectivityBanner(
+                        visible = !isOnline,
+                        position = BannerPosition.Top
+                    )
+
                     // Top bar
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -283,7 +293,8 @@ fun PostBookingView_Preview() {
             onSelectDate = {},
             onToggleHour = {},
             onSave = {},
-            onResultAcknowledged = {}
+            onResultAcknowledged = {},
+            isOnline = true
         )
     }
 }

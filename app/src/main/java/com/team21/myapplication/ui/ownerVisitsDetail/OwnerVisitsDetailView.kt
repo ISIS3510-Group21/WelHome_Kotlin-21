@@ -1,5 +1,6 @@
 package com.team21.myapplication.ui.ownerVisitsDetail
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -18,11 +19,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.team21.myapplication.ui.components.banners.BannerPosition
+import com.team21.myapplication.ui.components.banners.ConnectivityBanner
 import com.team21.myapplication.ui.components.buttons.BlueButton
 import com.team21.myapplication.ui.components.icons.AppIcons
 import com.team21.myapplication.ui.components.inputs.PlaceholderTextField
@@ -63,6 +68,7 @@ fun OwnerVisitDetailView(
     onMessageClick: () -> Unit = {},
     onBackClick: () -> Unit = {},
     snackbarHostState: SnackbarHostState,
+    isOnline: Boolean = true,
     modifier: Modifier = Modifier
 ) {
 
@@ -79,29 +85,6 @@ fun OwnerVisitDetailView(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    BlackText(
-                        text = "Visit Details",
-                        size = 22.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = AppIcons.GoBack,
-                            contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
-            )
-        },
         snackbarHost = {
             SnackbarHost(
                 hostState = snackbarHostState
@@ -119,6 +102,30 @@ fun OwnerVisitDetailView(
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
         ) {
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBackClick) {
+                    Icon(
+                        imageVector = AppIcons.GoBack,
+                        contentDescription = "Back",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                BlackText(
+                    text = "Visit Details",
+                    size = 22.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             // Imagen de la propiedad
             AsyncImage(
                 model = propertyImageUrl,
@@ -192,9 +199,15 @@ fun OwnerVisitDetailView(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // ¿Tenemos ya info real del visitante?
+            val hasVisitorInfo = !visitorName.isNullOrBlank() || !visitorPhotoUrl.isNullOrBlank()
+            Log.d("OwnerVisitDetailView", "visitorPhotoUrl = $visitorPhotoUrl")
+
             // Visitor Information Section
-            if (visitStatus == VisitStatus.AVAILABLE) {
-                // Estado AVAILABLE: muestra mensaje informativo
+            if (!hasVisitorInfo && visitStatus == VisitStatus.AVAILABLE) {
+                //  Solo mostramos el texto “dummy” cuando:
+                //  - la visita está AVAILABLE
+                //  - Y aún NO tenemos info real del visitante
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -202,20 +215,21 @@ fun OwnerVisitDetailView(
                 ) {
                     BlackText(
                         text = "Visitor Information",
-                        size = 20.sp,
+                        size = 18.sp,
                         fontWeight = FontWeight.SemiBold
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
 
                     GrayText(
-                        text = "Once this appointment has been confirmed by someone, you will be able to see the visitor's information here.",
+                        text = "Once this appointment has been confirmed with someone, you will be able to see the visitor's information here.",
                         size = 14.sp,
                         fontWeight = FontWeight.Normal
                     )
                 }
             } else {
-                // Otros estados: muestra información del visitante
+                // Si ya tenemos visitorName o visitorPhotoUrl,
+                // SIEMPRE mostramos la tarjeta con la foto
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -223,7 +237,7 @@ fun OwnerVisitDetailView(
                 ) {
                     BlackText(
                         text = "Visitor Information",
-                        size = 20.sp,
+                        size = 18.sp,
                         fontWeight = FontWeight.SemiBold
                     )
 
@@ -238,6 +252,7 @@ fun OwnerVisitDetailView(
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            val context = LocalContext.current
                             // Avatar del visitante (foto real o placeholder)
                             Box(
                                 modifier = Modifier
@@ -246,41 +261,44 @@ fun OwnerVisitDetailView(
                                     .background(MaterialTheme.colorScheme.secondaryContainer),
                                 contentAlignment = Alignment.Center
                             ) {
+                                // 1. Dibujamos SIEMPRE el ícono placeholder de fondo
+                                Icon(
+                                    imageVector = AppIcons.Profile,
+                                    contentDescription = "Visitor avatar placeholder",
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier.size(28.dp)
+                                )
+
+                                // 2. Encima, si hay URL, intentamos cargar la foto real
                                 if (!visitorPhotoUrl.isNullOrBlank()) {
-                                    // Mostrar foto real del visitante
                                     AsyncImage(
-                                        model = visitorPhotoUrl,
+                                        model = ImageRequest.Builder(context)
+                                            .data(visitorPhotoUrl)
+                                            .crossfade(true)
+                                            .build(),
                                         contentDescription = "Visitor photo",
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .clip(CircleShape),
                                         contentScale = ContentScale.Crop
                                     )
-                                } else {
-                                    // Mostrar ícono placeholder si no hay foto
-                                    Icon(
-                                        imageVector = AppIcons.Profile,
-                                        contentDescription = "Visitor avatar",
-                                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                                        modifier = Modifier.size(28.dp)
-                                    )
                                 }
                             }
 
                             Column {
                                 BlackText(
-                                    text = visitorName,
+                                    text = if (visitorName.isNotBlank()) visitorName else "Visitor",
                                     size = 16.sp,
                                     fontWeight = FontWeight.SemiBold
                                 )
                                 GrayText(
-                                    text = visitorNationality,
-                                    size = 13.sp
+                                    text = visitorNationality.ifBlank { "Roommate" },
+                                    size = 14.sp,
+                                    fontWeight = FontWeight.Normal
                                 )
                             }
                         }
 
-                        // Message Button
                         Button(
                             onClick = onMessageClick,
                             colors = ButtonDefaults.buttonColors(

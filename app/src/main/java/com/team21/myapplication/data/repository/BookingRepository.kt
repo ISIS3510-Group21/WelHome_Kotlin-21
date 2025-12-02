@@ -10,6 +10,7 @@ import java.time.format.DateTimeFormatter
 import java.util.*
 import com.google.firebase.firestore.FieldValue
 import android.util.Log
+import com.google.firebase.firestore.ListenerRegistration
 
 class BookingRepository {
     private val db = FirebaseFirestore.getInstance()
@@ -213,5 +214,57 @@ class BookingRepository {
             throw e
         }
     }
+
+    /**
+     * Registra listeners en los bookings de las propiedades dadas.
+     * Cada cambio en Booking (crear/actualizar/eliminar) dispara [onAnyChange].
+     *
+     * Devuelve la lista de ListenerRegistration para poder removerlos.
+     */
+    fun addBookingsChangeListenerForHousing(
+        housingIds: List<String>,
+        onAnyChange: () -> Unit
+    ): List<ListenerRegistration> {
+        if (housingIds.isEmpty()) return emptyList()
+
+        val registrations = mutableListOf<ListenerRegistration>()
+
+        housingIds.chunked(10).forEach { chunk ->
+            val reg = col
+                .whereIn("housing", chunk)
+                .addSnapshotListener { _, error ->
+                    if (error != null) {
+                        Log.e("BookingRepository", "Error in bookings listener", error)
+                        return@addSnapshotListener
+                    }
+                    // Algo cambió: dejamos que la capa superior decida qué hacer
+                    onAnyChange()
+                }
+            registrations.add(reg)
+        }
+
+        return registrations
+    }
+
+    /**
+     * Listener para un booking específico.
+     * Cada cambio en ese documento dispara [onChange] con el Booking actualizado o null.
+     */
+    fun addBookingChangeListener(
+        bookingId: String,
+        onChange: (Booking?) -> Unit
+    ): ListenerRegistration {
+        return col.document(bookingId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e("BookingRepository", "Error in booking listener", error)
+                    return@addSnapshotListener
+                }
+                val booking = snapshot?.toObject(Booking::class.java)
+                onChange(booking)
+            }
+    }
+
+
 
 }

@@ -26,7 +26,11 @@ import com.team21.myapplication.data.local.entity.DraftPostEntity
 import com.team21.myapplication.data.local.entity.DraftImageEntity
 import com.team21.myapplication.data.local.entity.AmenityEntity
 import com.team21.myapplication.data.local.dao.AmenityDao
+import com.team21.myapplication.data.local.dao.OwnerVisitCacheDao
 import com.team21.myapplication.data.local.entity.ThreadForumEntity
+import com.team21.myapplication.data.local.entity.OwnerVisitCacheEntity
+import com.team21.myapplication.data.local.dao.ScheduleDraftDao
+import com.team21.myapplication.data.local.entity.ScheduleDraftEntity
 
 @Database(
     entities = [
@@ -39,9 +43,11 @@ import com.team21.myapplication.data.local.entity.ThreadForumEntity
         DraftPostEntity::class,
         DraftImageEntity::class,
         AmenityEntity::class,
-        OfflineForumPostEntity::class
+        OfflineForumPostEntity::class,
+        OwnerVisitCacheEntity::class,
+        ScheduleDraftEntity::class
     ],
-    version = 5, // Incremented version
+    version = 7, // Incremented version
     exportSchema = false
 )
 @TypeConverters(MapLocationConverter::class, TimestampConverter::class) // Added TimestampConverter
@@ -58,6 +64,10 @@ abstract class AppDatabase : RoomDatabase() {
 
     abstract fun amenityDao(): AmenityDao
     abstract fun offlineForumPostDao(): OfflineForumPostDao
+
+    abstract fun ownerVisitCacheDao(): OwnerVisitCacheDao
+
+    abstract fun scheduleDraftDao(): ScheduleDraftDao
 
     companion object {
         @Volatile

@@ -17,4 +17,5 @@ data class OwnerScheduledVisit(
     val timestamp: Long,         // para ordenar y filtrar
     val isAvailable: Boolean = false,
     val visitorPhotoUrl: String? = null,
+    val isPendingDraft: Boolean = false // indica que es un slot local pendiente de subir
 )

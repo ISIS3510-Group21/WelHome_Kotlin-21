@@ -16,6 +16,10 @@ class BookingScheduleRepository {
     companion object {
         // cache en memoria por housingId — compartida entre instancias
         private val availabilityCache = ArrayMap<String, Pair<Map<LocalDate, List<LocalTime>>, Instant>>()
+
+        // Cache separado para el flujo del OWNER (postear BookingSchedule + offline)
+        private val ownerAvailabilityCache =
+            ArrayMap<String, Pair<Map<LocalDate, List<LocalTime>>, Instant>>()
     }
 
     /** Busca el schedule de un housingId. Tolera housing como String, DocumentReference o path String. */
@@ -59,7 +63,7 @@ class BookingScheduleRepository {
                 if (availableUsers <= 0) continue
 
                 val timeTs = slotDoc.get("time") as? Timestamp ?: continue
-                val localTime = timeTs.toDate().toInstant().atZone(zone).toLocalTime()
+                val localTime = timeTs.toDate().toInstant().atZone(zone).toLocalTime().withSecond(0).withNano(0)
                 result.getOrPut(localDate) { mutableListOf() }.add(localTime)
             }
         }
@@ -198,19 +202,17 @@ class BookingScheduleRepository {
                 newRef
             }
 
-            // 2) Buscar o crear BookingDate para la fecha dada
+            // 2) Buscar o crear BookingDate para la fecha dada (ID determinístico por día)
             val datesCol = scheduleRef.collection("BookingDate")
-            val datesSnap = datesCol.get().await()
 
-            var dateDocRef = datesSnap.documents.firstOrNull { doc ->
-                val ts = doc.get("date") as? Timestamp ?: return@firstOrNull false
-                val localDate = ts.toDate().toInstant().atZone(zone).toLocalDate()
-                localDate == date
-            }?.reference
+            // Usamos el propio LocalDate como ID: "2025-12-02"
+            val dateKey = date.toString()
+            val dateDocRef = datesCol.document(dateKey)
 
-            if (dateDocRef == null) {
-                dateDocRef = datesCol.document()
+            // Consultar si ya existe
+            val dateSnap = dateDocRef.get().await()
 
+            if (!dateSnap.exists()) {
                 val dateStart = date.atStartOfDay(zone)
                 val dateTs = Timestamp(dateStart.toEpochSecond(), 0)
 
@@ -221,7 +223,7 @@ class BookingScheduleRepository {
                 )
                 dateDocRef.set(datePayload).await()
 
-                // aumentar availableDates en el root
+                // aumentar availableDates en el root solo la primera vez
                 scheduleRef.update(
                     mapOf(
                         "availableDates" to FieldValue.increment(1),
@@ -230,23 +232,33 @@ class BookingScheduleRepository {
                 ).await()
             }
 
+
             // 3) Crear BookingSlot para cada hora (evitando duplicados)
             val slotsCol = dateDocRef!!.collection("BookingSlot")
             val existingSlotsSnap = slotsCol.get().await()
             val existingTimes: Set<LocalTime> = existingSlotsSnap.documents.mapNotNull { doc ->
                 val timeTs = doc.get("time") as? Timestamp ?: return@mapNotNull null
-                timeTs.toDate().toInstant().atZone(zone).toLocalTime()
+                timeTs.toDate().toInstant().atZone(zone).toLocalTime().withSecond(0).withNano(0)
             }.toSet()
+
+            // set que iremos actualizando para evitar duplicados dentro de la misma llamada
+            val seenTimes = existingTimes.toMutableSet()
 
             var newSlots = 0
 
             for (time in times) {
-                if (existingTimes.contains(time)) {
-                    // ya existe un slot para esta hora -> ignorar
+                // normalizamos la hora de entrada también
+                val normalized = time.withSecond(0).withNano(0)
+
+                // si ya existe en Firestore o dentro de la propia lista 'times', lo saltamos
+                if (!seenTimes.add(normalized)) {
+                    // add() devuelve false si ya estaba en el set
                     continue
                 }
 
-                val slotRef = slotsCol.document()
+                val slotId = normalized.format(java.time.format.DateTimeFormatter.ofPattern("HHmm"))
+                val slotRef = slotsCol.document(slotId)
+
                 val zoned = date.atTime(time).atZone(zone).withSecond(0).withNano(0)
                 val timeTs = Timestamp(zoned.toEpochSecond(), 0)
 
@@ -278,5 +290,65 @@ class BookingScheduleRepository {
         }
     }
 
+    fun addTimesToCacheOffline(
+        housingId: String,
+        date: LocalDate,
+        times: List<LocalTime>
+    ) {
+        if (times.isEmpty()) return
+
+        val current = ownerAvailabilityCache[housingId]
+        val oldMap = current?.first ?: emptyMap()
+
+        val existingForDay = oldMap[date] ?: emptyList()
+        val mergedForDay = (existingForDay + times).distinct().sorted()
+
+        val newMap = oldMap.toMutableMap().apply {
+            this[date] = mergedForDay
+        }.toMap()
+
+        val stamp = current?.second ?: Instant.now()
+        ownerAvailabilityCache[housingId] = newMap to stamp
+    }
+
+
+    suspend fun getAvailabilitySlots(
+        housingId: String,
+        isOnline: Boolean
+    ): Pair<Map<LocalDate, List<LocalTime>>, Instant?> {
+        val cached = ownerAvailabilityCache[housingId]
+
+        if (!isOnline) {
+            // OFFLINE -> lo que haya en caché
+            return cached ?: (emptyMap<LocalDate, List<LocalTime>>() to null)
+        }
+
+        // ONLINE -> siempre pedimos a Firestore
+        val remote = getAvailabilityByDay(housingId)
+        val now = Instant.now()
+
+        if (cached == null) {
+            ownerAvailabilityCache[housingId] = remote to now
+            return remote to now
+        }
+
+        val merged = mutableMapOf<LocalDate, MutableList<LocalTime>>()
+
+        // 1) remoto como base
+        for ((date, times) in remote) {
+            merged.getOrPut(date) { mutableListOf() }.addAll(times)
+        }
+
+        // 2) cache del owner encima (incluye slots offline todavía no subidos)
+        for ((date, times) in cached.first) {
+            merged.getOrPut(date) { mutableListOf() }.addAll(times)
+        }
+
+        val mergedFinal: Map<LocalDate, List<LocalTime>> =
+            merged.mapValues { (_, list) -> list.distinct().sorted() }
+
+        ownerAvailabilityCache[housingId] = mergedFinal to now
+        return mergedFinal to now
+    }
 
 }
