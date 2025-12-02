@@ -2,13 +2,16 @@ package com.team21.myapplication.ui.postBookingSchedule.state
 
 import android.app.Application
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.team21.myapplication.ui.postBookingSchedule.PostBookingScheduleViewModel
 import com.team21.myapplication.ui.postBookingSchedule.PostBookingScheduleViewModelFactory
 import com.team21.myapplication.ui.postBookingSchedule.PostBookingView
+import com.team21.myapplication.utils.NetworkMonitor
 
 @Composable
 fun PostBookingScheduleRoute(
@@ -21,9 +24,19 @@ fun PostBookingScheduleRoute(
 
     val state by viewModel.state.collectAsState()
 
+    //observar conectividad
+    val networkMonitor = remember { NetworkMonitor.get(context) }
+    val isOnline by networkMonitor.isOnline.collectAsState()
+
+    // avisar al ViewModel del estado de red
+    LaunchedEffect(isOnline) {
+        viewModel.setOnlineStatus(isOnline)
+    }
+
 
     PostBookingView(
         state = state,
+        isOnline = isOnline,
         onBack = onBack,
         onSelectProperty = { viewModel.onPropertySelected(it) },
         onSelectDate = { millis -> viewModel.onDateSelected(millis) },

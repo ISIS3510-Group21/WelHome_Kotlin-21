@@ -10,11 +10,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.google.firebase.firestore.ListenerRegistration
+import com.team21.myapplication.data.model.Booking
 
 class OwnerVisitDetailViewModel(application: Application) : AndroidViewModel(application) {
 
     private val bookingRepository = BookingRepository()
     private val studentRepository = StudentUserRepository()
+
+    private var bookingListener: ListenerRegistration? = null
 
     private val _state = MutableStateFlow(OwnerVisitDetailState())
     val state: StateFlow<OwnerVisitDetailState> = _state.asStateFlow()
@@ -61,6 +65,14 @@ class OwnerVisitDetailViewModel(application: Application) : AndroidViewModel(app
                 } else {
                     // Es un booking real - obtener detalles de Firestore
                     loadBookingDetails(bookingId, propertyImageUrl, visitDate, visitTime)
+                    if (bookingListener == null) {
+                        bookingListener = bookingRepository.addBookingChangeListener(bookingId) { updatedBooking ->
+                            if (updatedBooking != null) {
+                                // Usamos la misma función que en la carga inicial
+                                applyBookingToState(updatedBooking, propertyImageUrl, visitDate, visitTime)
+                            }
+                        }
+                    }
                 }
 
             } catch (e: Exception) {
@@ -89,41 +101,8 @@ class OwnerVisitDetailViewModel(application: Application) : AndroidViewModel(app
                 )
                 return
             }
-
-            // Obtener información del visitante
-            val (visitorName, visitorPhotoUrl) = studentRepository.getStudentBasicInfo(booking.user)
-
-            // Obtener nacionalidad del estudiante
-            val studentUser = studentRepository.getStudentUser(booking.user)
-            val visitorNationality = studentUser?.nationality ?: "Unknown"
-
-            // Determinar el estado de la visita
-            val visitStatus = when {
-                booking.state.equals("Completed", ignoreCase = true) -> VisitStatus.COMPLETED
-                booking.state.equals("Missed", ignoreCase = true) -> VisitStatus.MISSED
-                booking.state.equals("Scheduled", ignoreCase = true) && booking.confirmedVisit -> VisitStatus.SCHEDULED
-                else -> VisitStatus.CONFIRMED
-            }
-
-            // Convertir rating de Float a Int (si existe y es > 0)
-            val rating = if (booking.rating > 0) booking.rating.toInt() else null
-
-            _state.value = _state.value.copy(
-                isLoading = false,
-                propertyImageUrl = propertyImageUrl.ifBlank { booking.thumbnail },
-                visitStatus = visitStatus,
-                visitDate = visitDate,
-                visitTime = visitTime,
-                visitorName = visitorName,
-                visitorNationality = visitorNationality,
-                visitorPhotoUrl = visitorPhotoUrl,
-                visitorFeedback = booking.userComment.ifBlank { null },
-                visitorRating = rating,
-                ownerComment = booking.ownerComment,
-                ownerCommentDraft = booking.ownerComment,
-                bookingId = bookingId,
-                isAvailable = false
-            )
+            // Reutilizamos la misma lógica que usa el listener
+            applyBookingToState(booking, propertyImageUrl, visitDate, visitTime)
 
         } catch (e: Exception) {
             _state.value = _state.value.copy(
@@ -132,6 +111,58 @@ class OwnerVisitDetailViewModel(application: Application) : AndroidViewModel(app
             )
         }
     }
+
+    private fun applyBookingToState(
+        booking: Booking,
+        propertyImageUrl: String,
+        visitDate: String,
+        visitTime: String
+    ) {
+        // Obtener información del visitante
+        viewModelScope.launch {
+            try {
+                val (visitorName, visitorPhotoUrl) =
+                    studentRepository.getStudentBasicInfo(booking.user)
+
+                android.util.Log.d("OwnerVisitDetailVM", "visitorPhotoUrl = $visitorPhotoUrl")
+
+                val studentUser = studentRepository.getStudentUser(booking.user)
+                val visitorNationality = studentUser?.nationality ?: "Unknown"
+
+                val visitStatus = when {
+                    booking.state.equals("Completed", ignoreCase = true) -> VisitStatus.COMPLETED
+                    booking.state.equals("Missed", ignoreCase = true) -> VisitStatus.MISSED
+                    booking.state.equals("Scheduled", ignoreCase = true) && booking.confirmedVisit -> VisitStatus.SCHEDULED
+                    else -> VisitStatus.CONFIRMED
+                }
+
+                val rating = if (booking.rating > 0) booking.rating.toInt() else null
+
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    propertyImageUrl = propertyImageUrl.ifBlank { booking.thumbnail },
+                    visitStatus = visitStatus,
+                    visitDate = visitDate,
+                    visitTime = visitTime,
+                    visitorName = visitorName,
+                    visitorNationality = visitorNationality,
+                    visitorPhotoUrl = visitorPhotoUrl,
+                    visitorFeedback = booking.userComment.ifBlank { null },
+                    visitorRating = rating,
+                    ownerComment = booking.ownerComment,
+                    ownerCommentDraft = booking.ownerComment,
+                    bookingId = booking.id,  // asegúrate de tener id en Booking
+                    isAvailable = false
+                )
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "Error loading booking details"
+                )
+            }
+        }
+    }
+
 
     fun updateOwnerComment(comment: String) {
         _state.value = _state.value.copy(ownerCommentDraft = comment)
@@ -206,5 +237,9 @@ class OwnerVisitDetailViewModel(application: Application) : AndroidViewModel(app
         _state.value = _state.value.copy(commentSaveMessage = null)
     }
 
+    override fun onCleared() {
+        super.onCleared()
+        bookingListener?.remove()
+    }
 
 }

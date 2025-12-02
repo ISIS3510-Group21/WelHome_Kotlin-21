@@ -3,8 +3,11 @@ package com.team21.myapplication.ui.components.cards
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -12,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -44,6 +48,7 @@ fun ScheduledVisitCard(
     visitorName: String,
     propertyImageUrl: String,
     status: String = "Scheduled",
+    isPending: Boolean = false,
     modifier: Modifier = Modifier,
     onCardClick: () -> Unit = {}
 ) {
@@ -58,108 +63,132 @@ fun ScheduledVisitCard(
         elevation = CardDefaults.cardElevation(
             defaultElevation = 2.dp
         ),
+        enabled = !isPending,
         onClick = onCardClick
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+        Box(
+            modifier = Modifier.fillMaxWidth()
         ) {
-            // Header: Fecha y Estado
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .graphicsLayer {
+                        if (isPending) {
+                            alpha = 0.6f    // filtro grisáceo general
+                        }
+                    }
             ) {
-                // Fecha
-                Column {
-                    BlackText(
-                        text = date,
-                        size = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    BlueText(
-                        text = timeRange,
-                        size = 16.sp,
-                        fontWeight = FontWeight.Medium
-                    )
+                // Header: Fecha y Estado
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    // Fecha
+                    Column {
+                        BlackText(
+                            text = date,
+                            size = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        BlueText(
+                            text = timeRange,
+                            size = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    // Estado Badge
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                color = when (status.lowercase()) {
+                                    "completed" -> Color(0xFFE0E7FF)  // Azul claro
+                                    "missed" -> Color(0xFFFFE4E6)     // Rojo claro
+                                    "scheduled" -> Color(0xFFD1FAE5)  // Verde claro
+                                    "available" -> Color(0xFFFFEDD5)  // amarillo claro
+                                    "pending" -> Color(0xFFE5E7EB)
+                                    else -> MaterialTheme.colorScheme.secondaryContainer
+                                },
+                                shape = RoundedCornerShape(20.dp)
+                            )
+                            .padding(horizontal = 16.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = status,
+                            color = when (status.lowercase()) {
+                                "completed" -> MaterialTheme.colorScheme.primary  // Azul
+                                "missed" -> Color(0xFFEF4444) // Rojo
+                                "scheduled" -> Color(0xFF10B981)  // Verde
+                                "available" -> Color(0xFFF97316)// naranja
+                                "pending" -> Color(0xFF4B5563) //gris
+                                else -> MaterialTheme.colorScheme.primary
+                            },
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            fontFamily = Poppins
+                        )
+                    }
                 }
 
-                // Estado Badge
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Divider
                 Box(
                     modifier = Modifier
-                        .background(
-                            color = when (status.lowercase()) {
-                                "completed" -> Color(0xFFE0E7FF)  // Azul claro
-                                "missed" -> Color(0xFFFFE4E6)     // Rojo claro
-                                "scheduled" -> Color(0xFFD1FAE5)  // Verde claro
-                                "available" -> Color(0xFFF3F4F6)  // Gris claro
-                                else -> MaterialTheme.colorScheme.secondaryContainer
-                            },
-                            shape = RoundedCornerShape(20.dp)
-                        )
-                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(MaterialTheme.colorScheme.outlineVariant)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Información de la propiedad y visitante
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = status,
-                        color = when (status.lowercase()) {
-                            "completed" -> MaterialTheme.colorScheme.primary  // Azul
-                            "missed" -> Color(0xFFEF4444)                      // Rojo
-                            "scheduled" -> Color(0xFF10B981)                   // Verde
-                            "available" -> Color(0xFF6B7280)                   // Gris
-                            else -> MaterialTheme.colorScheme.primary
-                        },
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        fontFamily = Poppins
+                    // Imagen de la propiedad
+                    AsyncImage(
+                        model = propertyImageUrl,
+                        contentDescription = "Property image",
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(RoundedCornerShape(12.dp)),
+                        contentScale = ContentScale.Crop
                     )
+
+                    // Información textual
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        BlackText(
+                            text = propertyName,
+                            size = 18.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        GrayText(
+                            text = visitorName.ifBlank { "No visitor yet" },
+                            size = 14.sp,
+                            fontWeight = FontWeight.Normal
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Divider
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(MaterialTheme.colorScheme.outlineVariant)
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Información de la propiedad y visitante
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Imagen de la propiedad
-                AsyncImage(
-                    model = propertyImageUrl,
-                    contentDescription = "Property image",
+            // Relojito en la esquina superior derecha
+            if (isPending) {
+                Icon(
+                    imageVector = Icons.Outlined.Schedule, // importa este ícono
+                    contentDescription = "Pending upload",
+                    tint = Color(0xFF4B5563),
                     modifier = Modifier
-                        .size(64.dp)
-                        .clip(RoundedCornerShape(12.dp)),
-                    contentScale = ContentScale.Crop
+                        .align(Alignment.BottomEnd)
+                        .padding(12.dp)
                 )
-
-                // Información textual
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    BlackText(
-                        text = propertyName,
-                        size = 18.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    GrayText(
-                        text = visitorName.ifBlank { "No visitor yet" },
-                        size = 14.sp,
-                        fontWeight = FontWeight.Normal
-                    )
-                }
             }
         }
     }
@@ -190,7 +219,7 @@ fun ScheduledVisitCardPreview() {
                 propertyName = "Apartamento Centro",
                 visitorName = "Jane Smith",
                 propertyImageUrl = "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400",
-                status = "Confirmed"
+                status = "Available"
             )
 
             ScheduledVisitCard(
@@ -199,7 +228,8 @@ fun ScheduledVisitCardPreview() {
                 propertyName = "Residencia Universitaria Norte",
                 visitorName = "Carlos González",
                 propertyImageUrl = "https://images.unsplash.com/photo-1536376072261-38c75010e6c9?w=400",
-                status = "Pending"
+                status = "Pending",
+                isPending = true
             )
         }
     }

@@ -19,6 +19,11 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.team21.myapplication.data.local.AppDatabase
+import com.team21.myapplication.data.local.entity.ScheduleDraftEntity
+import com.team21.myapplication.data.repository.BookingRepository
+import com.team21.myapplication.sync.ScheduleUpdateBus
+import java.util.UUID
 
 class PostBookingScheduleViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -27,14 +32,25 @@ class PostBookingScheduleViewModel(application: Application) : AndroidViewModel(
     private val housingRepository = HousingPostRepository()
     private val bookingScheduleRepository = BookingScheduleRepository()
 
+    private val bookingRepository = BookingRepository()
+
+    private val db = AppDatabase.getDatabase(application)
+    private val scheduleDraftDao = db.scheduleDraftDao()
+
     private val _state = MutableStateFlow(PostBookingScheduleUiState())
     val state: StateFlow<PostBookingScheduleUiState> = _state.asStateFlow()
 
     private val zone: ZoneId = ZoneId.of("America/Bogota")   // UTC-5
-    private val hourFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
+    private val hourFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("H:mm", Locale.getDefault())
 
     // Horas base del día
     private val baseHours: List<LocalTime> = (7..20).map { h -> LocalTime.of(h, 0) }
+
+    private var isOnline: Boolean = true
+
+    fun setOnlineStatus(online: Boolean) {
+        isOnline = online
+    }
 
     init {
         loadOwnerProperties()
@@ -172,6 +188,87 @@ class PostBookingScheduleViewModel(application: Application) : AndroidViewModel(
                 return@launch
             }
 
+            // estrategia WhatsApp
+            if (!isOnline) {
+                val current = _state.value
+                val ownerId = authRepository.getCurrentUserId()
+                if (ownerId == null) {
+                    _state.update {
+                        it.copy(
+                            snackbarMessage = "You must be logged in to save a draft.",
+                            snackbarError = true
+                        )
+                    }
+                    return@launch
+                }
+
+                val selectedDate = Instant.ofEpochMilli(dateMillis)
+                    .atZone(ZoneOffset.UTC)
+                    .toLocalDate()
+
+                // convertir las horas "HH:mm" -> LocalTime
+                val times = selectedHours.mapNotNull { h ->
+                    try {
+                        LocalTime.parse(h, hourFormatter)
+                    } catch (_: Exception) {
+                        null
+                    }
+                }
+
+                // 1) timestamps en zona Bogotá
+                val slotTimestamps = times.map { time ->
+                    selectedDate
+                        .atTime(time)
+                        .atZone(zone)          // ya tienes 'zone' en el VM
+                        .toInstant()
+                        .toEpochMilli()
+                }
+
+                // 2) insertar drafts en Room
+                slotTimestamps.forEach { ts ->
+                    val id = UUID.randomUUID().toString()
+                    scheduleDraftDao.insert(
+                        ScheduleDraftEntity(
+                            id = id,
+                            ownerId = ownerId,
+                            housingId = housingId,
+                            propertyTitle = current.selectedPropertyTitle,
+                            propertyThumbnail = current.selectedPropertyThumbnail,
+                            timestamp = ts
+                        )
+                    )
+
+                    // 3) encolar worker para cada draft
+                    com.team21.myapplication.workers.enqueueUploadScheduleDraft(
+                        getApplication(),
+                        id
+                    )
+                }
+
+                // 4) actualizar cache de disponibilidad
+                bookingScheduleRepository.addTimesToCacheOffline(
+                    housingId = housingId,
+                    date = selectedDate,
+                    times = times
+                )
+
+                _state.update {
+                    it.copy(
+                        isSaving = false,
+                        selectedHours = emptySet(),
+                        snackbarMessage = "Schedule saved as draft. It will be uploaded when you're back online.",
+                        snackbarError = false
+                    )
+                }
+
+                refreshAvailableHoursForSelection(
+                    housingId = housingId,
+                    dateMillis = dateMillis
+                )
+
+                return@launch
+            }
+
             try {
                 _state.update { it.copy(isSaving = true, snackbarMessage = null) }
 
@@ -205,6 +302,9 @@ class PostBookingScheduleViewModel(application: Application) : AndroidViewModel(
                             snackbarError = false
                         )
                     }
+
+                    // avisar que hay nuevos slots disponibles
+                    ScheduleUpdateBus.notifyUpdated()
 
                     // actualizar lista de horas disponibles (ya no deberían salir las recien creadas)
                     refreshAvailableHoursForSelection(
@@ -257,14 +357,41 @@ class PostBookingScheduleViewModel(application: Application) : AndroidViewModel(
                 .atZone(ZoneOffset.UTC)   // el millis viene como 00:00 UTC
                 .toLocalDate()
 
-            val availabilityByDay = bookingScheduleRepository.getAvailabilityByDay(housingId)
-            val alreadyPostedTimes: List<LocalTime> = availabilityByDay[selectedDate] ?: emptyList()
+            // 1) Slots ya existentes en BookingSchedule (incluye drafts offline vía cache del owner)
+            val (availabilityByDay, _) =
+                bookingScheduleRepository.getAvailabilitySlots(housingId, isOnline)
+            val scheduleTimes: List<LocalTime> = availabilityByDay[selectedDate] ?: emptyList()
 
-            val remainingTimes = baseHours.filter { t -> !alreadyPostedTimes.contains(t) }
+            // 2) Horas que ya tienen bookings agendados para esa vivienda y ese día
+            val bookingsTimes: List<LocalTime> =
+                if (isOnline) {
+                    val bookings = bookingRepository.getBookingsByHousingIds(listOf(housingId))
+                    bookings
+                        .filter { booking ->
+                            // mismo día en zona oficial
+                            booking.date.toDate().toInstant().atZone(zone)
+                                .toLocalDate() == selectedDate
+                        }
+                        .map { booking ->
+                            booking.date.toDate().toInstant().atZone(zone)
+                                .toLocalTime()
+                                .withSecond(0)
+                                .withNano(0)
+                        }
+                } else {
+                    emptyList()
+                }
+            // 3) Unión de horarios ya ocupados (schedule + bookings)
+            val alreadyUsedTimes: Set<LocalTime> =
+                (scheduleTimes + bookingsTimes).toSet()
 
+            // 4) Filtrar las horas base quitando todo lo ocupado
+            val remainingTimes = baseHours.filter { t -> !alreadyUsedTimes.contains(t) }
+
+            // 5) Formatear para la UI
             val formatted = remainingTimes.map { t -> t.format(hourFormatter) }
 
-            _state.update {
+            _state.update{
                 it.copy(
                     availableHours = formatted
                 )
