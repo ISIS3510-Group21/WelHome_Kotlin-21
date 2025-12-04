@@ -191,5 +191,10 @@
             android:exported="false"
             android:theme="@style/Theme.WelHome" />
 
+        <activity
+            android:name=".ui.ownerPostsDetail.OwnerPostDetailActivity"
+            android:exported="false"
+            android:theme="@style/Theme.WelHome" />
+
     </application>
 </manifest>
