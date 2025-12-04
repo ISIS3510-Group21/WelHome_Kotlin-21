@@ -15,6 +15,10 @@ import com.team21.myapplication.ui.theme.BlackText
 import com.team21.myapplication.ui.theme.BlueCallToAction
 import com.team21.myapplication.ui.theme.LavanderLight
 import com.team21.myapplication.ui.theme.LocalDSTypography
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.ui.text.style.TextOverflow
 
 @Composable
 fun GrayButton(
@@ -22,27 +26,48 @@ fun GrayButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    selected: Boolean = false          // ← NUEVO
+    selected: Boolean = false,          // ← NUEVO
+    compact: Boolean = false
 ) {
     val bg = if (selected) MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.7f) else MaterialTheme.colorScheme.tertiaryContainer
     val fg = if (selected) MaterialTheme.colorScheme.inverseOnSurface else MaterialTheme.colorScheme.onBackground
 
+    val buttonHeight = if (compact) 32.dp else 40.dp
+    val shape = if (compact) RoundedCornerShape(16.dp) else RoundedCornerShape(20.dp)
+
+    val contentPadding = if (compact) {
+        PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+    } else {
+        PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+    }
+
+    val textStyle = if (compact) {
+        LocalDSTypography.current.Description.copy(fontSize = 12.sp)
+    } else {
+        LocalDSTypography.current.Description
+    }
+
+
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(40.dp),
-        shape = RoundedCornerShape(20.dp),
+        modifier = modifier.defaultMinSize(minHeight = buttonHeight),
+        shape = shape,
         colors = ButtonDefaults.buttonColors(
             containerColor = bg,
             contentColor = fg,
             disabledContainerColor = bg.copy(alpha = 0.6f),
             disabledContentColor = fg.copy(alpha = 0.6f)
-        )
+        ),
+        contentPadding = contentPadding
     ) {
         Text(
             text = text,
-            style = LocalDSTypography.current.Description,
-            color = fg
+            style = textStyle,
+            color = fg,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }

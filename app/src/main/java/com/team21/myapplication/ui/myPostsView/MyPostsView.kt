@@ -61,7 +61,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Dp
 import androidx.core.view.WindowCompat
-
+import com.team21.myapplication.ui.ownerPostsDetail.OwnerPostDetailActivity
 
 @Composable
 fun MyPostsScreen() {
@@ -175,6 +175,8 @@ fun MyPostsScreenLayout(
     onAddPostClick: () -> Unit = {},
     topPadding: Dp = 40.dp
 ) {
+    val ctx = LocalContext.current
+
     // Principal component as Column
     Column(
         modifier = Modifier
@@ -238,7 +240,18 @@ fun MyPostsScreenLayout(
                     imageUrl = imgUrl,
                     imageRes = if (imgUrl != null) null else R.drawable.sample_house,
                     modifier = Modifier.fillMaxWidth(),
-                    onClick = { if (post.isDraft) null else { /* navegar al detail */ } }
+                    onClick = {
+                        if (!post.isDraft) {
+                            // Para posts publicados, MyPostsViewModel ya guarda housing = id de la vivienda
+                            val housingId = post.housing.ifBlank { post.id }
+
+                            val intent = Intent(ctx, OwnerPostDetailActivity::class.java)
+                                .putExtra(OwnerPostDetailActivity.EXTRA_HOUSING_ID, housingId)
+
+                            ctx.startActivity(intent)
+                        }
+                    }
+
                 )
 
                 // 3) Si es borrador: overlay semitransparente + “pill” con ícono de reloj
